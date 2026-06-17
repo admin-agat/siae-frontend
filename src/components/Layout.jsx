@@ -1,8 +1,8 @@
+import { Outlet } from 'react-router-dom';
 import Sidebar from "./Sidebar";
 
 // Layout principal — envuelve todas las páginas privadas
-// Estructura: Sidebar izquierdo + contenido derecho
-export default function Layout({ children }) {
+export default function Layout() {
   return (
     <div className="flex min-h-screen bg-gray-100">
 
@@ -18,9 +18,9 @@ export default function Layout({ children }) {
           <span className="text-white text-sm opacity-80">v1.0</span>
         </header>
 
-        {/* Página activa */}
+        {/* Página activa — Outlet renderiza la ruta hija */}
         <main className="flex-1 p-6">
-          {children}
+          <Outlet />
         </main>
 
       </div>

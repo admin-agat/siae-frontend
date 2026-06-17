@@ -1,36 +1,40 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+// Enrutador principal del SIAE con rutas protegidas
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import LoginPage from '../pages/auth/LoginPage';
+import DashboardPage from '../pages/dashboard/DashboardPage';
+import CompradoresPage from '../pages/compradores/CompradoresPage';
+import Layout from '../components/Layout';
 
-// Pages
-import LoginPage from "../pages/auth/LoginPage";
-import DashboardPage from "../pages/dashboard/DashboardPage";
-
-// Ruta protegida — si no hay token, redirige al login
-function PrivateRoute({ children }) {
-  const { token } = useAuth();
-  return token ? children : <Navigate to="/login" />;
+// Componente que protege rutas privadas
+function RutaPrivada({ children }) {
+    const { token } = useAuth();
+    return token ? children : <Navigate to="/login" />;
 }
 
 export default function AppRouter() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        {/* Públicas */}
-        <Route path="/login" element={<LoginPage />} />
+    return (
+        <BrowserRouter>
+            <Routes>
+                {/* Ruta pública */}
+                <Route path="/login" element={<LoginPage />} />
 
-        {/* Privadas */}
-        <Route
-          path="/dashboard"
-          element={
-            <PrivateRoute>
-              <DashboardPage />
-            </PrivateRoute>
-          }
-        />
+                {/* Rutas privadas — dentro del Layout */}
+                <Route path="/" element={
+                    <RutaPrivada>
+                        <Layout />
+                    </RutaPrivada>
+                }>
+                    <Route index element={<DashboardPage />} />
+                    <Route path="dashboard" element={<DashboardPage />} />
 
-        {/* Redirige raíz al dashboard */}
-        <Route path="*" element={<Navigate to="/dashboard" />} />
-      </Routes>
-    </BrowserRouter>
-  );
+                    {/* Módulo Compradores */}
+                    <Route path="compradores" element={<CompradoresPage />} />
+                </Route>
+
+                {/* Ruta no encontrada */}
+                <Route path="*" element={<Navigate to="/" />} />
+            </Routes>
+        </BrowserRouter>
+    );
 }
