@@ -59,15 +59,16 @@ export default function CompradorModal({ comprador, onClose, onGuardado }) {
 
     return (
         // Fondo oscuro
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(0,0,0,0.25)', backdropFilter: 'blur(2px)' }}>
             <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
 
                 {/* Header del modal */}
-                <div className="flex justify-between items-center px-6 py-4 border-b">
-                    <h2 className="text-lg font-bold text-gray-800">
+                <div className="flex justify-between items-center px-6 py-4 rounded-t-xl" style={{ backgroundColor: '#0F6E56' }}>
+                    <h2 className="text-lg font-bold text-white">
+
                         {comprador ? 'Editar comprador' : 'Nuevo comprador'}
                     </h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+                    <button onClick={onClose} className="text-white hover:text-gray-200">
                         <X size={20} />
                     </button>
                 </div>
@@ -86,12 +87,11 @@ export default function CompradorModal({ comprador, onClose, onGuardado }) {
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="text-sm font-medium text-gray-700">Razón Social *</label>
-                            <input
-                                name="razon_social"
+                            <input name="razon_social"
                                 value={form.razon_social}
                                 onChange={handleChange}
                                 required
-                                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm outline-none focus:border-[#0F6E56]"
+                                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm outline-none focus:border-[#0F6E56] focus:ring-2 focus:ring-[#0F6E56] focus:ring-opacity-20 focus:ring-2 focus:ring-[#0F6E56] focus:ring-opacity-20 focus:ring-2 focus:ring-[#0F6E56] focus:ring-opacity-20"
                             />
                         </div>
                         <div>
@@ -101,7 +101,7 @@ export default function CompradorModal({ comprador, onClose, onGuardado }) {
                                 value={form.pais}
                                 onChange={handleChange}
                                 required
-                                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm outline-none focus:border-[#0F6E56]"
+                                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm outline-none focus:border-[#0F6E56] focus:ring-2 focus:ring-[#0F6E56] focus:ring-opacity-20 focus:ring-2 focus:ring-[#0F6E56] focus:ring-opacity-20 focus:ring-2 focus:ring-[#0F6E56] focus:ring-opacity-20 focus:ring-2 focus:ring-[#0F6E56] focus:ring-opacity-20"
                             />
                         </div>
                     </div>
@@ -114,7 +114,7 @@ export default function CompradorModal({ comprador, onClose, onGuardado }) {
                                 name="ciudad"
                                 value={form.ciudad}
                                 onChange={handleChange}
-                                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm outline-none focus:border-[#0F6E56]"
+                                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm outline-none focus:border-[#0F6E56] focus:ring-2 focus:ring-[#0F6E56] focus:ring-opacity-20 focus:ring-2 focus:ring-[#0F6E56] focus:ring-opacity-20 focus:ring-2 focus:ring-[#0F6E56] focus:ring-opacity-20"
                             />
                         </div>
                         <div>
@@ -123,7 +123,7 @@ export default function CompradorModal({ comprador, onClose, onGuardado }) {
                                 name="tipo"
                                 value={form.tipo}
                                 onChange={handleChange}
-                                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm outline-none focus:border-[#0F6E56]"
+                                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm outline-none focus:border-[#0F6E56] focus:ring-2 focus:ring-[#0F6E56] focus:ring-opacity-20 focus:ring-2 focus:ring-[#0F6E56] focus:ring-opacity-20 focus:ring-2 focus:ring-[#0F6E56] focus:ring-opacity-20"
                             >
                                 <option value="spot">Spot</option>
                                 <option value="contractual">Contractual</option>
@@ -139,7 +139,7 @@ export default function CompradorModal({ comprador, onClose, onGuardado }) {
                                 name="contacto_nombre"
                                 value={form.contacto_nombre}
                                 onChange={handleChange}
-                                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm outline-none focus:border-[#0F6E56]"
+                                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm outline-none focus:border-[#0F6E56] focus:ring-2 focus:ring-[#0F6E56] focus:ring-opacity-20 focus:ring-2 focus:ring-[#0F6E56] focus:ring-opacity-20 focus:ring-2 focus:ring-[#0F6E56] focus:ring-opacity-20"
                             />
                         </div>
                         <div>
@@ -149,7 +149,7 @@ export default function CompradorModal({ comprador, onClose, onGuardado }) {
                                 value={form.contacto_email}
                                 onChange={handleChange}
                                 type="email"
-                                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm outline-none focus:border-[#0F6E56]"
+                                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm outline-none focus:border-[#0F6E56] focus:ring-2 focus:ring-[#0F6E56] focus:ring-opacity-20 focus:ring-2 focus:ring-[#0F6E56] focus:ring-opacity-20 focus:ring-2 focus:ring-[#0F6E56] focus:ring-opacity-20"
                             />
                         </div>
                         <div>
@@ -158,7 +158,7 @@ export default function CompradorModal({ comprador, onClose, onGuardado }) {
                                 name="contacto_telefono"
                                 value={form.contacto_telefono}
                                 onChange={handleChange}
-                                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm outline-none focus:border-[#0F6E56]"
+                                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm outline-none focus:border-[#0F6E56] focus:ring-2 focus:ring-[#0F6E56] focus:ring-opacity-20 focus:ring-2 focus:ring-[#0F6E56] focus:ring-opacity-20 focus:ring-2 focus:ring-[#0F6E56] focus:ring-opacity-20"
                             />
                         </div>
                     </div>
@@ -171,7 +171,7 @@ export default function CompradorModal({ comprador, onClose, onGuardado }) {
                                 name="moneda"
                                 value={form.moneda}
                                 onChange={handleChange}
-                                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm outline-none focus:border-[#0F6E56]"
+                                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm outline-none focus:border-[#0F6E56] focus:ring-2 focus:ring-[#0F6E56] focus:ring-opacity-20 focus:ring-2 focus:ring-[#0F6E56] focus:ring-opacity-20 focus:ring-2 focus:ring-[#0F6E56] focus:ring-opacity-20"
                             >
                                 <option value="USD">USD</option>
                                 <option value="EUR">EUR</option>
@@ -185,7 +185,7 @@ export default function CompradorModal({ comprador, onClose, onGuardado }) {
                                 value={form.condicion_pago}
                                 onChange={handleChange}
                                 placeholder="Ej: 30 días"
-                                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm outline-none focus:border-[#0F6E56]"
+                                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm outline-none focus:border-[#0F6E56] focus:ring-2 focus:ring-[#0F6E56] focus:ring-opacity-20 focus:ring-2 focus:ring-[#0F6E56] focus:ring-opacity-20 focus:ring-2 focus:ring-[#0F6E56] focus:ring-opacity-20"
                             />
                         </div>
                     </div>
@@ -197,8 +197,8 @@ export default function CompradorModal({ comprador, onClose, onGuardado }) {
                             name="observaciones"
                             value={form.observaciones}
                             onChange={handleChange}
-                            rows={3}
-                            className="mt-1 w-full border rounded-lg px-3 py-2 text-sm outline-none focus:border-[#0F6E56]"
+                            rows={1}
+                            className="mt-1 w-full border rounded-lg px-3 py-2 text-sm outline-none focus:border-[#0F6E56] focus:ring-2 focus:ring-[#0F6E56] focus:ring-opacity-20 focus:ring-2 focus:ring-[#0F6E56] focus:ring-opacity-20 focus:ring-2 focus:ring-[#0F6E56] focus:ring-opacity-20 focus:ring-2 focus:ring-[#0F6E56] focus:ring-opacity-20"
                         />
                     </div>
 
