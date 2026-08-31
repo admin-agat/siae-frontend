@@ -1,57 +1,57 @@
-// Página principal del módulo Compradores
+// Página principal del módulo Unidades de Medida
 import { useState, useEffect } from 'react';
-import { getCompradores, deleteComprador } from '../../api/compradores';
+import { getUnidadesMedida, deleteUnidadMedida } from '../../api/unidadesMedida';
 import { Plus, Pencil, Trash2, Search } from 'lucide-react';
-import CompradorModal from '../../components/CompradorModal';
+import UnidadMedidaModal from '../../components/UnidadMedidaModal';
 
-export default function CompradoresPage() {
-    const [compradores, setCompradores] = useState([]);
+export default function UnidadesMedidaPage() {
+    const [unidades, setUnidades] = useState([]);
     const [loading, setLoading] = useState(true);
     const [busqueda, setBusqueda] = useState('');
     const [showModal, setShowModal] = useState(false);
-    const [compradorEdit, setCompradorEdit] = useState(null);
+    const [unidadEdit, setUnidadEdit] = useState(null);
 
-    // Cargar compradores al montar el componente
+    // Cargar unidades al montar el componente
     useEffect(() => {
-        cargarCompradores();
+        cargarUnidades();
     }, []);
 
-    const cargarCompradores = async () => {
+    const cargarUnidades = async () => {
         try {
             setLoading(true);
-            const res = await getCompradores();
-            setCompradores(res.data);
+            const res = await getUnidadesMedida();
+            setUnidades(res.data);
         } catch (error) {
-            console.error('Error cargando compradores:', error);
+            console.error('Error cargando unidades de medida:', error);
         } finally {
             setLoading(false);
         }
     };
 
     const handleEliminar = async (id) => {
-        if (!confirm('¿Estás seguro de cambiar de estado comprador?')) return;
+        if (!confirm('¿Estás seguro de cambiar de estado la unidad de medida?')) return;
         try {
-            await deleteComprador(id);
-            cargarCompradores(); // Recargar lista
+            await deleteUnidadMedida(id);
+            cargarUnidades(); // Recargar lista
         } catch (error) {
-            console.error('Error eliminando comprador:', error);
+            console.error('Error eliminando unidad de medida:', error);
         }
     };
 
-    const handleEditar = (comprador) => {
-        setCompradorEdit(comprador);
+    const handleEditar = (unidad) => {
+        setUnidadEdit(unidad);
         setShowModal(true);
     };
 
     const handleNuevo = () => {
-        setCompradorEdit(null);
+        setUnidadEdit(null);
         setShowModal(true);
     };
 
     // Filtrar por búsqueda
-    const compradoresFiltrados = compradores.filter(c =>
-        c.razon_social.toLowerCase().includes(busqueda.toLowerCase()) ||
-        c.pais.toLowerCase().includes(busqueda.toLowerCase())
+    const unidadesFiltradas = unidades.filter(u =>
+        u.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
+        u.codigo.toLowerCase().includes(busqueda.toLowerCase())
     );
 
     return (
@@ -59,15 +59,15 @@ export default function CompradoresPage() {
             {/* Encabezado */}
             <div className="flex justify-between items-center mb-6">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-800">Compradores</h1>
-                    <p className="text-gray-500 text-sm">Gestión de compradores internacionales</p>
+                    <h1 className="text-2xl font-bold text-gray-800">Unidades de Medida</h1>
+                    <p className="text-gray-500 text-sm">Catálogo de unidades de medida para insumos</p>
                 </div>
                 <button
                     onClick={handleNuevo}
                     className="flex items-center gap-2 bg-[#0F6E56] text-white px-4 py-2 rounded-lg hover:bg-[#0a5a45] transition"
                 >
                     <Plus size={18} />
-                    Nuevo comprador
+                    Nueva unidad
                 </button>
             </div>
 
@@ -76,7 +76,7 @@ export default function CompradoresPage() {
                 <Search size={18} className="text-gray-400" />
                 <input
                     type="text"
-                    placeholder="Buscar por nombre o país..."
+                    placeholder="Buscar por código o nombre..."
                     className="outline-none w-full text-sm"
                     value={busqueda}
                     onChange={(e) => setBusqueda(e.target.value)}
@@ -88,10 +88,8 @@ export default function CompradoresPage() {
                 <table className="w-full text-sm">
                     <thead className="bg-[#0F6E56] text-white">
                         <tr>
-                            <th className="text-left px-4 py-3">Razón Social</th>
-                            <th className="text-left px-4 py-3">País</th>
-                            <th className="text-left px-4 py-3">Contacto</th>
-                            <th className="text-left px-4 py-3">Moneda</th>
+                            <th className="text-left px-4 py-3">Código</th>
+                            <th className="text-left px-4 py-3">Nombre</th>
                             <th className="text-left px-4 py-3">Estado</th>
                             <th className="text-left px-4 py-3">Acciones</th>
                         </tr>
@@ -99,41 +97,39 @@ export default function CompradoresPage() {
                     <tbody>
                         {loading ? (
                             <tr>
-                                <td colSpan="7" className="text-center py-8 text-gray-400">
-                                    Cargando compradores...
+                                <td colSpan="4" className="text-center py-8 text-gray-400">
+                                    Cargando unidades de medida...
                                 </td>
                             </tr>
-                        ) : compradoresFiltrados.length === 0 ? (
+                        ) : unidadesFiltradas.length === 0 ? (
                             <tr>
-                                <td colSpan="7" className="text-center py-8 text-gray-400">
-                                    No hay compradores registrados
+                                <td colSpan="4" className="text-center py-8 text-gray-400">
+                                    No hay unidades de medida registradas
                                 </td>
                             </tr>
                         ) : (
-                            compradoresFiltrados.map((c, i) => (
-                                <tr key={c.id} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                                    <td className="px-4 py-3 font-medium">{c.razon_social}</td>
-                                    <td className="px-4 py-3">{c.pais}</td>
-                                  <td className="px-4 py-3">{c.contacto_nombre || '—'}</td>
-                                    <td className="px-4 py-3">{c.moneda}</td>
+                            unidadesFiltradas.map((u, i) => (
+                                <tr key={u.id} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                                    <td className="px-4 py-3 font-medium">{u.codigo}</td>
+                                    <td className="px-4 py-3">{u.nombre}</td>
                                     <td className="px-4 py-3">
                                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                            c.activo
+                                            u.activo
                                                 ? 'bg-green-100 text-green-700'
                                                 : 'bg-red-100 text-red-700'
                                         }`}>
-                                            {c.activo ? 'Activo' : 'Inactivo'}
+                                            {u.activo ? 'Activo' : 'Inactivo'}
                                         </span>
                                     </td>
                                     <td className="px-4 py-3 flex gap-2">
                                         <button
-                                            onClick={() => handleEditar(c)}
+                                            onClick={() => handleEditar(u)}
                                             className="text-blue-500 hover:text-blue-700"
                                         >
                                             <Pencil size={16} />
                                         </button>
                                         <button
-                                            onClick={() => handleEliminar(c.id)}
+                                            onClick={() => handleEliminar(u.id)}
                                             className="text-red-500 hover:text-red-700"
                                         >
                                             <Trash2 size={16} />
@@ -148,10 +144,10 @@ export default function CompradoresPage() {
 
             {/* Modal */}
             {showModal && (
-                <CompradorModal
-                    comprador={compradorEdit}
+                <UnidadMedidaModal
+                    unidadMedida={unidadEdit}
                     onClose={() => setShowModal(false)}
-                    onGuardado={cargarCompradores}
+                    onGuardado={cargarUnidades}
                 />
             )}
         </div>
