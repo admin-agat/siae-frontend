@@ -19,6 +19,18 @@ const lineaVacia = () => ({
     discount: '0',
 });
 
+// Calcula el número de semana ISO 8601 (lunes-domingo) para una fecha dada.
+// Esta es la "semana bananera" que usa AGAT — coincide con la semana ISO estándar.
+function getISOWeek(fecha) {
+    const d = new Date(Date.UTC(fecha.getFullYear(), fecha.getMonth(), fecha.getDate()));
+    const diaSemana = (d.getUTCDay() + 6) % 7; // lunes=0 ... domingo=6
+    d.setUTCDate(d.getUTCDate() - diaSemana + 3); // mover al jueves de esa semana
+    const primerJueves = new Date(Date.UTC(d.getUTCFullYear(), 0, 4));
+    const diaSemanaPrimerJueves = (primerJueves.getUTCDay() + 6) % 7;
+    primerJueves.setUTCDate(primerJueves.getUTCDate() - diaSemanaPrimerJueves + 3);
+    return 1 + Math.round((d - primerJueves) / (7 * 24 * 3600 * 1000));
+}
+
 export default function InventoryMovementFormPage() {
     const navigate = useNavigate();
 
@@ -58,6 +70,15 @@ export default function InventoryMovementFormPage() {
         cargarMotivos(tipo);
         setMovementReasonId('');
     }, [tipo]);
+
+    // Al cargar el formulario, fija la fecha a hoy y calcula semana/año automáticamente — no editable
+    useEffect(() => {
+        const hoy = new Date();
+        setFecha(hoy.toISOString().split('T')[0]); // formato YYYY-MM-DD
+        setWeek(getISOWeek(hoy));
+        setYear(hoy.getFullYear());
+    }, []);
+
 
     const cargarCatalogos = async () => {
         try {
@@ -108,7 +129,6 @@ export default function InventoryMovementFormPage() {
                     copia[index].unit_cost = insumo.cost || '';
                 }
             }
-
             return copia;
         });
     };
@@ -174,7 +194,7 @@ export default function InventoryMovementFormPage() {
     };
 
     return (
-        <div className="p-6 max-w-4xl">
+        <div className="max-w-full mx-auto p-6 space-y-6">
             <div className="mb-6">
                 <h1 className="text-2xl font-bold text-gray-800">Nuevo Movimiento de Inventario</h1>
                 <p className="text-gray-500 text-sm">Registrá un Ingreso o Egreso con sus insumos</p>
@@ -190,37 +210,61 @@ export default function InventoryMovementFormPage() {
 
                 {/* Cabecera */}
                 <div className="bg-white rounded-xl shadow p-6 space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+
+                   
+
+                    {/* Fila 0: Tipo, Motivo */}
+
+                    
+                    <div className="grid grid-cols-5 gap-4">
+                         <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Semana</label>
+                            {/* Calculada automáticamente (semana ISO) a partir de la fecha — solo lectura */}
+                            <input
+                                type="number"
+                                value={week}
+                                readOnly
+                                disabled
+                                className="w-full bg-gray-200 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-600 outline-none cursor-not-allowed"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Fecha *</label>
+                            {/* Editable — al cambiarla, recalcula la semana ISO automáticamente */}
+                            <input
+                                type="date"
+                                value={fecha}
+                                onChange={(e) => {
+                                    setFecha(e.target.value);
+                                    setWeek(getISOWeek(new Date(e.target.value + 'T00:00:00')));
+                                    setYear(new Date(e.target.value + 'T00:00:00').getFullYear());
+                                }}
+                                className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none"
+                            />
+                        </div>
+
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1.5">Tipo *</label>
                             <select
                                 value={tipo}
                                 onChange={(e) => setTipo(e.target.value)}
-                                className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#0F6E56]"
+                                className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none"
                             >
                                 <option value="INGRESO">INGRESO</option>
                                 <option value="EGRESO">EGRESO</option>
                             </select>
                         </div>
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Fecha *</label>
-                            <input
-                                type="date"
-                                value={fecha}
-                                onChange={(e) => setFecha(e.target.value)}
-                                className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#0F6E56]"
-                            />
-                        </div>
-                    </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
+
+                        {/*AQUI VA LA BODEGA */}
+                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1.5">Bodega *</label>
                             <select
                                 value={warehouseId}
                                 onChange={(e) => setWarehouseId(e.target.value)}
                                 required
-                                className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#0F6E56]"
+                                className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none"
                             >
                                 <option value="">Seleccionar bodega...</option>
                                 {bodegas.map((b) => (
@@ -228,13 +272,15 @@ export default function InventoryMovementFormPage() {
                                 ))}
                             </select>
                         </div>
+
+
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1.5">Motivo *</label>
                             <select
                                 value={movementReasonId}
                                 onChange={(e) => setMovementReasonId(e.target.value)}
                                 required
-                                className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#0F6E56]"
+                                className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none"
                             >
                                 <option value="">Seleccionar motivo...</option>
                                 {motivos.map((m) => (
@@ -242,78 +288,74 @@ export default function InventoryMovementFormPage() {
                                 ))}
                             </select>
                         </div>
+
+                        
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                            Tercero (Proveedor / Productor)
-                        </label>
-                        <select
-                            value={thirdPartyId}
-                            onChange={(e) => setThirdPartyId(e.target.value)}
-                            className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#0F6E56]"
-                        >
-                            <option value="">Sin tercero (movimiento interno)</option>
-                            {terceros.map((t) => (
-                                <option key={t.id} value={t.id}>{t.name} — {t.type}</option>
-                            ))}
-                        </select>
-                    </div>
+                    {/* Fila 1: Semana (solo visualiza), Fecha (editable), Orden de compra, Guía de remisión */}
+                    <div className="grid grid-cols-4 gap-4">
+                                                
 
-                    <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1.5">Orden de compra</label>
                             <input
                                 value={purchaseOrder}
                                 onChange={(e) => setPurchaseOrder(e.target.value.toUpperCase())}
                                 placeholder="Ej: OC-2026-045"
-                                className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#0F6E56]"
+                                className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none"
                             />
                         </div>
+
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1.5">Guía de remisión</label>
                             <input
                                 value={deliveryNote}
                                 onChange={(e) => setDeliveryNote(e.target.value.toUpperCase())}
                                 placeholder="Ej: 001-002-000123"
-                                className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#0F6E56]"
+                                className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none"
                             />
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Semana</label>
-                            <input
-                                type="number"
-                                min="1"
-                                max="53"
-                                value={week}
-                                onChange={(e) => setWeek(e.target.value)}
-                                className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#0F6E56]"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Año</label>
-                            <input
-                                type="number"
-                                value={year}
-                                onChange={(e) => setYear(e.target.value)}
-                                className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#0F6E56]"
-                            />
-                        </div>
-                    </div>
+                    {/* Fila 2: Bodega, Proveedor, Referencia */}
+                    <div className="grid grid-cols-3 gap-4">
+                       
 
-                    <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">Referencia / Observación</label>
-                        <input
-                            value={reference}
-                            onChange={(e) => setReference(e.target.value)}
-                            placeholder="Nota libre, opcional"
-                            className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#0F6E56]"
-                        />
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                                Tercero (Proveedor / Productor)
+                            </label>
+                            {/* Filtrado según el tipo: INGRESO solo muestra PROVEEDOR, EGRESO solo PRODUCTOR/COMERCIALIZADORA */}
+                            <select
+                                value={thirdPartyId}
+                                onChange={(e) => setThirdPartyId(e.target.value)}
+                                className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none"
+                            >
+                                <option value="">Sin tercero (movimiento interno)</option>
+                                {terceros
+                                    .filter((t) => {
+                                        if (tipo === 'INGRESO') return t.type === 'PROVEEDOR';
+                                        if (tipo === 'EGRESO') return ['PRODUCTOR', 'COMERCIALIZADORA'].includes(t.type);
+                                        return true;
+                                    })
+                                    .map((t) => (
+                                        <option key={t.id} value={t.id}>{t.name} — {t.type}</option>
+                                    ))}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Referencia / Observación</label>
+                            <input
+                                value={reference}
+                                onChange={(e) => setReference(e.target.value)}
+                                placeholder="Nota libre, opcional"
+                                className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none"
+                            />
+                        </div>
                     </div>
                 </div>
+
 
                 {/* Líneas de detalle */}
                 <div className="bg-white rounded-xl shadow overflow-hidden">
@@ -433,7 +475,7 @@ export default function InventoryMovementFormPage() {
                         {guardando ? 'Guardando...' : 'Guardar movimiento'}
                     </button>
                 </div>
-            </form>
-        </div>
+            </form >
+        </div >
     );
 }

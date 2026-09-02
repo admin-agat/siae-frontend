@@ -1,10 +1,13 @@
 import axios from './axios';
 
-// Lista todos los insumos activos, con búsqueda y filtro opcional por categoría
-export const getSupplies = (search = '', supplyCategoryId = null) => {
+// Lista todos los insumos activos, con búsqueda, filtro opcional por categoría
+// y filtro opcional por proveedor (solo los insumos que ese proveedor vende,
+// según la tabla pivote third_party_supplies)
+export const getSupplies = (search = '', supplyCategoryId = null, thirdPartyId = null) => {
   const params = {};
   if (search) params.search = search;
   if (supplyCategoryId) params.supply_category_id = supplyCategoryId;
+  if (thirdPartyId) params.third_party_id = thirdPartyId;
   return axios.get('/supplies', { params });
 };
 
