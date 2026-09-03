@@ -101,7 +101,7 @@ export default function FarmModal({ farm, onClose, onGuardado }) {
                             value={form.third_party_id}
                             onChange={handleChange}
                             required
-                            className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#0F6E56]"
+                            className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#3B5BDB]"
                         >
                             <option value="">Seleccionar productor...</option>
                             {productores.map(p => (
@@ -120,7 +120,7 @@ export default function FarmModal({ farm, onClose, onGuardado }) {
                             required
                             maxLength={255}
                             placeholder="Ej: NUEVA ESPERANZA"
-                            className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#0F6E56]"
+                            className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#3B5BDB]"
                         />
                     </div>
 
@@ -134,7 +134,7 @@ export default function FarmModal({ farm, onClose, onGuardado }) {
                                 onChange={handleChange}
                                 maxLength={50}
                                 placeholder="Ej: 09815"
-                                className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#0F6E56]"
+                                className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#3B5BDB]"
                             />
                         </div>
                         <div>
@@ -145,7 +145,7 @@ export default function FarmModal({ farm, onClose, onGuardado }) {
                                 onChange={handleChange}
                                 maxLength={100}
                                 placeholder="Ej: MACHALA"
-                                className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#0F6E56]"
+                                className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#3B5BDB]"
                             />
                         </div>
                     </div>
@@ -162,7 +162,7 @@ export default function FarmModal({ farm, onClose, onGuardado }) {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="px-5 py-2.5 text-sm font-semibold bg-[#0F6E56] text-white rounded-lg hover:bg-[#0a5a45] disabled:opacity-50"
+                            className="px-5 py-2.5 text-sm font-semibold bg-[#3B5BDB] text-white rounded-lg hover:bg-[#2F49B8] disabled:opacity-50"
                         >
                             {loading ? 'Guardando...' : farm ? 'Actualizar' : 'Guardar'}
                         </button>

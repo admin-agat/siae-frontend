@@ -85,7 +85,7 @@ export default function TercerosPage() {
                 </div>
                 <button
                     onClick={handleNuevo}
-                    className="flex items-center gap-2 bg-[#0F6E56] text-white px-4 py-2 rounded-lg hover:bg-[#0a5a45] transition"
+                    className="flex items-center gap-2 bg-[#3B5BDB] text-white px-4 py-2 rounded-lg hover:bg-[#2F49B8] transition"
                 >
                     <Plus size={18} />
                     Nuevo tercero
@@ -107,7 +107,7 @@ export default function TercerosPage() {
             {/* Tabla */}
             <div className="bg-white rounded-xl shadow overflow-hidden">
                 <table className="w-full text-sm">
-                    <thead className="bg-[#0F6E56] text-white">
+                    <thead className="bg-[#3B5BDB] text-white">
                         <tr>
                             <th className="text-left px-4 py-3">Nombre</th>
                             <th className="text-left px-4 py-3">Tipo</th>

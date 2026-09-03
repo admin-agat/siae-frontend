@@ -85,7 +85,7 @@ export default function PurchaseOrdersPage() {
                 </div>
                 <button
                     onClick={() => navigate('/ordenes-compra/nueva')}
-                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold bg-[#0F6E56] text-white rounded-lg hover:bg-[#0a5a45]"
+                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold bg-[#3B5BDB] text-white rounded-lg hover:bg-[#2F49B8]"
                 >
                     <Plus size={16} />
                     Nueva Orden de Compra
@@ -119,7 +119,7 @@ export default function PurchaseOrdersPage() {
 
             <div className="bg-white rounded-xl shadow overflow-hidden">
                 <table className="w-full text-sm">
-                    <thead className="bg-[#0F6E56] text-white">
+                    <thead className="bg-[#3B5BDB] text-white">
                         <tr>
                             <th className="text-left px-4 py-3">Código</th>
                             <th className="text-left px-4 py-3">Proveedor</th>
@@ -166,7 +166,7 @@ export default function PurchaseOrdersPage() {
                                     <td className="px-4 py-3 text-center">
                                         <button
                                             onClick={() => navigate(`/ordenes-compra/${orden.id}`)}
-                                            className="text-gray-500 hover:text-[#0F6E56]"
+                                            className="text-gray-500 hover:text-[#3B5BDB]"
                                             title="Ver detalle"
                                         >
                                             <Eye size={16} />

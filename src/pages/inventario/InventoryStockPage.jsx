@@ -46,7 +46,7 @@ export default function InventoryStockPage() {
                 </div>
                 <button
                     onClick={cargarStock}
-                    className="flex items-center gap-2 bg-[#0F6E56] text-white px-4 py-2 rounded-lg hover:bg-[#0a5a45] transition"
+                    className="flex items-center gap-2 bg-[#3B5BDB] text-white px-4 py-2 rounded-lg hover:bg-[#2F49B8] transition"
                 >
                     Actualizar
                 </button>
@@ -72,11 +72,11 @@ export default function InventoryStockPage() {
                     {Object.entries(porBodega).map(([bodega, filas]) => (
                         <div key={bodega} className="bg-white rounded-xl shadow overflow-hidden">
                             <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 border-b">
-                                <Warehouse size={16} className="text-[#0F6E56]" />
+                                <Warehouse size={16} className="text-[#3B5BDB]" />
                                 <h2 className="font-semibold text-gray-800">{bodega}</h2>
                             </div>
                             <table className="w-full text-sm">
-                                <thead className="bg-[#0F6E56] text-white">
+                                <thead className="bg-[#3B5BDB] text-white">
                                     <tr>
                                         <th className="text-left px-4 py-3">Insumo</th>
                                         <th className="text-right px-4 py-3">Existencia</th>

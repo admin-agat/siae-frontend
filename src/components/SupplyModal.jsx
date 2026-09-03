@@ -3,11 +3,15 @@ import { useState, useEffect } from 'react';
 import { createSupply, updateSupply } from '../api/supplies';
 import { getSupplies } from '../api/supplies';
 import { getSupplyCategories } from '../api/supplyCategories';
-import { X } from 'lucide-react';
+import { X, CheckCircle } from 'lucide-react';
+// Estándar centralizado de mensajes toast (crear/actualizar/desactivar/reactivar)
+import { getMensajeExito, getMensajeError } from '../utils/toastMessages';
 
 const UNIDADES = ['CAJAS', 'LIBRAS', 'ROLLOS', 'SACOS', 'UNIDAD'];
 
 export default function SupplyModal({ supply, onClose, onGuardado }) {
+    const esEdicion = Boolean(supply?.id);
+
     const [form, setForm] = useState({
         supply_category_id: '',
         code: '',
@@ -23,6 +27,8 @@ export default function SupplyModal({ supply, onClose, onGuardado }) {
     const [insumosExistentes, setInsumosExistentes] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    // Toast de éxito — mismo patrón visual y mismo helper que WarehouseModal
+    const [mostrarExito, setMostrarExito] = useState(false);
 
     useEffect(() => {
         cargarCategorias();
@@ -109,25 +115,42 @@ export default function SupplyModal({ supply, onClose, onGuardado }) {
         e.preventDefault();
         setLoading(true);
         setError('');
+        // 'crear' o 'actualizar', usado tanto para el toast de éxito como el de error
+        const accion = esEdicion ? 'actualizar' : 'crear';
         try {
-            if (supply) {
+            if (esEdicion) {
                 await updateSupply(supply.id, form);
             } else {
                 await createSupply(form);
             }
-            onGuardado();
-            onClose();
+            // Se muestra el toast de éxito y se espera un momento antes de
+            // cerrar, mismo comportamiento que WarehouseModal (antes este
+            // modal cerraba de inmediato sin ninguna confirmación visual)
+            setMostrarExito(true);
+            setTimeout(() => {
+                onGuardado();
+                onClose();
+            }, 1200);
         } catch (err) {
-            setError('Error al guardar. Verifica los datos.');
+            // Mensaje de error estandarizado (antes era un texto fijo genérico)
+            setError(getMensajeError('insumo', accion));
             console.error(err);
-        } finally {
             setLoading(false);
         }
     };
 
     return (
         <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto relative">
+
+                {/* Toast de éxito — texto generado por el helper estandarizado,
+                    distingue automáticamente "creado" vs "actualizado" */}
+                {mostrarExito && (
+                    <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-green-600 text-white text-sm font-semibold px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-2 z-10">
+                        <CheckCircle size={18} />
+                        {getMensajeExito('insumo', esEdicion ? 'actualizar' : 'crear')}
+                    </div>
+                )}
 
                 {/* Header */}
                 <div className="flex justify-between items-center px-7 py-5 border-b border-gray-100">
@@ -156,7 +179,7 @@ export default function SupplyModal({ supply, onClose, onGuardado }) {
                             value={form.supply_category_id}
                             onChange={handleChange}
                             required
-                            className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#0F6E56]"
+                            className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#3B5BDB]"
                         >
                             <option value="">Seleccionar categoría...</option>
                             {categorias.map(c => (
@@ -175,7 +198,7 @@ export default function SupplyModal({ supply, onClose, onGuardado }) {
                             required
                             maxLength={255}
                             placeholder="Ej: TAPA CARTÓN ESTÁNDAR"
-                            className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#0F6E56]"
+                            className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#3B5BDB]"
                         />
                     </div>
 
@@ -188,7 +211,7 @@ export default function SupplyModal({ supply, onClose, onGuardado }) {
                             onChange={handleChange}
                             rows={2}
                             placeholder="Detalle adicional del insumo (opcional)"
-                            className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#0F6E56] resize-none"
+                            className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#3B5BDB] resize-none"
                         />
                     </div>
 
@@ -208,7 +231,7 @@ export default function SupplyModal({ supply, onClose, onGuardado }) {
                                 required
                                 maxLength={255}
                                 placeholder="Ej: CART-TAPA-001"
-                                className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#0F6E56]"
+                                className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#3B5BDB]"
                             />
                         </div>
                         <div>
@@ -218,7 +241,7 @@ export default function SupplyModal({ supply, onClose, onGuardado }) {
                                 value={form.unit}
                                 onChange={handleChange}
                                 required
-                                className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#0F6E56]"
+                                className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#3B5BDB]"
                             >
                                 {UNIDADES.map(u => (
                                     <option key={u} value={u}>{u}</option>
@@ -238,7 +261,7 @@ export default function SupplyModal({ supply, onClose, onGuardado }) {
                             value={form.cost}
                             onChange={handleChange}
                             placeholder="0.00"
-                            className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#0F6E56]"
+                            className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#3B5BDB]"
                         />
                     </div>
 
@@ -254,7 +277,7 @@ export default function SupplyModal({ supply, onClose, onGuardado }) {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="px-5 py-2.5 text-sm font-semibold bg-[#0F6E56] text-white rounded-lg hover:bg-[#0a5a45] disabled:opacity-50"
+                            className="px-5 py-2.5 text-sm font-semibold bg-[#3B5BDB] text-white rounded-lg hover:bg-[#2F49B8] disabled:opacity-50"
                         >
                             {loading ? 'Guardando...' : supply ? 'Actualizar' : 'Guardar'}
                         </button>

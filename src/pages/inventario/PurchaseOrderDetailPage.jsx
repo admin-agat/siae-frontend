@@ -63,7 +63,7 @@ export default function PurchaseOrderDetailPage() {
                 </div>
                 <button
                     onClick={() => navigate('/ordenes-compra')}
-                    className="text-sm font-semibold text-[#0F6E56] hover:text-[#0a5a45]"
+                    className="text-sm font-semibold text-[#3B5BDB] hover:text-[#2F49B8]"
                 >
                     ← Volver al listado
                 </button>
@@ -77,7 +77,7 @@ export default function PurchaseOrderDetailPage() {
             <div className="flex items-center gap-3 mb-2">
                 <button
                     onClick={() => navigate('/ordenes-compra')}
-                    className="text-gray-500 hover:text-[#0F6E56]"
+                    className="text-gray-500 hover:text-[#3B5BDB]"
                     title="Volver al listado"
                 >
                     <ArrowLeft size={20} />
@@ -135,7 +135,7 @@ export default function PurchaseOrderDetailPage() {
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
-                        <thead className="bg-[#0F6E56] text-white">
+                        <thead className="bg-[#3B5BDB] text-white">
                             <tr>
                                 <th className="text-left px-2 py-2">Insumo</th>
                                 <th className="text-right px-2 py-2 w-24">Pedido</th>
@@ -204,7 +204,7 @@ export default function PurchaseOrderDetailPage() {
                             <span>Retención IR</span>
                             <span>-${parseFloat(orden.retencion_total).toFixed(2)}</span>
                         </div>
-                        <div className="flex justify-between font-bold text-[#0F6E56] text-base pt-2 border-t">
+                        <div className="flex justify-between font-bold text-[#3B5BDB] text-base pt-2 border-t">
                             <span>Total</span>
                             <span>${parseFloat(orden.total).toFixed(2)}</span>
                         </div>

@@ -85,7 +85,7 @@ export default function ThirdPartyModal({ thirdParty, onClose, onGuardado }) {
                                 required
                                 maxLength={255}
                                 placeholder="Ej: Hacienda La Esperanza"
-                                className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#0F6E56]"
+                                className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#3B5BDB]"
                             />
                         </div>
                         <div>
@@ -95,7 +95,7 @@ export default function ThirdPartyModal({ thirdParty, onClose, onGuardado }) {
                                 value={form.type}
                                 onChange={handleChange}
                                 required
-                                className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#0F6E56]"
+                                className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#3B5BDB]"
                             >
                                 <option value="PRODUCTOR">Productor</option>
                                 <option value="COMERCIALIZADORA">Comercializadora</option>
@@ -115,7 +115,7 @@ export default function ThirdPartyModal({ thirdParty, onClose, onGuardado }) {
                                 onChange={handleChange}
                                 maxLength={50}
                                 placeholder="Ej: 0912345678001"
-                                className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#0F6E56]"
+                                className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#3B5BDB]"
                             />
                         </div>
                         <div>
@@ -126,7 +126,7 @@ export default function ThirdPartyModal({ thirdParty, onClose, onGuardado }) {
                                 onChange={handleChange}
                                 maxLength={100}
                                 placeholder="Ej: Machala"
-                                className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#0F6E56]"
+                                className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#3B5BDB]"
                             />
                         </div>
                     </div>
@@ -141,7 +141,7 @@ export default function ThirdPartyModal({ thirdParty, onClose, onGuardado }) {
                                 onChange={handleChange}
                                 maxLength={30}
                                 placeholder="Ej: 0991234567"
-                                className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#0F6E56]"
+                                className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#3B5BDB]"
                             />
                         </div>
                         <div>
@@ -153,7 +153,7 @@ export default function ThirdPartyModal({ thirdParty, onClose, onGuardado }) {
                                 onChange={handleChange}
                                 maxLength={255}
                                 placeholder="Ej: contacto@ejemplo.com"
-                                className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#0F6E56]"
+                                className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#3B5BDB]"
                             />
                         </div>
                     </div>
@@ -166,7 +166,7 @@ export default function ThirdPartyModal({ thirdParty, onClose, onGuardado }) {
                             checked={form.status}
                             onChange={handleChange}
                             id="status"
-                            className="w-4 h-4 accent-[#0F6E56]"
+                            className="w-4 h-4 accent-[#3B5BDB]"
                         />
                         <label htmlFor="status" className="text-sm text-gray-700">Tercero activo</label>
                     </div>
@@ -183,7 +183,7 @@ export default function ThirdPartyModal({ thirdParty, onClose, onGuardado }) {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="px-5 py-2.5 text-sm font-semibold bg-[#0F6E56] text-white rounded-lg hover:bg-[#0a5a45] disabled:opacity-50"
+                            className="px-5 py-2.5 text-sm font-semibold bg-[#3B5BDB] text-white rounded-lg hover:bg-[#2F49B8] disabled:opacity-50"
                         >
                             {loading ? 'Guardando...' : thirdParty ? 'Actualizar' : 'Guardar'}
                         </button>

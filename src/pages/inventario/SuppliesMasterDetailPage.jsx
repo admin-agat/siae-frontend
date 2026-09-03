@@ -3,11 +3,13 @@
 // categoría seleccionada a la derecha. Reemplaza la navegación entre
 // SupplyCategoriesPage y SuppliesPage por una sola pantalla.
 import { useState, useEffect } from 'react';
-import { Plus, Pencil, Ban, Search, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Pencil, Ban, Search, RotateCcw, ChevronLeft, ChevronRight, AlertTriangle, CheckCircle } from 'lucide-react';
 import { getSupplyCategories, deactivateSupplyCategory, reactivateSupplyCategory } from '../../api/supplyCategories';
 import { getSupplies, deactivateSupply, reactivateSupply } from '../../api/supplies';
 import SupplyCategoryModal from '../../components/SupplyCategoryModal';
 import SupplyModal from '../../components/SupplyModal';
+// Estándar centralizado de mensajes toast (crear/actualizar/desactivar/reactivar)
+import { getMensajeExito, getMensajeError } from '../../utils/toastMessages';
 
 // Cantidad de filas por página, tanto en Categorías como en Insumos.
 const POR_PAGINA = 9;
@@ -31,6 +33,18 @@ export default function SuppliesMasterDetailPage() {
     const [paginaInsumo, setPaginaInsumo] = useState(1);
     const [showInsumoModal, setShowInsumoModal] = useState(false);
     const [insumoEdit, setInsumoEdit] = useState(null);
+    // Fila de insumo resaltada al hacer click (mismo patrón visual que WarehousesPage)
+    const [filaSeleccionada, setFilaSeleccionada] = useState(null);
+
+    // Modal de confirmación propio, reemplaza el confirm() nativo del navegador
+    // (mismo motivo que en WarehousesPage: Chrome lo bloquea tras varios usos
+    // seguidos y el botón parece no hacer nada).
+    // confirmacion = null (cerrado) o { tipo: 'categoria'|'insumo', item, accion: 'desactivar'|'reactivar' }
+    const [confirmacion, setConfirmacion] = useState(null);
+
+    // Toast de éxito/error, mismo formato visual y mismo helper que en Bodegas
+    // toast = null (oculto) o { tipo: 'exito'|'error', mensaje: string }
+    const [toast, setToast] = useState(null);
 
     useEffect(() => {
         cargarCategorias();
@@ -47,6 +61,13 @@ export default function SuppliesMasterDetailPage() {
     useEffect(() => {
         setPaginaInsumo(1);
     }, [busquedaInsumo, filtroEstadoInsumo, categoriaSeleccionada]);
+
+    // Oculta el toast automáticamente después de un momento
+    useEffect(() => {
+        if (!toast) return;
+        const timer = setTimeout(() => setToast(null), 2500);
+        return () => clearTimeout(timer);
+    }, [toast]);
 
     const cargarCategorias = async () => {
         try {
@@ -82,47 +103,35 @@ export default function SuppliesMasterDetailPage() {
         }
     };
 
-    // --- Acciones de Categoría ---
+    // --- Confirmación + acciones de Desactivar/Reactivar (unificado para
+    // categoría e insumo, igual que el patrón de WarehousesPage) ---
 
-    const handleDesactivarCategoria = async (id) => {
-        if (!confirm('¿Estás seguro de desactivar esta categoría?')) return;
-        try {
-            await deactivateSupplyCategory(id);
-            cargarCategorias();
-        } catch (error) {
-            console.error('Error desactivando categoría:', error);
-        }
+    const pedirConfirmacion = (tipo, item, accion) => {
+        setConfirmacion({ tipo, item, accion });
     };
 
-    const handleReactivarCategoria = async (id) => {
-        if (!confirm('¿Deseas reactivar esta categoría de insumo?')) return;
-        try {
-            await reactivateSupplyCategory(id);
-            cargarCategorias();
-        } catch (error) {
-            console.error('Error reactivando categoría:', error);
-        }
-    };
+    const ejecutarConfirmacion = async () => {
+        if (!confirmacion) return;
+        const { tipo, item, accion } = confirmacion;
 
-    // --- Acciones de Insumo ---
-
-    const handleDesactivarInsumo = async (id) => {
-        if (!confirm('¿Estás seguro de desactivar este insumo?')) return;
         try {
-            await deactivateSupply(id);
-            cargarInsumos();
+            if (tipo === 'categoria') {
+                accion === 'desactivar'
+                    ? await deactivateSupplyCategory(item.id)
+                    : await reactivateSupplyCategory(item.id);
+                cargarCategorias();
+            } else {
+                accion === 'desactivar'
+                    ? await deactivateSupply(item.id)
+                    : await reactivateSupply(item.id);
+                cargarInsumos();
+            }
+            setToast({ tipo: 'exito', mensaje: getMensajeExito(tipo, accion) });
         } catch (error) {
-            console.error('Error desactivando insumo:', error);
-        }
-    };
-
-    const handleReactivarInsumo = async (id) => {
-        if (!confirm('¿Deseas reactivar este insumo?')) return;
-        try {
-            await reactivateSupply(id);
-            cargarInsumos();
-        } catch (error) {
-            console.error('Error reactivando insumo:', error);
+            console.error(`Error al ${accion} ${tipo}:`, error);
+            setToast({ tipo: 'error', mensaje: getMensajeError(tipo, accion) });
+        } finally {
+            setConfirmacion(null);
         }
     };
 
@@ -175,6 +184,16 @@ export default function SuppliesMasterDetailPage() {
 
     return (
         <div className="p-6">
+            {/* Toast de éxito/error — mismo formato visual y helper que WarehousesPage */}
+            {toast && (
+                <div className={`fixed top-6 left-1/2 -translate-x-1/2 text-white text-sm font-semibold px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-2 z-[70] ${
+                    toast.tipo === 'exito' ? 'bg-green-600' : 'bg-red-600'
+                }`}>
+                    {toast.tipo === 'exito' ? <CheckCircle size={18} /> : <AlertTriangle size={18} />}
+                    {toast.mensaje}
+                </div>
+            )}
+
             <div className="mb-6">
                 <h1 className="text-2xl font-bold text-gray-800">Insumos por Categoría</h1>
                 <p className="text-gray-500 text-sm">Seleccioná una categoría para ver y gestionar sus insumos</p>
@@ -192,7 +211,7 @@ export default function SuppliesMasterDetailPage() {
                         </div>
                         <button
                             onClick={() => { setCategoriaEdit(null); setShowCategoriaModal(true); }}
-                            className="flex items-center gap-1 text-sm font-semibold text-[#0F6E56] hover:text-[#0a5a45]"
+                            className="flex items-center gap-1 text-sm font-semibold text-[#3B5BDB] hover:text-[#2F49B8]"
                         >
                             <Plus size={16} />
                             Nueva
@@ -239,7 +258,7 @@ export default function SuppliesMasterDetailPage() {
                                     onClick={() => setCategoriaSeleccionada(c)}
                                     className={`flex items-center justify-between px-4 py-3 border-b last:border-0 cursor-pointer transition ${
                                         categoriaSeleccionada?.id === c.id
-                                            ? 'bg-green-50 border-l-4 border-l-[#0F6E56]'
+                                            ? 'bg-green-50 border-l-4 border-l-[#3B5BDB]'
                                             : 'hover:bg-slate-50'
                                     }`}
                                 >
@@ -261,7 +280,7 @@ export default function SuppliesMasterDetailPage() {
                                         </button>
                                         {c.status ? (
                                             <button
-                                                onClick={(e) => { e.stopPropagation(); handleDesactivarCategoria(c.id); }}
+                                                onClick={(e) => { e.stopPropagation(); pedirConfirmacion('categoria', c, 'desactivar'); }}
                                                 className="text-gray-400 hover:text-red-600"
                                                 title="Desactivar categoría"
                                             >
@@ -269,7 +288,7 @@ export default function SuppliesMasterDetailPage() {
                                             </button>
                                         ) : (
                                             <button
-                                                onClick={(e) => { e.stopPropagation(); handleReactivarCategoria(c.id); }}
+                                                onClick={(e) => { e.stopPropagation(); pedirConfirmacion('categoria', c, 'reactivar'); }}
                                                 className="text-green-600 hover:text-green-800"
                                                 title="Reactivar categoría"
                                             >
@@ -310,10 +329,10 @@ export default function SuppliesMasterDetailPage() {
 
                 {/* Columna derecha: Insumos — tarjeta con acento verde
                     institucional, panel de TRABAJO principal */}
-                <div className="col-span-2 bg-[#0F6E56]/[0.03] border border-[#0F6E56]/20 rounded-2xl p-4">
+                <div className="col-span-2 bg-[#3B5BDB]/[0.03] border border-[#3B5BDB]/20 rounded-2xl p-4">
                     <div className="flex justify-between items-center mb-3">
                         <div className="flex items-center gap-2">
-                            <div className="w-1.5 h-5 bg-[#0F6E56] rounded-full" />
+                            <div className="w-1.5 h-5 bg-[#3B5BDB] rounded-full" />
                             <h2 className="font-semibold text-gray-800">
                                 {categoriaSeleccionada
                                     ? `Insumos de ${categoriaSeleccionada.name}`
@@ -323,7 +342,7 @@ export default function SuppliesMasterDetailPage() {
                         <button
                             onClick={handleNuevoInsumo}
                             disabled={!categoriaSeleccionada}
-                            className="flex items-center gap-2 bg-[#0F6E56] text-white px-4 py-2 rounded-lg hover:bg-[#0a5a45] transition disabled:opacity-40"
+                            className="flex items-center gap-2 bg-[#3B5BDB] text-white px-4 py-2 rounded-lg hover:bg-[#2F49B8] transition disabled:opacity-40"
                         >
                             <Plus size={18} />
                             Nuevo insumo
@@ -331,7 +350,7 @@ export default function SuppliesMasterDetailPage() {
                     </div>
 
                     <div className="flex items-center gap-3 mb-3 flex-nowrap">
-                        <div className="flex items-center gap-2 bg-white border border-[#0F6E56]/20 rounded-lg px-3 py-2 flex-1 min-w-0">
+                        <div className="flex items-center gap-2 bg-white border border-[#3B5BDB]/20 rounded-lg px-3 py-2 flex-1 min-w-0">
                             <Search size={16} className="text-gray-400 shrink-0" />
                             <input
                                 type="text"
@@ -343,14 +362,14 @@ export default function SuppliesMasterDetailPage() {
                         </div>
 
                         {/* Filtro de estado: Activos / Inactivos / Todos */}
-                        <div className="flex gap-1 bg-[#0F6E56]/10 rounded-lg p-1 shrink-0">
+                        <div className="flex gap-1 bg-[#3B5BDB]/10 rounded-lg p-1 shrink-0">
                             {['ACTIVOS', 'INACTIVOS', 'TODOS'].map((opcion) => (
                                 <button
                                     key={opcion}
                                     onClick={() => setFiltroEstadoInsumo(opcion)}
                                     className={`text-xs font-semibold px-3 py-1.5 rounded-md transition whitespace-nowrap ${
                                         filtroEstadoInsumo === opcion
-                                            ? 'bg-white text-[#0F6E56] shadow-sm'
+                                            ? 'bg-white text-[#3B5BDB] shadow-sm'
                                             : 'text-gray-500 hover:text-gray-700'
                                     }`}
                                 >
@@ -360,9 +379,9 @@ export default function SuppliesMasterDetailPage() {
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-xl border border-[#0F6E56]/15 shadow-sm overflow-hidden">
+                    <div className="bg-white rounded-xl border border-[#3B5BDB]/15 shadow-sm overflow-hidden">
                         <table className="w-full text-sm">
-                            <thead className="bg-[#0F6E56] text-white">
+                            <thead className="bg-[#3B5BDB] text-white">
                                 <tr>
                                     <th className="text-left px-4 py-3">Código</th>
                                     <th className="text-left px-4 py-3">Insumo</th>
@@ -393,7 +412,15 @@ export default function SuppliesMasterDetailPage() {
                                     </tr>
                                 ) : (
                                     insumosPagina.map((i, idx) => (
-                                        <tr key={i.id} className={idx % 2 === 0 ? 'bg-slate-50/60' : 'bg-white'}>
+                                        <tr
+                                            key={i.id}
+                                            onClick={() => setFilaSeleccionada(i.id)}
+                                            className={`cursor-pointer transition ${
+                                                filaSeleccionada === i.id
+                                                    ? 'bg-blue-50'
+                                                    : idx % 2 === 0 ? 'bg-slate-50/60' : 'bg-white'
+                                            } hover:bg-blue-50/60`}
+                                        >
                                             <td className="px-4 py-3 text-gray-600">{i.code}</td>
                                             <td className="px-4 py-3 font-medium">{i.name}</td>
                                             <td className="px-4 py-3">{i.unit}</td>
@@ -405,14 +432,14 @@ export default function SuppliesMasterDetailPage() {
                                                     {i.status ? 'Activo' : 'Inactivo'}
                                                 </span>
                                             </td>
-                                            <td className="px-4 py-3 flex gap-2">
+                                            <td className="px-4 py-3 flex gap-2" onClick={(e) => e.stopPropagation()}>
                                                 {i.status ? (
                                                     <>
                                                         <button onClick={() => { setInsumoEdit(i); setShowInsumoModal(true); }} className="text-blue-500 hover:text-blue-700">
                                                             <Pencil size={16} />
                                                         </button>
                                                         <button
-                                                            onClick={() => handleDesactivarInsumo(i.id)}
+                                                            onClick={() => pedirConfirmacion('insumo', i, 'desactivar')}
                                                             className="text-gray-400 hover:text-red-600"
                                                             title="Desactivar insumo"
                                                         >
@@ -421,7 +448,7 @@ export default function SuppliesMasterDetailPage() {
                                                     </>
                                                 ) : (
                                                     <button
-                                                        onClick={() => handleReactivarInsumo(i.id)}
+                                                        onClick={() => pedirConfirmacion('insumo', i, 'reactivar')}
                                                         className="text-green-600 hover:text-green-800"
                                                         title="Reactivar insumo"
                                                     >
@@ -437,11 +464,11 @@ export default function SuppliesMasterDetailPage() {
 
                         {/* Paginación de Insumos */}
                         {categoriaSeleccionada && !loadingInsumos && insumosFiltrados.length > POR_PAGINA && (
-                            <div className="flex items-center justify-between px-4 py-3 border-t border-[#0F6E56]/10 text-sm">
+                            <div className="flex items-center justify-between px-4 py-3 border-t border-[#3B5BDB]/10 text-sm">
                                 <button
                                     onClick={() => setPaginaInsumo(p => Math.max(1, p - 1))}
                                     disabled={paginaInsumo === 1}
-                                    className="flex items-center gap-1 text-gray-600 hover:text-[#0F6E56] disabled:opacity-30 disabled:hover:text-gray-600"
+                                    className="flex items-center gap-1 text-gray-600 hover:text-[#3B5BDB] disabled:opacity-30 disabled:hover:text-gray-600"
                                 >
                                     <ChevronLeft size={16} />
                                     Anterior
@@ -452,7 +479,7 @@ export default function SuppliesMasterDetailPage() {
                                 <button
                                     onClick={() => setPaginaInsumo(p => Math.min(totalPaginasInsumo, p + 1))}
                                     disabled={paginaInsumo === totalPaginasInsumo}
-                                    className="flex items-center gap-1 text-gray-600 hover:text-[#0F6E56] disabled:opacity-30 disabled:hover:text-gray-600"
+                                    className="flex items-center gap-1 text-gray-600 hover:text-[#3B5BDB] disabled:opacity-30 disabled:hover:text-gray-600"
                                 >
                                     Siguiente
                                     <ChevronRight size={16} />
@@ -477,6 +504,53 @@ export default function SuppliesMasterDetailPage() {
                     onClose={() => { setShowInsumoModal(false); setInsumoEdit(null); }}
                     onGuardado={cargarInsumos}
                 />
+            )}
+
+            {/* Modal de confirmación propio — reemplaza confirm() nativo,
+                sirve tanto para categorías como para insumos */}
+            {confirmacion && (
+                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+                        <div className="flex items-start gap-3 mb-4">
+                            <div className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
+                                confirmacion.accion === 'desactivar' ? 'bg-red-100' : 'bg-green-100'
+                            }`}>
+                                <AlertTriangle
+                                    size={20}
+                                    className={confirmacion.accion === 'desactivar' ? 'text-red-600' : 'text-green-600'}
+                                />
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-gray-800">
+                                    {confirmacion.accion === 'desactivar'
+                                        ? `Desactivar ${confirmacion.tipo === 'categoria' ? 'categoría' : 'insumo'}`
+                                        : `Reactivar ${confirmacion.tipo === 'categoria' ? 'categoría' : 'insumo'}`}
+                                </h3>
+                                <p className="text-sm text-gray-500 mt-1">
+                                    ¿Estás seguro de {confirmacion.accion} <strong>{confirmacion.item.name}</strong>?
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => setConfirmacion(null)}
+                                className="px-4 py-2 text-sm font-semibold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={ejecutarConfirmacion}
+                                className={`px-4 py-2 text-sm font-semibold text-white rounded-lg ${
+                                    confirmacion.accion === 'desactivar'
+                                        ? 'bg-red-600 hover:bg-red-700'
+                                        : 'bg-green-600 hover:bg-green-700'
+                                }`}
+                            >
+                                Aceptar
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

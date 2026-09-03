@@ -13,7 +13,7 @@ export default function Layout() {
       <div className="flex-1 flex flex-col">
 
         {/* Navbar superior */}
-        <header className="px-6 py-4 flex items-center justify-between shadow-sm" style={{ backgroundColor: "#0F6E56" }}>
+        <header className="px-6 py-4 flex items-center justify-between shadow-sm" style={{ backgroundColor: "#3B5BDB" }}>
           <span className="text-white font-semibold text-sm">Sistema Integral AGAT-ECUAGREEN</span>
           <span className="text-white text-sm opacity-80">v1.0</span>
         </header>

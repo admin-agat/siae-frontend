@@ -27,12 +27,12 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#0F6E56" }}>
+        <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#3B5BDB" }}>
             <div className="bg-white rounded-2xl shadow-2xl p-10 w-full max-w-md">
 
                 {/* Ícono */}
                 <div className="flex justify-center mb-4">
-                    <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ backgroundColor: "#0F6E56" }}>
+                    <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ backgroundColor: "#3B5BDB" }}>
                         <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3C7 3 3 7.5 3 12c0 4 2.5 7.5 6 9 .5-2 1-4 3-6-2 1-4 1-5 0 1-3 4-5 7-5s6 2 7 5c-1 1-3 1-5 0 2 2 2.5 4 3 6 3.5-1.5 6-5 6-9 0-4.5-4-9-9-9z" />
                         </svg>
@@ -48,11 +48,14 @@ export default function LoginPage() {
                 {/* Formulario */}
                 <div className="space-y-4">
                     <div>
-                        <label className="text-sm font-medium text-gray-600">Correo electrónico</label>
-                        <input type="email" value={email}
+                        {/* Antes decía "Correo electrónico" con type="email": el navegador
+                            bloqueaba el submit de usuarios sin arroba (bquevedo1) antes de
+                            que la petición llegara al backend. Ahora acepta ambos formatos. */}
+                        <label className="text-sm font-medium text-gray-600">Usuario</label>
+                        <input type="text" value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            placeholder="admin@agat-ecuagreen.com"
-                            className="w-full mt-1 px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0F6E56] text-gray-800"
+                            placeholder="admin@agat-ecuagreen.com o usuario"
+                            className="w-full mt-1 px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#3B5BDB] text-gray-800"
                         />
                     </div>
 
@@ -63,7 +66,7 @@ export default function LoginPage() {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             placeholder="••••••••"
-                            className="w-full mt-1 px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0F6E56] text-gray-800"
+                            className="w-full mt-1 px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#3B5BDB] text-gray-800"
                         />
                     </div>
 
@@ -75,7 +78,7 @@ export default function LoginPage() {
                         onClick={handleLogin}
                         disabled={loading}
                         className="w-full py-3 rounded-xl text-white font-semibold text-base hover:opacity-90 transition disabled:opacity-50"
-                        style={{ backgroundColor: "#0F6E56" }}
+                        style={{ backgroundColor: "#3B5BDB" }}
                     >
                         {loading ? "Ingresando..." : "Ingresar al sistema"}
                     </button>

@@ -29,6 +29,13 @@ function RutaSoloAdmin({ children }) {
   const { user } = useAuth();
   return user?.role === "ADMIN" ? children : <Navigate to="/bodegas" />;
 }
+// Componente que BLOQUEA a un BODEGUERO de entrar por URL directa a páginas
+// que no le corresponden (todo excepto Stock General y Nuevo Movimiento).
+// Un BODEGUERO que intente entrar aquí es redirigido a /stock.
+function RutaNoBodeguero({ children }) {
+  const { user } = useAuth();
+  return user?.role === "BODEGUERO" ? <Navigate to="/stock" /> : children;
+}
 export default function AppRouter() {
   return (
     <BrowserRouter>
@@ -41,27 +48,30 @@ export default function AppRouter() {
             <Layout />
           </RutaPrivada>
         }>
-          <Route index element={<DashboardPage />} />
-          <Route path="dashboard" element={<DashboardPage />} />
-          {/* Módulo Terceros — solo ADMIN */}
+          <Route index element={<RutaNoBodeguero><DashboardPage /></RutaNoBodeguero>} />
+          <Route path="dashboard" element={<RutaNoBodeguero><DashboardPage /></RutaNoBodeguero>} />
+          {/* Módulo Terceros — solo ADMIN (ya bloquea BODEGUERO igual que los demás roles) */}
           <Route path="terceros" element={<RutaSoloAdmin><TercerosPage /></RutaSoloAdmin>} />
           {/* Módulo Fincas — solo ADMIN */}
           <Route path="fincas" element={<RutaSoloAdmin><FincasPage /></RutaSoloAdmin>} />
           {/* Módulo Inventario */}
-          <Route path="bodegas" element={<WarehousesPage />} />
+          <Route path="bodegas" element={<RutaNoBodeguero><WarehousesPage /></RutaNoBodeguero>} />
 
           {/* Insumos: solo la vista maestro-detalle (categorías + insumos combinados).
               Las páginas viejas por separado (/categorias-insumo, /insumos) se eliminaron
               — ya no se usan, confirmado con el usuario. */}
-          <Route path="/insumos-categorias" element={<SuppliesMasterDetailPage />} />
+          <Route path="/insumos-categorias" element={<RutaNoBodeguero><SuppliesMasterDetailPage /></RutaNoBodeguero>} />
 
-          <Route path="/motivos-movimiento" element={<MovementReasonsPage />} />
+          <Route path="/motivos-movimiento" element={<RutaNoBodeguero><MovementReasonsPage /></RutaNoBodeguero>} />
+
+          {/* Stock General y Nuevo Movimiento — las únicas dos que un BODEGUERO
+              puede ver, por eso no llevan RutaNoBodeguero */}
           <Route path="/stock" element={<InventoryStockPage />} />
           <Route path="/movimientos/nuevo" element={<InventoryMovementFormPage />} />
 
-          <Route path="/ordenes-compra" element={<PurchaseOrdersPage />} />
-          <Route path="/ordenes-compra/nueva" element={<PurchaseOrderFormPage />} />
-          <Route path="/ordenes-compra/:id" element={<PurchaseOrderDetailPage />} />
+          <Route path="/ordenes-compra" element={<RutaNoBodeguero><PurchaseOrdersPage /></RutaNoBodeguero>} />
+          <Route path="/ordenes-compra/nueva" element={<RutaNoBodeguero><PurchaseOrderFormPage /></RutaNoBodeguero>} />
+          <Route path="/ordenes-compra/:id" element={<RutaNoBodeguero><PurchaseOrderDetailPage /></RutaNoBodeguero>} />
 
         </Route>
         {/* Ruta no encontrada */}

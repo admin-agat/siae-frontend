@@ -14,7 +14,7 @@ export function AuthProvider({ children }) {
     localStorage.setItem("token", tokenData);
     localStorage.setItem("user", JSON.stringify(userData)); // Persistimos el usuario completo (incluye role)
   };
-  const logout = () => {
+  const logout = () => { 
     setUser(null);
     setToken(null);
     localStorage.removeItem("token");

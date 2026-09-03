@@ -35,6 +35,10 @@ const menuItems = [
         ],
     },
 ];
+
+// Rutas que SÍ puede ver un BODEGUERO dentro de INVENTARIO (nada más)
+const RUTAS_BODEGUERO = ["/stock", "/movimientos/nuevo"];
+
 export default function Sidebar() {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
@@ -44,18 +48,33 @@ export default function Sidebar() {
         navigate("/login");
     };
 
-    // Jefe de Bodega y Coordinador de Inventario solo ven el módulo de Inventario
+    // Jefe de Bodega y Coordinador de Inventario ven todo el módulo de Inventario
     // (Terceros y Fincas quedan reservados solo para ADMIN)
     const esRolBodega = user?.role === "JEFE_BODEGA" || user?.role === "COORDINADOR_INVENTARIO";
-    const menuVisible = esRolBodega
-        ? menuItems.filter((grupo) => grupo.seccion === "INVENTARIO")
-        : menuItems;
+    // El Bodeguero es más restringido: solo Stock General y Nuevo Movimiento,
+    // filtrado dentro de la misma sección INVENTARIO (no ve Bodegas, Insumos,
+    // Motivos ni Órdenes de Compra)
+    const esBodeguero = user?.role === "BODEGUERO";
+
+    let menuVisible;
+    if (esBodeguero) {
+        menuVisible = menuItems
+            .filter((grupo) => grupo.seccion === "INVENTARIO")
+            .map((grupo) => ({
+                ...grupo,
+                items: grupo.items.filter((item) => RUTAS_BODEGUERO.includes(item.ruta)),
+            }));
+    } else if (esRolBodega) {
+        menuVisible = menuItems.filter((grupo) => grupo.seccion === "INVENTARIO");
+    } else {
+        menuVisible = menuItems;
+    }
 
     return (
         <div className="w-70 h-screen sticky top-0 flex flex-col bg-white" style={{ borderRight: "1px solid #e5e7eb" }}>
             {/* Logo */}
             <div className="px-5 py-4" style={{ borderBottom: "1px solid #e5e7eb" }}>
-                <span className="font-bold text-lg" style={{ color: "#0F6E56" }}>AGAT · SIAE</span>
+                <span className="font-bold text-lg" style={{ color: "#3B5BDB" }}>AGAT · SIAE</span>
             </div>
             {/* Menú */}
             <nav className="flex-1 px-3 py-4 space-y-4 overflow-y-auto">
@@ -70,8 +89,8 @@ export default function Sidebar() {
                                     key={item.ruta}
                                     onClick={() => navigate(item.ruta)}
                                     className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-2 transition border-l-4 ${activo
-                                        ? "bg-green-50 text-[#0F6E56] font-semibold border-[#22C55E]"
-                                        : "text-gray-600 hover:bg-green-50 hover:text-[#0F6E56] border-transparent"
+                                        ? "bg-green-50 text-[#3B5BDB] font-semibold border-[#4C6EF5]"
+                                        : "text-gray-600 hover:bg-green-50 hover:text-[#3B5BDB] border-transparent"
                                         }`}
                                 >
                                     <Icono size={15} />
