@@ -36,3 +36,4 @@ export const reactivateMovementReason = (id) => {
 export const getActiveMovementReasonsByType = (type) => {
   return axios.get('/movement-reasons', { params: { type, solo_activos: 1 } });
 };
+

@@ -2,8 +2,11 @@ import { useAuth } from "../context/AuthContext";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
     LayoutDashboard, Users, LogOut, Sprout, Warehouse, Boxes,
-    ArrowLeftRight, ClipboardList, FileText, ShoppingCart
+    ArrowLeftRight, ClipboardList, FileText, ShoppingCart,
+    FileSignature, Clock, Building2, Tag, Wallet, Ship,
+    CircleDollarSign, History, Download, BarChart3, Percent
 } from "lucide-react";
+
 const menuItems = [
     {
         seccion: "PRINCIPAL",
@@ -12,7 +15,7 @@ const menuItems = [
         ],
     },
     {
-        seccion: "TERCEROS",
+        seccion: "PERSONAS",
         items: [
             { label: "Productores / Comercializadoras", ruta: "/terceros", icono: Users },
         ],
@@ -34,6 +37,25 @@ const menuItems = [
             { label: "Órdenes de Compra", ruta: "/ordenes-compra", icono: ShoppingCart },
         ],
     },
+    // --- Módulos en desarrollo: visuales por ahora, sin rutas funcionales ---    
+    {
+        seccion: "COMERCIAL",
+        items: [
+            { label: "Comercializadoras", ruta: null, icono: Building2, proximamente: true },
+            { label: "Marcas", ruta: null, icono: Tag, proximamente: true },
+        ],
+    },
+   
+    {
+        seccion: "LIQUIDACIÓN",
+        items: [
+            { label: "Nueva liquidación", ruta: null, icono: FileText, proximamente: true },
+            { label: "Pendientes pago", ruta: null, icono: Clock, proximamente: true },
+            { label: "Pago 80%", ruta: null, icono: Percent, proximamente: true },
+            { label: "Pago 20%", ruta: null, icono: CircleDollarSign, proximamente: true },
+            { label: "Historial pagos", ruta: null, icono: History, proximamente: true },
+        ],
+    },        
 ];
 
 // Rutas que SÍ puede ver un BODEGUERO dentro de INVENTARIO (nada más)
@@ -84,6 +106,25 @@ export default function Sidebar() {
                         {grupo.items.map((item) => {
                             const Icono = item.icono;
                             const activo = location.pathname === item.ruta;
+
+                            if (item.proximamente) {
+                                return (
+                                    <div
+                                        key={item.label}
+                                        title="Próximamente"
+                                        className="w-full text-left px-3 py-2 rounded-lg text-sm flex items-center justify-between gap-2 border-l-4 border-transparent text-gray-400 cursor-not-allowed"
+                                    >
+                                        <span className="flex items-center gap-2">
+                                            <Icono size={15} />
+                                            {item.label}
+                                        </span>
+                                        <span className="text-[10px] font-semibold bg-gray-100 text-gray-400 px-1.5 py-0.5 rounded">
+                                            Pronto
+                                        </span>
+                                    </div>
+                                );
+                            }
+
                             return (
                                 <button
                                     key={item.ruta}

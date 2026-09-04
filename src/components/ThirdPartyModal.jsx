@@ -1,26 +1,34 @@
 // Modal para crear y editar terceros (productores, comercializadoras, proveedores, clientes)
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createThirdParty, updateThirdParty } from '../api/thirdParties';
-import { X } from 'lucide-react';
+import { X, CheckCircle } from 'lucide-react';
+import { getMensajeExito, getMensajeError } from '../utils/toastMessages';
+
+const FORM_VACIO = {
+    name: '',
+    type: 'PRODUCTOR',
+    identification: '',
+    zone: '',
+    phone: '',
+    email: '',
+    status: true,
+};
 
 export default function ThirdPartyModal({ thirdParty, onClose, onGuardado }) {
-    const [form, setForm] = useState({
-        name: '',
-        type: 'PRODUCTOR',
-        identification: '',
-        zone: '',
-        phone: '',
-        email: '',
-        status: true,
-    });
+    const esEdicion = Boolean(thirdParty?.id);
+
+    const [form, setForm] = useState(FORM_VACIO);
+    const formInicialRef = useRef(null);
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [mostrarExito, setMostrarExito] = useState(false);
+    const [mostrarConfirmarSalida, setMostrarConfirmarSalida] = useState(false);
 
     useEffect(() => {
-        if (thirdParty) {
-            setForm(thirdParty);
-        }
+        const datosIniciales = thirdParty ? { ...FORM_VACIO, ...thirdParty } : FORM_VACIO;
+        setForm(datosIniciales);
+        formInicialRef.current = datosIniciales;
     }, [thirdParty]);
 
     const handleChange = (e) => {
@@ -31,36 +39,60 @@ export default function ThirdPartyModal({ thirdParty, onClose, onGuardado }) {
         }));
     };
 
+    const hayCambiosSinGuardar = () => {
+        if (!formInicialRef.current) return false;
+        return JSON.stringify(form) !== JSON.stringify(formInicialRef.current);
+    };
+
+    const handleCancelar = () => {
+        if (hayCambiosSinGuardar()) {
+            setMostrarConfirmarSalida(true);
+            return;
+        }
+        onClose();
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
         setError('');
+        const accion = esEdicion ? 'actualizar' : 'crear';
         try {
-            if (thirdParty) {
+            if (esEdicion) {
                 await updateThirdParty(thirdParty.id, form);
             } else {
                 await createThirdParty(form);
             }
-            onGuardado();
-            onClose();
+            setMostrarExito(true);
+            setTimeout(() => {
+                onGuardado();
+                onClose();
+            }, 1200);
         } catch (err) {
-            setError('Error al guardar. Verifica los datos.');
+            setError(getMensajeError('tercero', accion));
             console.error(err);
-        } finally {
             setLoading(false);
         }
     };
 
     return (
         <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto relative">
+
+                {/* Toast de éxito */}
+                {mostrarExito && (
+                    <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-green-600 text-white text-sm font-semibold px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-2 z-10">
+                        <CheckCircle size={18} />
+                        {getMensajeExito('tercero', esEdicion ? 'actualizar' : 'crear')}
+                    </div>
+                )}
 
                 {/* Header del modal */}
                 <div className="flex justify-between items-center px-7 py-5 border-b border-gray-100">
                     <h2 className="text-lg font-bold text-[#0a4f3e]">
-                        {thirdParty ? 'Editar tercero' : 'Nuevo tercero'}
+                        {esEdicion ? 'Editar tercero' : 'Nuevo tercero'}
                     </h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+                    <button onClick={handleCancelar} className="text-gray-400 hover:text-gray-600">
                         <X size={22} />
                     </button>
                 </div>
@@ -175,21 +207,47 @@ export default function ThirdPartyModal({ thirdParty, onClose, onGuardado }) {
                     <div className="flex justify-end gap-4 items-center pt-4 border-t border-gray-100">
                         <button
                             type="button"
-                            onClick={onClose}
-                            className="text-sm font-semibold text-gray-700 hover:text-gray-900 px-2"
+                            onClick={handleCancelar}
+                            className="px-5 py-2.5 text-sm font-semibold bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
                         >
                             Cancelar
                         </button>
                         <button
                             type="submit"
                             disabled={loading}
-                            className="px-5 py-2.5 text-sm font-semibold bg-[#3B5BDB] text-white rounded-lg hover:bg-[#2F49B8] disabled:opacity-50"
+                            className="px-5 py-2.5 text-sm font-semibold bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition"
                         >
-                            {loading ? 'Guardando...' : thirdParty ? 'Actualizar' : 'Guardar'}
+                            {loading ? 'Guardando...' : esEdicion ? 'Actualizar' : 'Guardar'}
                         </button>
                     </div>
                 </form>
             </div>
+
+            {/* Modal propio de confirmación al salir */}
+            {mostrarConfirmarSalida && (
+                <div className="fixed inset-0 flex items-center justify-center z-[60]" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm px-6 py-6">
+                        <h3 className="text-base font-bold text-gray-800 mb-2">¿Seguro que deseas salir?</h3>
+                        <p className="text-sm text-gray-500 mb-6">Tienes cambios sin guardar que se perderán.</p>
+                        <div className="flex justify-end gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setMostrarConfirmarSalida(false)}
+                                className="px-4 py-2 text-sm font-semibold text-gray-600 hover:text-gray-800 rounded-lg transition"
+                            >
+                                Seguir editando
+                            </button>
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="px-4 py-2 text-sm font-semibold bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                            >
+                                Salir sin guardar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

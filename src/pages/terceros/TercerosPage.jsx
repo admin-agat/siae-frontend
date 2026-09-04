@@ -1,13 +1,15 @@
 // Página principal del módulo Terceros
 import { useState, useEffect } from 'react';
 import { getThirdParties, deleteThirdParty } from '../../api/thirdParties';
-import { Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight, AlertTriangle, CheckCircle } from 'lucide-react';
 import ThirdPartyModal from '../../components/ThirdPartyModal';
+import { getMensajeExito, getMensajeError } from '../../utils/toastMessages';
 
 const TIPO_LABEL = {
-    producer: 'Productor',
-    supplier: 'Proveedor',
-    customer: 'Cliente',
+    PRODUCTOR: 'Productor',
+    COMERCIALIZADORA: 'Comercializadora',
+    PROVEEDOR: 'Proveedor',
+    CLIENTE: 'Cliente',
 };
 
 const POR_PAGINA = 10;
@@ -20,6 +22,13 @@ export default function TercerosPage() {
     const [terceroEdit, setTerceroEdit] = useState(null);
     const [paginaActual, setPaginaActual] = useState(1);
 
+    // Modal de confirmación propio, reemplaza el confirm() nativo
+    // confirmacion = null (cerrado) o { tercero }
+    const [confirmacion, setConfirmacion] = useState(null);
+
+    // toast = null (oculto) o { tipo: 'exito'|'error', mensaje: string }
+    const [toast, setToast] = useState(null);
+
     useEffect(() => {
         cargarTerceros();
     }, []);
@@ -29,25 +38,44 @@ export default function TercerosPage() {
         setPaginaActual(1);
     }, [busqueda]);
 
+    // Oculta el toast automáticamente después de un momento
+    useEffect(() => {
+        if (!toast) return;
+        const timer = setTimeout(() => setToast(null), 2500);
+        return () => clearTimeout(timer);
+    }, [toast]);
+
     const cargarTerceros = async () => {
         try {
             setLoading(true);
             const res = await getThirdParties();
-            setTerceros(res.data);
+            const data = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+            setTerceros(data);
         } catch (error) {
             console.error('Error cargando terceros:', error);
+            setTerceros([]);
         } finally {
             setLoading(false);
         }
     };
 
-    const handleEliminar = async (id) => {
-        if (!confirm('¿Estás seguro de desactivar este tercero?')) return;
+    // Abre el modal de confirmación en vez de ejecutar la acción directo
+    const pedirConfirmacion = (tercero) => {
+        setConfirmacion({ tercero });
+    };
+
+    const ejecutarConfirmacion = async () => {
+        if (!confirmacion) return;
+        const { tercero } = confirmacion;
         try {
-            await deleteThirdParty(id);
+            await deleteThirdParty(tercero.id);
             cargarTerceros();
+            setToast({ tipo: 'exito', mensaje: getMensajeExito('tercero', 'desactivar') });
         } catch (error) {
             console.error('Error eliminando tercero:', error);
+            setToast({ tipo: 'error', mensaje: getMensajeError('tercero', 'desactivar') });
+        } finally {
+            setConfirmacion(null);
         }
     };
 
@@ -77,6 +105,16 @@ export default function TercerosPage() {
 
     return (
         <div className="p-6">
+            {/* Toast de éxito/error */}
+            {toast && (
+                <div className={`fixed top-6 left-1/2 -translate-x-1/2 text-white text-sm font-semibold px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-2 z-[70] ${
+                    toast.tipo === 'exito' ? 'bg-green-600' : 'bg-red-600'
+                }`}>
+                    {toast.tipo === 'exito' ? <CheckCircle size={18} /> : <AlertTriangle size={18} />}
+                    {toast.mensaje}
+                </div>
+            )}
+
             {/* Encabezado */}
             <div className="flex justify-between items-center mb-6">
                 <div>
@@ -85,7 +123,7 @@ export default function TercerosPage() {
                 </div>
                 <button
                     onClick={handleNuevo}
-                    className="flex items-center gap-2 bg-[#3B5BDB] text-white px-4 py-2 rounded-lg hover:bg-[#2F49B8] transition"
+                    className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
                 >
                     <Plus size={18} />
                     Nuevo tercero
@@ -154,7 +192,7 @@ export default function TercerosPage() {
                                             <Pencil size={16} />
                                         </button>
                                         <button
-                                            onClick={() => handleEliminar(t.id)}
+                                            onClick={() => pedirConfirmacion(t)}
                                             className="text-red-500 hover:text-red-700"
                                         >
                                             <Trash2 size={16} />
@@ -197,13 +235,46 @@ export default function TercerosPage() {
                 )}
             </div>
 
-            {/* Modal */}
+            {/* Modal crear/editar */}
             {showModal && (
                 <ThirdPartyModal
                     thirdParty={terceroEdit}
                     onClose={() => setShowModal(false)}
                     onGuardado={cargarTerceros}
                 />
+            )}
+
+            {/* Modal de confirmación propio */}
+            {confirmacion && (
+                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+                        <div className="flex items-start gap-3 mb-4">
+                            <div className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-red-100">
+                                <AlertTriangle size={20} className="text-red-600" />
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-gray-800">Desactivar tercero</h3>
+                                <p className="text-sm text-gray-500 mt-1">
+                                    ¿Estás seguro de desactivar <strong>{confirmacion.tercero.name}</strong>?
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => setConfirmacion(null)}
+                                className="px-4 py-2 text-sm font-semibold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={ejecutarConfirmacion}
+                                className="px-4 py-2 text-sm font-semibold text-white rounded-lg bg-red-600 hover:bg-red-700"
+                            >
+                                Aceptar
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

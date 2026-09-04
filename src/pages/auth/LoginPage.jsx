@@ -12,7 +12,10 @@ export default function LoginPage() {
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
 
-    const handleLogin = async () => {
+    const [idioma, setIdioma] = useState("ES");
+
+    const handleLogin = async (e) => {
+        e.preventDefault();
         setLoading(true);
         setError("");
         try {
@@ -30,6 +33,20 @@ export default function LoginPage() {
         <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#3B5BDB" }}>
             <div className="bg-white rounded-2xl shadow-2xl p-10 w-full max-w-md">
 
+                {/* Selector de idioma (visual, en desarrollo) */}
+                <div className="flex justify-end mb-2">
+                    <select
+                        value={idioma}
+                        onChange={(e) => setIdioma(e.target.value)}
+                        title="Selector de idioma (próximamente)"
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition outline-none cursor-pointer"
+                    >
+                        <option value="ES">🇪🇨 ES</option>
+                        <option value="RU">🇷🇺 RU</option>
+                    </select>
+                </div>
+
+
                 {/* Ícono */}
                 <div className="flex justify-center mb-4">
                     <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ backgroundColor: "#3B5BDB" }}>
@@ -46,11 +63,8 @@ export default function LoginPage() {
                 </div>
 
                 {/* Formulario */}
-                <div className="space-y-4">
+                <form onSubmit={handleLogin} className="space-y-4">
                     <div>
-                        {/* Antes decía "Correo electrónico" con type="email": el navegador
-                            bloqueaba el submit de usuarios sin arroba (bquevedo1) antes de
-                            que la petición llegara al backend. Ahora acepta ambos formatos. */}
                         <label className="text-sm font-medium text-gray-600">Usuario</label>
                         <input type="text" value={email}
                             onChange={(e) => setEmail(e.target.value)}
@@ -75,14 +89,14 @@ export default function LoginPage() {
                     )}
 
                     <button
-                        onClick={handleLogin}
+                        type="submit"
                         disabled={loading}
                         className="w-full py-3 rounded-xl text-white font-semibold text-base hover:opacity-90 transition disabled:opacity-50"
                         style={{ backgroundColor: "#3B5BDB" }}
                     >
                         {loading ? "Ingresando..." : "Ingresar al sistema"}
                     </button>
-                </div>
+                </form>
 
                 {/* Footer */}
                 <p className="text-center text-xs text-gray-400 mt-6">
