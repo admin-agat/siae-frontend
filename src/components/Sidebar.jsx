@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import {
     LayoutDashboard, Users, LogOut, Sprout, Warehouse, Boxes,
     ArrowLeftRight, ClipboardList, FileText, ShoppingCart,
-    FileSignature, Clock, Building2, Tag, Wallet, Ship,
+    FileSignature, Clock, Building2, Tag, Wallet, Ship, Container,
     CircleDollarSign, History, Download, BarChart3, Percent
 } from "lucide-react";
 
@@ -39,13 +39,20 @@ const menuItems = [
     },
     // --- Módulos en desarrollo: visuales por ahora, sin rutas funcionales ---    
     {
+        seccion: "LOGISTICA",
+        items: [
+            { label: "Navieras", ruta: null, icono: Ship, proximamente: true },      // 🚢 barco: representa las empresas navieras
+            { label: "Embarques", ruta: null, icono: Container, proximamente: true }, // 📦 contenedor: representa el embarque/carga
+        ],
+    },
+    {
         seccion: "COMERCIAL",
         items: [
             { label: "Comercializadoras", ruta: null, icono: Building2, proximamente: true },
             { label: "Marcas", ruta: null, icono: Tag, proximamente: true },
         ],
     },
-   
+
     {
         seccion: "LIQUIDACIÓN",
         items: [
@@ -55,7 +62,7 @@ const menuItems = [
             { label: "Pago 20%", ruta: null, icono: CircleDollarSign, proximamente: true },
             { label: "Historial pagos", ruta: null, icono: History, proximamente: true },
         ],
-    },        
+    },
 ];
 
 // Rutas que SÍ puede ver un BODEGUERO dentro de INVENTARIO (nada más)
