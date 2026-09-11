@@ -26,3 +26,11 @@ export const createPurchaseOrder = (data) => {
 export const getNextPurchaseOrderCode = (date) => {
   return axios.get('/purchase-orders/next-code', { params: { date } });
 };
+
+// Cancela una orden de compra con un motivo obligatorio.
+// El backend rechaza esto si la orden ya está CANCELADA o COMPLETA.
+export const cancelPurchaseOrder = (id, cancellationReason) => {
+  return axios.patch(`/purchase-orders/${id}/cancel`, {
+    cancellation_reason: cancellationReason,
+  });
+};

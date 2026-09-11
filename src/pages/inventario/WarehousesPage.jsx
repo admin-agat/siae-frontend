@@ -111,9 +111,8 @@ export default function WarehousesPage() {
         <div className="p-6">
             {/* Toast de éxito/error — mismo formato visual que el usado en WarehouseModal */}
             {toast && (
-                <div className={`fixed top-6 left-1/2 -translate-x-1/2 text-white text-sm font-semibold px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-2 z-[70] ${
-                    toast.tipo === 'exito' ? 'bg-green-600' : 'bg-red-600'
-                }`}>
+                <div className={`fixed top-6 left-1/2 -translate-x-1/2 text-white text-sm font-semibold px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-2 z-[70] ${toast.tipo === 'exito' ? 'bg-green-600' : 'bg-red-600'
+                    }`}>
                     {toast.tipo === 'exito' ? <CheckCircle size={18} /> : <AlertTriangle size={18} />}
                     {toast.mensaje}
                 </div>
@@ -126,7 +125,7 @@ export default function WarehousesPage() {
                 </div>
                 <button
                     onClick={handleNuevo}
-                    className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
+                    className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
                 >
                     <Plus size={18} />
                     Nueva bodega
@@ -174,33 +173,33 @@ export default function WarehousesPage() {
                                 <tr
                                     key={b.id}
                                     onClick={() => setFilaSeleccionada(b.id)}
-                                    className={`cursor-pointer transition ${
-                                        filaSeleccionada === b.id
+                                    className={`cursor-pointer transition ${filaSeleccionada === b.id
                                             ? 'bg-blue-50'
                                             : i % 2 === 0 ? 'bg-gray-50' : 'bg-white'
-                                    } hover:bg-blue-50/60`}
+                                        } hover:bg-blue-50/60`}
                                 >
                                     <td className="px-4 py-3 font-medium">{b.code}</td>
                                     <td className="px-4 py-3">{b.name}</td>
                                     <td className="px-4 py-3">{b.zone || '—'}</td>
                                     <td className="px-4 py-3">{b.responsible?.name || '—'}</td>
                                     <td className="px-4 py-3">
-                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                            b.status ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                                        }`}>
+                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${b.status ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                            }`}>
                                             {b.status ? 'Activo' : 'Inactivo'}
                                         </span>
                                     </td>
-                                    <td className="px-4 py-3 flex gap-2" onClick={(e) => e.stopPropagation()}>
-                                        <button onClick={() => handleEditar(b)} className="text-blue-500 hover:text-blue-700">
-                                            <Pencil size={16} />
-                                        </button>
+                                                                       <td className="px-4 py-3 flex gap-2" onClick={(e) => e.stopPropagation()}>
                                         {b.status ? (
-                                            <button onClick={() => pedirConfirmacion(b, 'desactivar')} className="text-red-500 hover:text-red-700">
-                                                <Ban size={16} />
-                                            </button>
+                                            <>
+                                                <button onClick={() => handleEditar(b)} className="bg-green-600 hover:bg-green-700 text-white p-1 rounded-lg transition">
+                                                    <Pencil size={16} />
+                                                </button>
+                                                <button onClick={() => pedirConfirmacion(b, 'desactivar')} className="bg-red-600 hover:bg-red-700 text-white p-1 rounded-lg transition">
+                                                    <Ban size={16} />
+                                                </button>
+                                            </>
                                         ) : (
-                                            <button onClick={() => pedirConfirmacion(b, 'reactivar')} className="text-green-600 hover:text-green-700">
+                                            <button onClick={() => pedirConfirmacion(b, 'reactivar')} className="bg-blue-600 hover:bg-blue-700 text-white p-1 rounded-lg transition" title="Reactivar">
                                                 <RotateCcw size={16} />
                                             </button>
                                         )}
@@ -254,9 +253,8 @@ export default function WarehousesPage() {
                 <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
                         <div className="flex items-start gap-3 mb-4">
-                            <div className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
-                                confirmacion.accion === 'desactivar' ? 'bg-red-100' : 'bg-green-100'
-                            }`}>
+                            <div className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${confirmacion.accion === 'desactivar' ? 'bg-red-100' : 'bg-green-100'
+                                }`}>
                                 <AlertTriangle
                                     size={20}
                                     className={confirmacion.accion === 'desactivar' ? 'text-red-600' : 'text-green-600'}
@@ -272,7 +270,7 @@ export default function WarehousesPage() {
                             </div>
                         </div>
                         <div className="flex justify-end gap-3">
-                            <button
+                                                        <button
                                 onClick={() => setConfirmacion(null)}
                                 className="px-4 py-2 text-sm font-semibold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200"
                             >
@@ -280,11 +278,10 @@ export default function WarehousesPage() {
                             </button>
                             <button
                                 onClick={ejecutarConfirmacion}
-                                className={`px-4 py-2 text-sm font-semibold text-white rounded-lg ${
-                                    confirmacion.accion === 'desactivar'
+                                className={`px-4 py-2 text-sm font-semibold text-white rounded-lg ${confirmacion.accion === 'desactivar'
                                         ? 'bg-red-600 hover:bg-red-700'
                                         : 'bg-green-600 hover:bg-green-700'
-                                }`}
+                                    }`}
                             >
                                 Aceptar
                             </button>

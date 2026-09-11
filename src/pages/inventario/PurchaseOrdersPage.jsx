@@ -2,19 +2,27 @@
 // Listado de Órdenes de Compra (OC). Cada fila muestra el código generado,
 // proveedor, bodega destino, fecha/semana y estado (PENDIENTE hasta que se
 // reciba vía InventoryMovementFormPage). Desde aquí se navega a crear una
-// nueva OC o a ver el detalle de una existente.
+// nueva OC, ver el detalle de una existente, o cancelarla (con motivo
+// obligatorio) si todavía está PENDIENTE o PARCIAL.
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Eye } from 'lucide-react';
+import { Plus, Eye, Ban } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { getPurchaseOrders } from '../../api/purchaseOrders';
+import { getPurchaseOrders, cancelPurchaseOrder } from '../../api/purchaseOrders';
 
 const PAGE_SIZE = 10;
 
 const ESTADO_ESTILOS = {
     PENDIENTE: 'bg-amber-100 text-amber-800',
+    PARCIAL: 'bg-blue-100 text-blue-800',
+    COMPLETA: 'bg-green-100 text-green-800',
     RECIBIDA: 'bg-green-100 text-green-800',
     CANCELADA: 'bg-red-100 text-red-800',
 };
+
+// Estados desde los que SÍ se puede cancelar una orden. COMPLETA y
+// CANCELADA quedan fuera (el backend también lo rechaza, esto es solo
+// para no mostrar un botón que de todas formas va a fallar).
+const ESTADOS_CANCELABLES = ['PENDIENTE', 'PARCIAL'];
 
 export default function PurchaseOrdersPage() {
     const navigate = useNavigate();
@@ -26,6 +34,17 @@ export default function PurchaseOrdersPage() {
     const [busqueda, setBusqueda] = useState('');
     const [filtroEstado, setFiltroEstado] = useState('TODOS');
     const [pagina, setPagina] = useState(1);
+
+    // Estado del modal de cancelación: null cuando está cerrado, o la
+    // orden que se quiere cancelar mientras el modal está abierto.
+    const [ordenACancelar, setOrdenACancelar] = useState(null);
+    const [motivoCancelacion, setMotivoCancelacion] = useState('');
+    const [cancelando, setCancelando] = useState(false);
+    const [errorCancelacion, setErrorCancelacion] = useState('');
+
+    // Toast local (mismo patrón del resto del sistema: sin librería,
+    // estado propio con auto-hide).
+    const [toast, setToast] = useState(null);
 
     useEffect(() => {
         cargarOrdenes();
@@ -42,6 +61,53 @@ export default function PurchaseOrdersPage() {
             setError('NO SE PUDIERON CARGAR LAS ÓRDENES DE COMPRA');
         } finally {
             setCargando(false);
+        }
+    };
+
+    const abrirModalCancelar = (orden) => {
+        setOrdenACancelar(orden);
+        setMotivoCancelacion('');
+        setErrorCancelacion('');
+    };
+
+    const cerrarModalCancelar = () => {
+        if (cancelando) return; // evita cerrar a mitad de una petición en curso
+        setOrdenACancelar(null);
+        setMotivoCancelacion('');
+        setErrorCancelacion('');
+    };
+
+    const confirmarCancelacion = async () => {
+        if (motivoCancelacion.trim().length < 3) {
+            setErrorCancelacion('EL MOTIVO DEBE TENER AL MENOS 3 CARACTERES');
+            return;
+        }
+
+        setCancelando(true);
+        setErrorCancelacion('');
+        try {
+            await cancelPurchaseOrder(ordenACancelar.id, motivoCancelacion.trim());
+
+            // Actualiza la fila en memoria sin tener que recargar todo el listado
+            setOrdenes((prev) =>
+                prev.map((o) =>
+                    o.id === ordenACancelar.id
+                        ? { ...o, status: 'CANCELADA', cancellation_reason: motivoCancelacion.trim() }
+                        : o
+                )
+            );
+
+            setToast({ tipo: 'exito', mensaje: `ORDEN ${ordenACancelar.code} CANCELADA CORRECTAMENTE` });
+            setTimeout(() => setToast(null), 2500);
+
+            setOrdenACancelar(null);
+            setMotivoCancelacion('');
+        } catch (err) {
+            console.error('ERROR AL CANCELAR LA ORDEN:', err);
+            const mensajeBackend = err?.response?.data?.message;
+            setErrorCancelacion(mensajeBackend || 'NO SE PUDO CANCELAR LA ORDEN');
+        } finally {
+            setCancelando(false);
         }
     };
 
@@ -112,7 +178,8 @@ export default function PurchaseOrdersPage() {
                 >
                     <option value="TODOS">Todos los estados</option>
                     <option value="PENDIENTE">Pendiente</option>
-                    <option value="RECIBIDA">Recibida</option>
+                    <option value="PARCIAL">Parcial</option>
+                    <option value="COMPLETA">Completa</option>
                     <option value="CANCELADA">Cancelada</option>
                 </select>
             </div>
@@ -127,7 +194,7 @@ export default function PurchaseOrdersPage() {
                             <th className="text-left px-4 py-3">Fecha</th>
                             <th className="text-center px-4 py-3 w-20">Semana</th>
                             <th className="text-center px-4 py-3 w-32">Estado</th>
-                            <th className="text-center px-4 py-3 w-16"></th>
+                            <th className="text-center px-4 py-3 w-24">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -164,13 +231,24 @@ export default function PurchaseOrdersPage() {
                                         </span>
                                     </td>
                                     <td className="px-4 py-3 text-center">
-                                        <button
-                                            onClick={() => navigate(`/ordenes-compra/${orden.id}`)}
-                                            className="text-gray-500 hover:text-[#3B5BDB]"
-                                            title="Ver detalle"
-                                        >
-                                            <Eye size={16} />
-                                        </button>
+                                        <div className="flex items-center justify-center gap-3">
+                                            <button
+                                                onClick={() => navigate(`/ordenes-compra/${orden.id}`)}
+                                                className="text-gray-500 hover:text-[#3B5BDB]"
+                                                title="Ver detalle"
+                                            >
+                                                <Eye size={16} />
+                                            </button>
+                                            {ESTADOS_CANCELABLES.includes(orden.status) && (
+                                                <button
+                                                    onClick={() => abrirModalCancelar(orden)}
+                                                    className="text-gray-500 hover:text-red-600"
+                                                    title="Cancelar orden"
+                                                >
+                                                    <Ban size={16} />
+                                                </button>
+                                            )}
+                                        </div>
                                     </td>
                                 </tr>
                             ))
@@ -202,6 +280,58 @@ export default function PurchaseOrdersPage() {
                     </div>
                 )}
             </div>
+
+            {/* Modal de cancelación — modal propio en React, nunca confirm()
+                nativo (Chrome lo bloquea después de varios usos). */}
+            {ordenACancelar && (
+                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-xl shadow-lg w-full max-w-md p-6">
+                        <h2 className="text-lg font-bold text-gray-800 mb-1">
+                            Cancelar orden {ordenACancelar.code}
+                        </h2>
+                        <p className="text-sm text-gray-500 mb-4">
+                            Esta acción cambia el estado a CANCELADA. Indica el motivo:
+                        </p>
+
+                        <textarea
+                            value={motivoCancelacion}
+                            onChange={(e) => setMotivoCancelacion(e.target.value.toUpperCase())}
+                            placeholder="EJ: PROVEEDOR NO PUDO CUMPLIR CON LA ENTREGA..."
+                            rows={4}
+                            className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none uppercase resize-none"
+                            autoFocus
+                        />
+
+                        {errorCancelacion && (
+                            <p className="text-red-600 text-xs mt-2">{errorCancelacion}</p>
+                        )}
+
+                        <div className="flex justify-end gap-3 mt-5">
+                            <button
+                                onClick={cerrarModalCancelar}
+                                disabled={cancelando}
+                                className="px-4 py-2 text-sm font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                            >
+                                Volver
+                            </button>
+                            <button
+                                onClick={confirmarCancelacion}
+                                disabled={cancelando}
+                                className="px-4 py-2 text-sm font-semibold rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                            >
+                                {cancelando ? 'Cancelando...' : 'Confirmar cancelación'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Toast de éxito, mismo patrón visual del resto del sistema */}
+            {toast && (
+                <div className="fixed bottom-6 right-6 bg-green-100 text-green-800 text-sm font-medium px-4 py-3 rounded-lg shadow-lg z-50">
+                    {toast.mensaje}
+                </div>
+            )}
         </div>
     );
 }

@@ -14,6 +14,11 @@ import InventoryMovementFormPage from "../pages/inventario/InventoryMovementForm
 import SuppliesMasterDetailPage from "../pages/inventario/SuppliesMasterDetailPage";
 import PurchaseOrderFormPage from "../pages/inventario/PurchaseOrderFormPage";
 import PurchaseOrderDetailPage from "../pages/inventario/PurchaseOrderDetailPage";
+import ShippingLinesPage from "../pages/exportaciones/ShippingLinesPage";
+import BookingsPage from "../pages/exportaciones/BookingsPage";
+import PortsMasterDetailPage from "../pages/exportaciones/PortsMasterDetailPage";
+import DestinationsPage from "../pages/exportaciones/DestinationsPage";
+import CustomersPage from "../pages/exportaciones/CustomersPage";
 
 //ordenes de compras
 import PurchaseOrdersPage from "../pages/inventario/PurchaseOrdersPage";
@@ -54,6 +59,14 @@ export default function AppRouter() {
           <Route path="terceros" element={<RutaSoloAdmin><TercerosPage /></RutaSoloAdmin>} />
           {/* Módulo Fincas — solo ADMIN */}
           <Route path="fincas" element={<RutaSoloAdmin><FincasPage /></RutaSoloAdmin>} />
+
+          {/*Módulo Exportaciones*/}
+          <Route path="navieras" element={<ShippingLinesPage />} />
+          <Route path="bookings" element={<BookingsPage />} />
+          <Route path="/exportaciones/puertos" element={<PortsMasterDetailPage />} />
+          <Route path="/exportaciones/destinos" element={<DestinationsPage />} />
+          <Route path="/exportaciones/clientes" element={<CustomersPage />} />
+
           {/* Módulo Inventario */}
           <Route path="bodegas" element={<RutaNoBodeguero><WarehousesPage /></RutaNoBodeguero>} />
 
@@ -63,6 +76,7 @@ export default function AppRouter() {
           <Route path="/insumos-categorias" element={<RutaNoBodeguero><SuppliesMasterDetailPage /></RutaNoBodeguero>} />
 
           <Route path="/motivos-movimiento" element={<RutaNoBodeguero><MovementReasonsPage /></RutaNoBodeguero>} />
+          
 
           {/* Stock General y Nuevo Movimiento — las únicas dos que un BODEGUERO
               puede ver, por eso no llevan RutaNoBodeguero */}

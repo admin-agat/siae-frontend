@@ -1,110 +1,92 @@
-// SuppliesMasterDetailPage.jsx
-// Vista maestro-detalle: categorías de insumo a la izquierda, insumos de la
-// categoría seleccionada a la derecha. Reemplaza la navegación entre
-// SupplyCategoriesPage y SuppliesPage por una sola pantalla.
+// ShippingLinesPage.jsx
+// Vista maestro-detalle: navieras a la izquierda, barcos de la naviera
+// seleccionada a la derecha. Mismo patrón que SuppliesMasterDetailPage.
 import { useState, useEffect } from 'react';
 import { Plus, Pencil, Ban, Search, RotateCcw, ChevronLeft, ChevronRight, AlertTriangle, CheckCircle } from 'lucide-react';
-import { getSupplyCategories, deactivateSupplyCategory, reactivateSupplyCategory } from '../../api/supplyCategories';
-import { getSupplies, deactivateSupply, reactivateSupply } from '../../api/supplies';
-import SupplyCategoryModal from '../../components/SupplyCategoryModal';
-import SupplyModal from '../../components/SupplyModal';
-// Estándar centralizado de mensajes toast (crear/actualizar/desactivar/reactivar)
+import { getShippingLines, deactivateShippingLine, reactivateShippingLine } from '../../api/shippingLines';
+import { getVessels, deactivateVessel, reactivateVessel } from '../../api/vessels';
+import ShippingLineModal from '../../components/ShippingLineModal';
+import VesselModal from '../../components/VesselModal';
 import { getMensajeExito, getMensajeError } from '../../utils/toastMessages';
 
-// Cantidad de filas por página, tanto en Categorías como en Insumos.
 const POR_PAGINA = 9;
 
-export default function SuppliesMasterDetailPage() {
-    // Categorías (columna izquierda)
-    const [categorias, setCategorias] = useState([]);
-    const [loadingCategorias, setLoadingCategorias] = useState(true);
-    const [categoriaSeleccionada, setCategoriaSeleccionada] = useState(null);
-    const [busquedaCategoria, setBusquedaCategoria] = useState('');
-    const [filtroEstadoCategoria, setFiltroEstadoCategoria] = useState('ACTIVOS'); // ACTIVOS | INACTIVOS | TODOS
-    const [paginaCategoria, setPaginaCategoria] = useState(1);
-    const [showCategoriaModal, setShowCategoriaModal] = useState(false);
-    const [categoriaEdit, setCategoriaEdit] = useState(null);
+export default function ShippingLinesPage() {
+    // Navieras (columna izquierda)
+    const [navieras, setNavieras] = useState([]);
+    const [loadingNavieras, setLoadingNavieras] = useState(true);
+    const [navieraSeleccionada, setNavieraSeleccionada] = useState(null);
+    const [busquedaNaviera, setBusquedaNaviera] = useState('');
+    const [filtroEstadoNaviera, setFiltroEstadoNaviera] = useState('ACTIVOS');
+    const [paginaNaviera, setPaginaNaviera] = useState(1);
+    const [showNavieraModal, setShowNavieraModal] = useState(false);
+    const [navieraEdit, setNavieraEdit] = useState(null);
 
-    // Insumos (columna derecha, filtrados por la categoría seleccionada)
-    const [insumos, setInsumos] = useState([]);
-    const [loadingInsumos, setLoadingInsumos] = useState(true);
-    const [busquedaInsumo, setBusquedaInsumo] = useState('');
-    const [filtroEstadoInsumo, setFiltroEstadoInsumo] = useState('ACTIVOS'); // ACTIVOS | INACTIVOS | TODOS
-    const [paginaInsumo, setPaginaInsumo] = useState(1);
-    const [showInsumoModal, setShowInsumoModal] = useState(false);
-    const [insumoEdit, setInsumoEdit] = useState(null);
-    // Fila de insumo resaltada al hacer click (mismo patrón visual que WarehousesPage)
+    // Barcos (columna derecha, filtrados por la naviera seleccionada)
+    const [barcos, setBarcos] = useState([]);
+    const [loadingBarcos, setLoadingBarcos] = useState(true);
+    const [busquedaBarco, setBusquedaBarco] = useState('');
+    const [filtroEstadoBarco, setFiltroEstadoBarco] = useState('ACTIVOS');
+    const [paginaBarco, setPaginaBarco] = useState(1);
+    const [showBarcoModal, setShowBarcoModal] = useState(false);
+    const [barcoEdit, setBarcoEdit] = useState(null);
     const [filaSeleccionada, setFilaSeleccionada] = useState(null);
 
-    // Modal de confirmación propio, reemplaza el confirm() nativo del navegador
-    // (mismo motivo que en WarehousesPage: Chrome lo bloquea tras varios usos
-    // seguidos y el botón parece no hacer nada).
-    // confirmacion = null (cerrado) o { tipo: 'categoria'|'insumo', item, accion: 'desactivar'|'reactivar' }
+    // confirmacion = null o { tipo: 'naviera'|'barco', item, accion: 'desactivar'|'reactivar' }
     const [confirmacion, setConfirmacion] = useState(null);
-
-    // Toast de éxito/error, mismo formato visual y mismo helper que en Bodegas
-    // toast = null (oculto) o { tipo: 'exito'|'error', mensaje: string }
     const [toast, setToast] = useState(null);
 
     useEffect(() => {
-        cargarCategorias();
-        cargarInsumos();
+        cargarNavieras();
+        cargarBarcos();
     }, []);
 
-    // Cada vez que cambia la búsqueda, el filtro de estado, o la categoría
-    // seleccionada, volvemos a la página 1 (si no, podés quedar "varado" en
-    // una página que ya no existe para el nuevo resultado filtrado).
     useEffect(() => {
-        setPaginaCategoria(1);
-    }, [busquedaCategoria, filtroEstadoCategoria]);
+        setPaginaNaviera(1);
+    }, [busquedaNaviera, filtroEstadoNaviera]);
 
     useEffect(() => {
-        setPaginaInsumo(1);
-    }, [busquedaInsumo, filtroEstadoInsumo, categoriaSeleccionada]);
+        setPaginaBarco(1);
+    }, [busquedaBarco, filtroEstadoBarco, navieraSeleccionada]);
 
-    // Oculta el toast automáticamente después de un momento
     useEffect(() => {
         if (!toast) return;
         const timer = setTimeout(() => setToast(null), 2500);
         return () => clearTimeout(timer);
     }, [toast]);
 
-    const cargarCategorias = async () => {
+    const cargarNavieras = async () => {
         try {
-            setLoadingCategorias(true);
-            const res = await getSupplyCategories();
-            setCategorias(res.data);
-            // Si todavía no hay categoría seleccionada, seleccionamos la
-            // primera activa por defecto para que la derecha no quede vacía.
-            setCategoriaSeleccionada(prev => {
+            setLoadingNavieras(true);
+            const res = await getShippingLines();
+            const data = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+            setNavieras(data);
+            setNavieraSeleccionada(prev => {
                 if (prev) return prev;
-                const primeraActiva = res.data.find(c => c.status);
-                return primeraActiva || res.data[0] || null;
+                const primeraActiva = data.find(n => n.status);
+                return primeraActiva || data[0] || null;
             });
         } catch (error) {
-            console.error('Error cargando categorías de insumo:', error);
+            console.error('Error cargando navieras:', error);
         } finally {
-            setLoadingCategorias(false);
+            setLoadingNavieras(false);
         }
     };
 
-    // Traemos TODOS los insumos una sola vez y filtramos por categoría en el
-    // frontend (catálogo chico y casi estático, no hace falta pedirlo al
-    // backend cada vez que cambiás de categoría).
-    const cargarInsumos = async () => {
+    // Traemos TODOS los barcos una sola vez (catálogo chico) y filtramos por
+    // naviera en el frontend, igual que hace Insumos con las categorías.
+    const cargarBarcos = async () => {
         try {
-            setLoadingInsumos(true);
-            const res = await getSupplies();
-            setInsumos(res.data);
+            setLoadingBarcos(true);
+            const res = await getVessels();
+            const data = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+            setBarcos(data);
         } catch (error) {
-            console.error('Error cargando insumos:', error);
+            console.error('Error cargando barcos:', error);
         } finally {
-            setLoadingInsumos(false);
+            setLoadingBarcos(false);
         }
     };
-
-    // --- Confirmación + acciones de Desactivar/Reactivar (unificado para
-    // categoría e insumo, igual que el patrón de WarehousesPage) ---
 
     const pedirConfirmacion = (tipo, item, accion) => {
         setConfirmacion({ tipo, item, accion });
@@ -115,16 +97,16 @@ export default function SuppliesMasterDetailPage() {
         const { tipo, item, accion } = confirmacion;
 
         try {
-            if (tipo === 'categoria') {
+            if (tipo === 'naviera') {
                 accion === 'desactivar'
-                    ? await deactivateSupplyCategory(item.id)
-                    : await reactivateSupplyCategory(item.id);
-                cargarCategorias();
+                    ? await deactivateShippingLine(item.id)
+                    : await reactivateShippingLine(item.id);
+                cargarNavieras();
             } else {
                 accion === 'desactivar'
-                    ? await deactivateSupply(item.id)
-                    : await reactivateSupply(item.id);
-                cargarInsumos();
+                    ? await deactivateVessel(item.id)
+                    : await reactivateVessel(item.id);
+                cargarBarcos();
             }
             setToast({ tipo: 'exito', mensaje: getMensajeExito(tipo, accion) });
         } catch (error) {
@@ -135,56 +117,49 @@ export default function SuppliesMasterDetailPage() {
         }
     };
 
-    const handleNuevoInsumo = () => {
-        // Pre-cargamos la categoría seleccionada en el modal de insumo,
-        // para que el usuario no tenga que volver a elegirla.
-        setInsumoEdit(
-            categoriaSeleccionada
-                ? { supply_category_id: categoriaSeleccionada.id }
-                : null
-        );
-        setShowInsumoModal(true);
+    const handleNuevoBarco = () => {
+        setBarcoEdit(null);
+        setShowBarcoModal(true);
     };
 
-    // --- Filtros de Categoría (búsqueda + estado) ---
+    // --- Filtros de Naviera ---
 
-    const categoriasFiltradas = categorias
-        .filter(c => c.name.toLowerCase().includes(busquedaCategoria.toLowerCase()))
-        .filter(c => {
-            if (filtroEstadoCategoria === 'ACTIVOS') return c.status;
-            if (filtroEstadoCategoria === 'INACTIVOS') return !c.status;
-            return true; // TODOS
+    const navierasFiltradas = navieras
+        .filter(n => n.name?.toLowerCase().includes(busquedaNaviera.toLowerCase()))
+        .filter(n => {
+            if (filtroEstadoNaviera === 'ACTIVOS') return n.status;
+            if (filtroEstadoNaviera === 'INACTIVOS') return !n.status;
+            return true;
         });
 
-    const totalPaginasCategoria = Math.max(1, Math.ceil(categoriasFiltradas.length / POR_PAGINA));
-    const categoriasPagina = categoriasFiltradas.slice(
-        (paginaCategoria - 1) * POR_PAGINA,
-        paginaCategoria * POR_PAGINA
+    const totalPaginasNaviera = Math.max(1, Math.ceil(navierasFiltradas.length / POR_PAGINA));
+    const navierasPagina = navierasFiltradas.slice(
+        (paginaNaviera - 1) * POR_PAGINA,
+        paginaNaviera * POR_PAGINA
     );
 
-    // --- Filtros de Insumo (categoría + búsqueda + estado) ---
+    // --- Filtros de Barco (naviera + búsqueda + estado) ---
 
-    const insumosDeCategoria = insumos.filter(i =>
-        categoriaSeleccionada && i.supply_category_id === categoriaSeleccionada.id
+    const barcosDeNaviera = barcos.filter(v =>
+        navieraSeleccionada && v.shipping_line_id === navieraSeleccionada.id
     );
 
-    const insumosFiltrados = insumosDeCategoria
-        .filter(i => `${i.name} ${i.code}`.toLowerCase().includes(busquedaInsumo.toLowerCase()))
-        .filter(i => {
-            if (filtroEstadoInsumo === 'ACTIVOS') return i.status;
-            if (filtroEstadoInsumo === 'INACTIVOS') return !i.status;
-            return true; // TODOS
+    const barcosFiltrados = barcosDeNaviera
+        .filter(v => v.name?.toLowerCase().includes(busquedaBarco.toLowerCase()))
+        .filter(v => {
+            if (filtroEstadoBarco === 'ACTIVOS') return v.status;
+            if (filtroEstadoBarco === 'INACTIVOS') return !v.status;
+            return true;
         });
 
-    const totalPaginasInsumo = Math.max(1, Math.ceil(insumosFiltrados.length / POR_PAGINA));
-    const insumosPagina = insumosFiltrados.slice(
-        (paginaInsumo - 1) * POR_PAGINA,
-        paginaInsumo * POR_PAGINA
+    const totalPaginasBarco = Math.max(1, Math.ceil(barcosFiltrados.length / POR_PAGINA));
+    const barcosPagina = barcosFiltrados.slice(
+        (paginaBarco - 1) * POR_PAGINA,
+        paginaBarco * POR_PAGINA
     );
 
     return (
         <div className="p-6">
-            {/* Toast de éxito/error — mismo formato visual y helper que WarehousesPage */}
             {toast && (
                 <div className={`fixed top-6 left-1/2 -translate-x-1/2 text-white text-sm font-semibold px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-2 z-[70] ${
                     toast.tipo === 'exito' ? 'bg-green-600' : 'bg-red-600'
@@ -195,24 +170,23 @@ export default function SuppliesMasterDetailPage() {
             )}
 
             <div className="mb-6">
-                <h1 className="text-2xl font-bold text-gray-800">Insumos por Categoría</h1>
-                <p className="text-gray-500 text-sm">Seleccioná una categoría para ver y gestionar sus insumos</p>
+                <h1 className="text-2xl font-bold text-gray-800">Navieras</h1>
+                <p className="text-gray-500 text-sm">Seleccioná una naviera para ver y gestionar sus barcos</p>
             </div>
 
-                       <div className="grid grid-cols-3 gap-6">
+            <div className="grid grid-cols-3 gap-6">
 
-                {/* Columna izquierda: Categorías — tarjeta en tono slate,
-                    para que se lea como el panel de NAVEGACIÓN, no el de trabajo */}
+                {/* Columna izquierda: Navieras */}
                 <div className="col-span-1 bg-slate-50 border border-slate-200 rounded-2xl p-4">
                     <div className="flex justify-between items-center mb-3">
                         <div className="flex items-center gap-2">
                             <div className="w-1.5 h-5 bg-slate-400 rounded-full" />
-                            <h2 className="font-semibold text-slate-700">Categorías</h2>
+                            <h2 className="font-semibold text-slate-700">Navieras</h2>
                         </div>
                         <button
-                            onClick={() => { setCategoriaEdit(null); setShowCategoriaModal(true); }}
-                            className="flex items-center gap-2 bg-[#3B5BDB] text-white px-4 py-2 rounded-lg hover:bg-[#2F49B8] transition disabled:opacity-40"
- >
+                            onClick={() => { setNavieraEdit(null); setShowNavieraModal(true); }}
+                            className="flex items-center gap-2 bg-[#3B5BDB] text-white px-4 py-2 rounded-lg hover:bg-[#2F49B8] transition"
+                        >
                             <Plus size={16} />
                             Nueva
                         </button>
@@ -222,21 +196,20 @@ export default function SuppliesMasterDetailPage() {
                         <Search size={16} className="text-slate-400" />
                         <input
                             type="text"
-                            placeholder="Buscar categoría..."
+                            placeholder="Buscar naviera..."
                             className="outline-none w-full text-sm uppercase placeholder:normal-case"
-                            value={busquedaCategoria}
-                            onChange={(e) => setBusquedaCategoria(e.target.value.toUpperCase())}
+                            value={busquedaNaviera}
+                            onChange={(e) => setBusquedaNaviera(e.target.value.toUpperCase())}
                         />
                     </div>
 
-                    {/* Filtro de estado: Activos / Inactivos / Todos */}
                     <div className="flex gap-1 mb-3 bg-slate-200/60 rounded-lg p-1">
                         {['ACTIVOS', 'INACTIVOS', 'TODOS'].map((opcion) => (
                             <button
                                 key={opcion}
-                                onClick={() => setFiltroEstadoCategoria(opcion)}
+                                onClick={() => setFiltroEstadoNaviera(opcion)}
                                 className={`flex-1 text-xs font-semibold py-1.5 rounded-md transition ${
-                                    filtroEstadoCategoria === opcion
+                                    filtroEstadoNaviera === opcion
                                         ? 'bg-white text-slate-700 shadow-sm'
                                         : 'text-slate-500 hover:text-slate-700'
                                 }`}
@@ -247,47 +220,46 @@ export default function SuppliesMasterDetailPage() {
                     </div>
 
                     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                        {loadingCategorias ? (
+                        {loadingNavieras ? (
                             <p className="text-center py-6 text-gray-400 text-sm">Cargando...</p>
-                        ) : categoriasPagina.length === 0 ? (
-                            <p className="text-center py-6 text-gray-400 text-sm">Sin categorías</p>
+                        ) : navierasPagina.length === 0 ? (
+                            <p className="text-center py-6 text-gray-400 text-sm">Sin navieras</p>
                         ) : (
-                            categoriasPagina.map((c) => (
+                            navierasPagina.map((n) => (
                                 <div
-                                    key={c.id}
-                                    onClick={() => setCategoriaSeleccionada(c)}
+                                    key={n.id}
+                                    onClick={() => setNavieraSeleccionada(n)}
                                     className={`flex items-center justify-between px-4 py-3 border-b last:border-0 cursor-pointer transition ${
-                                        categoriaSeleccionada?.id === c.id
+                                        navieraSeleccionada?.id === n.id
                                             ? 'bg-green-50 border-l-4 border-l-[#3B5BDB]'
                                             : 'hover:bg-slate-50'
                                     }`}
                                 >
                                     <div>
-                                        <p className="font-medium text-sm text-gray-800">{c.name}</p>
-                                        <p className="text-xs text-gray-500">{c.group_label}</p>
+                                        <p className="font-medium text-sm text-gray-800">{n.name}</p>
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
-                                            c.status ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'
+                                            n.status ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'
                                         }`}>
-                                            {c.status ? 'Activo' : 'Inactivo'}
+                                            {n.status ? 'Activo' : 'Inactivo'}
                                         </span>
                                         <button
-                                            onClick={(e) => { e.stopPropagation(); setCategoriaEdit(c); setShowCategoriaModal(true); }}
+                                            onClick={(e) => { e.stopPropagation(); setNavieraEdit(n); setShowNavieraModal(true); }}
                                             className="bg-green-600 hover:bg-green-700 text-white p-1 rounded-lg transition">
-    <Pencil size={14} />
+                                            <Pencil size={14} />
                                         </button>
-                                        {c.status ? (
+                                        {n.status ? (
                                             <button
-                                                onClick={(e) => { e.stopPropagation(); pedirConfirmacion('categoria', c, 'desactivar'); }}
-                                               className="bg-red-600 hover:bg-red-700 text-white p-1 rounded-lg transition">
-    <Ban size={14} />
+                                                onClick={(e) => { e.stopPropagation(); pedirConfirmacion('naviera', n, 'desactivar'); }}
+                                                className="bg-red-600 hover:bg-red-700 text-white p-1 rounded-lg transition">
+                                                <Ban size={14} />
                                             </button>
                                         ) : (
                                             <button
-                                                onClick={(e) => { e.stopPropagation(); pedirConfirmacion('categoria', c, 'reactivar'); }}
+                                                onClick={(e) => { e.stopPropagation(); pedirConfirmacion('naviera', n, 'reactivar'); }}
                                                 className="text-green-600 hover:text-green-800"
-                                                title="Reactivar categoría"
+                                                title="Reactivar naviera"
                                             >
                                                 <RotateCcw size={14} />
                                             </button>
@@ -298,23 +270,22 @@ export default function SuppliesMasterDetailPage() {
                         )}
                     </div>
 
-                    {/* Paginación de Categorías */}
-                    {!loadingCategorias && categoriasFiltradas.length > POR_PAGINA && (
+                    {!loadingNavieras && navierasFiltradas.length > POR_PAGINA && (
                         <div className="flex items-center justify-between mt-3 text-sm">
                             <button
-                                onClick={() => setPaginaCategoria(p => Math.max(1, p - 1))}
-                                disabled={paginaCategoria === 1}
+                                onClick={() => setPaginaNaviera(p => Math.max(1, p - 1))}
+                                disabled={paginaNaviera === 1}
                                 className="flex items-center gap-1 text-slate-600 hover:text-slate-800 disabled:opacity-30 disabled:hover:text-slate-600"
                             >
                                 <ChevronLeft size={16} />
                                 Anterior
                             </button>
                             <span className="text-slate-500">
-                                Página {paginaCategoria} de {totalPaginasCategoria}
+                                Página {paginaNaviera} de {totalPaginasNaviera}
                             </span>
                             <button
-                                onClick={() => setPaginaCategoria(p => Math.min(totalPaginasCategoria, p + 1))}
-                                disabled={paginaCategoria === totalPaginasCategoria}
+                                onClick={() => setPaginaNaviera(p => Math.min(totalPaginasNaviera, p + 1))}
+                                disabled={paginaNaviera === totalPaginasNaviera}
                                 className="flex items-center gap-1 text-slate-600 hover:text-slate-800 disabled:opacity-30 disabled:hover:text-slate-600"
                             >
                                 Siguiente
@@ -324,25 +295,24 @@ export default function SuppliesMasterDetailPage() {
                     )}
                 </div>
 
-                {/* Columna derecha: Insumos — tarjeta con acento verde
-                    institucional, panel de TRABAJO principal */}
+                {/* Columna derecha: Barcos */}
                 <div className="col-span-2 bg-[#3B5BDB]/[0.03] border border-[#3B5BDB]/20 rounded-2xl p-4">
                     <div className="flex justify-between items-center mb-3">
                         <div className="flex items-center gap-2">
                             <div className="w-1.5 h-5 bg-[#3B5BDB] rounded-full" />
                             <h2 className="font-semibold text-gray-800">
-                                {categoriaSeleccionada
-                                    ? `Insumos de ${categoriaSeleccionada.name}`
-                                    : 'Seleccioná una categoría'}
+                                {navieraSeleccionada
+                                    ? `Barcos de ${navieraSeleccionada.name}`
+                                    : 'Seleccioná una naviera'}
                             </h2>
                         </div>
                         <button
-                            onClick={handleNuevoInsumo}
-                            disabled={!categoriaSeleccionada}
+                            onClick={handleNuevoBarco}
+                            disabled={!navieraSeleccionada}
                             className="flex items-center gap-2 bg-[#3B5BDB] text-white px-4 py-2 rounded-lg hover:bg-[#2F49B8] transition disabled:opacity-40"
                         >
                             <Plus size={18} />
-                            Nuevo insumo
+                            Nuevo barco
                         </button>
                     </div>
 
@@ -351,21 +321,20 @@ export default function SuppliesMasterDetailPage() {
                             <Search size={16} className="text-gray-400 shrink-0" />
                             <input
                                 type="text"
-                                placeholder="Buscar por nombre o código..."
+                                placeholder="Buscar barco..."
                                 className="outline-none w-full text-sm uppercase placeholder:normal-case"
-                                value={busquedaInsumo}
-                                onChange={(e) => setBusquedaInsumo(e.target.value.toUpperCase())}
+                                value={busquedaBarco}
+                                onChange={(e) => setBusquedaBarco(e.target.value.toUpperCase())}
                             />
                         </div>
 
-                        {/* Filtro de estado: Activos / Inactivos / Todos */}
                         <div className="flex gap-1 bg-[#3B5BDB]/10 rounded-lg p-1 shrink-0">
                             {['ACTIVOS', 'INACTIVOS', 'TODOS'].map((opcion) => (
                                 <button
                                     key={opcion}
-                                    onClick={() => setFiltroEstadoInsumo(opcion)}
+                                    onClick={() => setFiltroEstadoBarco(opcion)}
                                     className={`text-xs font-semibold px-3 py-1.5 rounded-md transition whitespace-nowrap ${
-                                        filtroEstadoInsumo === opcion
+                                        filtroEstadoBarco === opcion
                                             ? 'bg-white text-[#3B5BDB] shadow-sm'
                                             : 'text-gray-500 hover:text-gray-700'
                                     }`}
@@ -380,74 +349,66 @@ export default function SuppliesMasterDetailPage() {
                         <table className="w-full text-sm">
                             <thead className="bg-[#3B5BDB] text-white">
                                 <tr>
-                                    <th className="text-left px-4 py-3">Código</th>
-                                    <th className="text-left px-4 py-3">Insumo</th>
-                                    <th className="text-left px-4 py-3">Unidad</th>
-                                    <th className="text-left px-4 py-3">Costo</th>
+                                    <th className="text-left px-4 py-3">Barco</th>
                                     <th className="text-left px-4 py-3">Estado</th>
                                     <th className="text-left px-4 py-3">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {!categoriaSeleccionada ? (
+                                {!navieraSeleccionada ? (
                                     <tr>
-                                        <td colSpan="6" className="text-center py-8 text-gray-400">
-                                            Elegí una categoría de la izquierda
+                                        <td colSpan="3" className="text-center py-8 text-gray-400">
+                                            Elegí una naviera de la izquierda
                                         </td>
                                     </tr>
-                                ) : loadingInsumos ? (
+                                ) : loadingBarcos ? (
                                     <tr>
-                                        <td colSpan="6" className="text-center py-8 text-gray-400">
-                                            Cargando insumos...
+                                        <td colSpan="3" className="text-center py-8 text-gray-400">
+                                            Cargando barcos...
                                         </td>
                                     </tr>
-                                ) : insumosPagina.length === 0 ? (
+                                ) : barcosPagina.length === 0 ? (
                                     <tr>
-                                        <td colSpan="6" className="text-center py-8 text-gray-400">
-                                            Esta categoría no tiene insumos {filtroEstadoInsumo === 'TODOS' ? '' : filtroEstadoInsumo.toLowerCase()} que coincidan
+                                        <td colSpan="3" className="text-center py-8 text-gray-400">
+                                            Esta naviera no tiene barcos {filtroEstadoBarco === 'TODOS' ? '' : filtroEstadoBarco.toLowerCase()} que coincidan
                                         </td>
                                     </tr>
                                 ) : (
-                                    insumosPagina.map((i, idx) => (
+                                    barcosPagina.map((v, idx) => (
                                         <tr
-                                            key={i.id}
-                                            onClick={() => setFilaSeleccionada(i.id)}
+                                            key={v.id}
+                                            onClick={() => setFilaSeleccionada(v.id)}
                                             className={`cursor-pointer transition ${
-                                                filaSeleccionada === i.id
+                                                filaSeleccionada === v.id
                                                     ? 'bg-blue-50'
                                                     : idx % 2 === 0 ? 'bg-slate-50/60' : 'bg-white'
                                             } hover:bg-blue-50/60`}
                                         >
-                                            <td className="px-4 py-3 text-gray-600">{i.code}</td>
-                                            <td className="px-4 py-3 font-medium">{i.name}</td>
-                                            <td className="px-4 py-3">{i.unit}</td>
-                                            <td className="px-4 py-3">${Number(i.cost).toFixed(2)}</td>
+                                            <td className="px-4 py-3 font-medium">{v.name}</td>
                                             <td className="px-4 py-3">
                                                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                                    i.status ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'
+                                                    v.status ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'
                                                 }`}>
-                                                    {i.status ? 'Activo' : 'Inactivo'}
+                                                    {v.status ? 'Activo' : 'Inactivo'}
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3 flex gap-2" onClick={(e) => e.stopPropagation()}>
-                                                {i.status ? (
+                                                {v.status ? (
                                                     <>
-                                                        <button onClick={() => { setInsumoEdit(i); setShowInsumoModal(true); }} className="bg-green-600 hover:bg-green-700 text-white p-1 rounded-lg transition">
-    <Pencil size={14} />
-
+                                                        <button onClick={() => { setBarcoEdit(v); setShowBarcoModal(true); }} className="bg-green-600 hover:bg-green-700 text-white p-1 rounded-lg transition">
+                                                            <Pencil size={14} />
                                                         </button>
                                                         <button
-                                                            onClick={() => pedirConfirmacion('insumo', i, 'desactivar')}
+                                                            onClick={() => pedirConfirmacion('barco', v, 'desactivar')}
                                                             className="bg-red-600 hover:bg-red-700 text-white p-1 rounded-lg transition">
-    <Ban size={14} />
-
+                                                            <Ban size={14} />
                                                         </button>
                                                     </>
                                                 ) : (
                                                     <button
-                                                        onClick={() => pedirConfirmacion('insumo', i, 'reactivar')}
+                                                        onClick={() => pedirConfirmacion('barco', v, 'reactivar')}
                                                         className="text-green-600 hover:text-green-800"
-                                                        title="Reactivar insumo"
+                                                        title="Reactivar barco"
                                                     >
                                                         <RotateCcw size={16} />
                                                     </button>
@@ -459,23 +420,22 @@ export default function SuppliesMasterDetailPage() {
                             </tbody>
                         </table>
 
-                        {/* Paginación de Insumos */}
-                        {categoriaSeleccionada && !loadingInsumos && insumosFiltrados.length > POR_PAGINA && (
+                        {navieraSeleccionada && !loadingBarcos && barcosFiltrados.length > POR_PAGINA && (
                             <div className="flex items-center justify-between px-4 py-3 border-t border-[#3B5BDB]/10 text-sm">
                                 <button
-                                    onClick={() => setPaginaInsumo(p => Math.max(1, p - 1))}
-                                    disabled={paginaInsumo === 1}
+                                    onClick={() => setPaginaBarco(p => Math.max(1, p - 1))}
+                                    disabled={paginaBarco === 1}
                                     className="flex items-center gap-1 text-gray-600 hover:text-[#3B5BDB] disabled:opacity-30 disabled:hover:text-gray-600"
                                 >
                                     <ChevronLeft size={16} />
                                     Anterior
                                 </button>
                                 <span className="text-gray-500">
-                                    Página {paginaInsumo} de {totalPaginasInsumo}
+                                    Página {paginaBarco} de {totalPaginasBarco}
                                 </span>
                                 <button
-                                    onClick={() => setPaginaInsumo(p => Math.min(totalPaginasInsumo, p + 1))}
-                                    disabled={paginaInsumo === totalPaginasInsumo}
+                                    onClick={() => setPaginaBarco(p => Math.min(totalPaginasBarco, p + 1))}
+                                    disabled={paginaBarco === totalPaginasBarco}
                                     className="flex items-center gap-1 text-gray-600 hover:text-[#3B5BDB] disabled:opacity-30 disabled:hover:text-gray-600"
                                 >
                                     Siguiente
@@ -487,24 +447,24 @@ export default function SuppliesMasterDetailPage() {
                 </div>
             </div>
 
-            {showCategoriaModal && (
-                <SupplyCategoryModal
-                    supplyCategory={categoriaEdit}
-                    onClose={() => { setShowCategoriaModal(false); setCategoriaEdit(null); }}
-                    onGuardado={cargarCategorias}
+            {showNavieraModal && (
+                <ShippingLineModal
+                    isOpen={showNavieraModal}
+                    shippingLine={navieraEdit}
+                    onClose={() => { setShowNavieraModal(false); setNavieraEdit(null); }}
+                    onGuardado={cargarNavieras}
                 />
             )}
 
-            {showInsumoModal && (
-                <SupplyModal
-                    supply={insumoEdit}
-                    onClose={() => { setShowInsumoModal(false); setInsumoEdit(null); }}
-                    onGuardado={cargarInsumos}
+            {showBarcoModal && (
+                <VesselModal
+                    vessel={barcoEdit}
+                    shippingLineId={navieraSeleccionada?.id}
+                    onClose={() => { setShowBarcoModal(false); setBarcoEdit(null); }}
+                    onGuardado={cargarBarcos}
                 />
             )}
 
-            {/* Modal de confirmación propio — reemplaza confirm() nativo,
-                sirve tanto para categorías como para insumos */}
             {confirmacion && (
                 <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
@@ -520,8 +480,8 @@ export default function SuppliesMasterDetailPage() {
                             <div>
                                 <h3 className="font-bold text-gray-800">
                                     {confirmacion.accion === 'desactivar'
-                                        ? `Desactivar ${confirmacion.tipo === 'categoria' ? 'categoría' : 'insumo'}`
-                                        : `Reactivar ${confirmacion.tipo === 'categoria' ? 'categoría' : 'insumo'}`}
+                                        ? `Desactivar ${confirmacion.tipo === 'naviera' ? 'naviera' : 'barco'}`
+                                        : `Reactivar ${confirmacion.tipo === 'naviera' ? 'naviera' : 'barco'}`}
                                 </h3>
                                 <p className="text-sm text-gray-500 mt-1">
                                     ¿Estás seguro de {confirmacion.accion} <strong>{confirmacion.item.name}</strong>?

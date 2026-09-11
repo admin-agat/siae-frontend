@@ -1,9 +1,10 @@
 // Modal para crear y editar bodegas
 import { useState, useEffect, useRef } from 'react';
 import { createWarehouse, updateWarehouse, getWarehouses } from '../api/warehouses';
-import { X, CheckCircle } from 'lucide-react';
 // Estándar centralizado de mensajes toast (crear/actualizar/desactivar/reactivar)
 import { getMensajeExito, getMensajeError } from '../utils/toastMessages';
+
+import ModalShell from './common/ModalShell';
 
 // Prefijo fijo de código para bodegas (igual patrón que CRT-/PLA-/QUI- en Insumos)
 const PREFIJO_CODIGO = 'BOG-';
@@ -137,102 +138,64 @@ export default function WarehouseModal({ warehouse, onClose, onGuardado }) {
     };
 
     return (
-        <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto relative">
-
-                {/* Toast de éxito — texto generado por el helper estandarizado,
-                    distingue automáticamente "creada" vs "actualizada" */}
-                {mostrarExito && (
-                    <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-green-600 text-white text-sm font-semibold px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-2 z-10">
-                        <CheckCircle size={18} />
-                        {getMensajeExito('bodega', esEdicion ? 'actualizar' : 'crear')}
-                    </div>
-                )}
-
-                {/* Header */}
-                <div className="flex justify-between items-center px-7 py-5 border-b border-gray-100">
-                    <h2 className="text-lg font-bold text-[#0a4f3e]">
-                        {esEdicion ? 'Editar bodega' : 'Nueva bodega'}
-                    </h2>
-                    <button onClick={handleCancelar} className="text-gray-400 hover:text-gray-600">
-                        <X size={22} />
-                    </button>
+        <>
+            <ModalShell
+    title={esEdicion ? 'Editar bodega' : 'Nueva bodega'}
+    onClose={handleCancelar}
+    onSubmit={handleSubmit}
+    esEdicion={esEdicion}
+    guardando={loading}
+    deshabilitado={cargandoCodigo}
+    error={error}
+    toast={mostrarExito ? getMensajeExito('bodega', esEdicion ? 'actualizar' : 'crear') : ''}
+>
+                {/* Nombre de la bodega */}
+                <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Nombre de la Bodega *</label>
+                    <input
+                        name="name"
+                        value={form.name}
+                        onChange={handleChange}
+                        required
+                        maxLength={255}
+                        placeholder="Ej: BODEGA PRINCIPAL"
+                        className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
                 </div>
 
-                {/* Formulario */}
-                <form onSubmit={handleSubmit} className="px-7 py-6 space-y-5">
-
-                    {error && (
-                        <div className="bg-red-50 text-red-600 text-sm px-4 py-2 rounded-lg">
-                            {error}
-                        </div>
-                    )}
-
-                    {/* Nombre de la bodega */}
+                {/* Fila: Código + Zona */}
+                <div className="grid grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">Nombre de la Bodega *</label>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">Código *</label>
                         <input
-                            name="name"
-                            value={form.name}
+                            disabled
+                            name="code"
+                            value={cargandoCodigo ? 'Calculando...' : form.code}
+                            readOnly
+                            required
+                            maxLength={255}
+                            className="w-full bg-gray-200 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-600 outline-none cursor-not-allowed"
+                        />
+                        <p className="text-xs text-gray-400 mt-1">Generado automáticamente</p>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">Zona *</label>
+                        <input
+                            name="zone"
+                            value={form.zone}
                             onChange={handleChange}
                             required
                             maxLength={255}
-                            placeholder="Ej: BODEGA PRINCIPAL"
-                            className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#3B5BDB]"
+                            placeholder="Ej: MACHALA"
+                            className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500"
                         />
                     </div>
+                </div>
 
-                    {/* Fila: Código + Zona */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Código *</label>
-                            <input
-                                name="code"
-                                value={cargandoCodigo ? 'Calculando...' : form.code}
-                                readOnly
-                                required
-                                maxLength={255}
-                                className="w-full bg-gray-200 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-600 outline-none cursor-not-allowed"
-                            />
-                            <p className="text-xs text-gray-400 mt-1">Generado automáticamente</p>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Zona *</label>
-                            <input
-                                name="zone"
-                                value={form.zone}
-                                onChange={handleChange}
-                                required
-                                maxLength={255}
-                                placeholder="Ej: MACHALA"
-                                className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#3B5BDB]"
-                            />
-                        </div>
-                    </div>
-
-                    {/* Nota: el selector de responsable (dropdown de users) se agrega
-                        cuando tengamos el endpoint de usuarios listo para consumir aquí,
-                        siguiendo el mismo patrón que el selector de productor en FarmModal */}
-
-                    {/* Botones */}
-                    <div className="flex justify-end gap-4 items-center pt-4 border-t border-gray-100">
-                        <button
-                            type="button"
-                            onClick={handleCancelar}
-                            className="px-5 py-2.5 text-sm font-semibold bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
-                        >
-                            Cancelar
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={loading || cargandoCodigo}
-                            className="px-5 py-2.5 text-sm font-semibold bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition"
-                        >
-                            {loading ? 'Guardando...' : esEdicion ? 'Actualizar' : 'Guardar'}
-                        </button>
-                    </div>
-                </form>
-            </div>
+                {/* Nota: el selector de responsable (dropdown de users) se agrega
+                    cuando tengamos el endpoint de usuarios listo para consumir aquí,
+                    siguiendo el mismo patrón que el selector de productor en FarmModal */}
+            </ModalShell>
 
             {/* Modal propio de confirmación al salir (reemplaza el confirm() nativo del navegador) */}
             {mostrarConfirmarSalida && (
@@ -259,6 +222,6 @@ export default function WarehouseModal({ warehouse, onClose, onGuardado }) {
                     </div>
                 </div>
             )}
-        </div>
+        </>
     );
 }

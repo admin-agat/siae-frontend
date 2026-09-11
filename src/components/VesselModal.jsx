@@ -1,43 +1,30 @@
-// MovementReasonModal.jsx
-// Modal para crear/editar un Motivo de Movimiento (ej. "Compra a Proveedor",
-// "Transferencia a otra Bodega"). Un motivo solo tiene Nombre y Tipo — es un
-// catálogo simple, sin líneas ni detalle.
+// Modal para crear/editar un Barco, siempre asociado a una Naviera fija
+// (se abre desde el detalle expandido de esa naviera en ShippingLinesPage).
 import { useState, useEffect, useRef } from 'react';
-import { createMovementReason, updateMovementReason } from '../api/movementReasons';
+import { createVessel, updateVessel } from '../api/vessels';
 import { getMensajeExito, getMensajeError } from '../utils/toastMessages';
 import ModalShell from './common/ModalShell';
 
-export default function MovementReasonModal({ reason, onClose, onGuardado }) {
-    const esEdicion = Boolean(reason?.id);
+export default function VesselModal({ vessel, shippingLineId, onClose, onGuardado }) {
+    const esEdicion = Boolean(vessel?.id);
 
     const [name, setName] = useState('');
-    const [type, setType] = useState('INGRESO');
-
-    // Guarda el estado inicial del formulario para poder comparar y saber
-    // si el usuario realmente modificó algo antes de mostrarle la confirmación al cancelar
     const formInicialRef = useRef(null);
 
     const [guardando, setGuardando] = useState(false);
     const [error, setError] = useState('');
     const [mostrarExito, setMostrarExito] = useState(false);
-    // Controla el modal propio de "¿seguro que deseas salir?" (reemplaza el confirm() nativo del navegador)
     const [mostrarConfirmarSalida, setMostrarConfirmarSalida] = useState(false);
 
     useEffect(() => {
-        const datosIniciales = {
-            name: reason?.name || '',
-            type: reason?.type || 'INGRESO',
-        };
-        setName(datosIniciales.name);
-        setType(datosIniciales.type);
-        formInicialRef.current = datosIniciales;
-    }, [reason]);
+        const nombreInicial = vessel?.name || '';
+        setName(nombreInicial);
+        formInicialRef.current = nombreInicial;
+    }, [vessel]);
 
-    // Compara el formulario actual contra el estado con el que abrió,
-    // para saber si hay cambios sin guardar
     const hayCambiosSinGuardar = () => {
-        if (!formInicialRef.current) return false;
-        return JSON.stringify({ name, type }) !== JSON.stringify(formInicialRef.current);
+        if (formInicialRef.current === null) return false;
+        return name !== formInicialRef.current;
     };
 
     const handleCancelar = () => {
@@ -53,19 +40,19 @@ export default function MovementReasonModal({ reason, onClose, onGuardado }) {
         setError('');
 
         if (!name.trim()) {
-            setError('EL NOMBRE ES OBLIGATORIO');
+            setError('EL NOMBRE DEL BARCO ES OBLIGATORIO');
             return;
         }
 
         setGuardando(true);
         const accion = esEdicion ? 'actualizar' : 'crear';
         try {
-            const data = { name: name.trim().toUpperCase(), type };
+            const data = { name: name.trim().toUpperCase(), shipping_line_id: shippingLineId };
 
             if (esEdicion) {
-                await updateMovementReason(reason.id, data);
+                await updateVessel(vessel.id, data);
             } else {
-                await createMovementReason(data);
+                await createVessel(data);
             }
 
             setMostrarExito(true);
@@ -74,9 +61,9 @@ export default function MovementReasonModal({ reason, onClose, onGuardado }) {
                 onClose();
             }, 1200);
         } catch (err) {
-            console.error('ERROR AL GUARDAR EL MOTIVO DE MOVIMIENTO:', err);
+            console.error('ERROR AL GUARDAR EL BARCO:', err);
             setError(
-                err.response?.data?.message || getMensajeError('motivo', accion)
+                err.response?.data?.message || getMensajeError('barco', accion)
             );
             setGuardando(false);
         }
@@ -85,42 +72,27 @@ export default function MovementReasonModal({ reason, onClose, onGuardado }) {
     return (
         <>
             <ModalShell
-                title={esEdicion ? 'Editar Motivo' : 'Nuevo Motivo de Movimiento'}
+                title={esEdicion ? 'Editar barco' : 'Nuevo barco'}
                 onClose={handleCancelar}
                 onSubmit={handleSubmit}
                 esEdicion={esEdicion}
                 guardando={guardando}
                 error={error}
-                toast={mostrarExito ? getMensajeExito('motivo', esEdicion ? 'actualizar' : 'crear') : ''}
+                toast={mostrarExito ? getMensajeExito('barco', esEdicion ? 'actualizar' : 'crear') : ''}
                 size="sm"
             >
                 <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Nombre *</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Nombre del barco *</label>
                     <input
                         value={name}
                         onChange={(e) => setName(e.target.value.toUpperCase())}
-                        placeholder="Ej: COMPRA A PROVEEDOR"
+                        placeholder="Ej: MSC ANNA"
                         required
                         className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                 </div>
-
-                <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Tipo *</label>
-                    <select
-                        value={type}
-                        onChange={(e) => setType(e.target.value)}
-                        required
-                        className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500"
-                    >
-                        <option value="INGRESO">INGRESO</option>
-                        <option value="EGRESO">EGRESO</option>
-                        <option value="DEVOLUCION">DEVOLUCIÓN</option>
-                    </select>
-                </div>
             </ModalShell>
 
-            {/* Modal propio de confirmación al salir (reemplaza el confirm() nativo del navegador) */}
             {mostrarConfirmarSalida && (
                 <div className="fixed inset-0 flex items-center justify-center z-[60]" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm px-6 py-6">

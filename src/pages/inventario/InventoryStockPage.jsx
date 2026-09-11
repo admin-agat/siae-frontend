@@ -1,13 +1,18 @@
 // InventoryStockPage.jsx
 // Vista general de stock: todas las bodegas con sus insumos y existencias actuales.
+// Cada bodega es un acordeón: clic en el encabezado para expandir/colapsar.
 import { useState, useEffect } from 'react';
-import { Search, Warehouse } from 'lucide-react';
+import { Search, Warehouse, ChevronDown, ChevronUp } from 'lucide-react';
 import { getGeneralStock } from '../../api/inventoryStock';
 
 export default function InventoryStockPage() {
     const [stock, setStock] = useState([]);
     const [loading, setLoading] = useState(true);
     const [busqueda, setBusqueda] = useState('');
+
+    // Guarda qué bodegas están expandidas: { "BODEGA SAN JUAN": true, ... }
+    // Empieza vacío (todo colapsado) para que la vista general sea compacta.
+    const [bodegasAbiertas, setBodegasAbiertas] = useState({});
 
     useEffect(() => {
         cargarStock();
@@ -25,6 +30,13 @@ export default function InventoryStockPage() {
         }
     };
 
+    const toggleBodega = (bodega) => {
+        setBodegasAbiertas((prev) => ({
+            ...prev,
+            [bodega]: !prev[bodega],
+        }));
+    };
+
     const stockFiltrado = stock.filter(row =>
         `${row.warehouse_name} ${row.supply_name}`.toLowerCase().includes(busqueda.toLowerCase())
     );
@@ -36,6 +48,14 @@ export default function InventoryStockPage() {
         acc[row.warehouse_name].push(row);
         return acc;
     }, {});
+
+    // Mientras el usuario busca algo, conviene expandir automáticamente
+    // las bodegas que sí tienen resultados, para no obligarlo a abrir
+    // cada una manualmente después de filtrar.
+    const estaAbierta = (bodega) => {
+        if (busqueda.trim() !== '') return true;
+        return Boolean(bodegasAbiertas[bodega]);
+    };
 
     return (
         <div className="p-6">
@@ -68,33 +88,54 @@ export default function InventoryStockPage() {
             ) : Object.keys(porBodega).length === 0 ? (
                 <p className="text-center text-gray-400 py-10">No hay existencias registradas todavía</p>
             ) : (
-                <div className="space-y-6">
-                    {Object.entries(porBodega).map(([bodega, filas]) => (
-                        <div key={bodega} className="bg-white rounded-xl shadow overflow-hidden">
-                            <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 border-b">
-                                <Warehouse size={16} className="text-[#3B5BDB]" />
-                                <h2 className="font-semibold text-gray-800">{bodega}</h2>
+                <div className="space-y-4">
+                    {Object.entries(porBodega).map(([bodega, filas]) => {
+                        const abierta = estaAbierta(bodega);
+
+                        return (
+                            <div key={bodega} className="bg-white rounded-xl shadow overflow-hidden">
+                                <button
+                                    type="button"
+                                    onClick={() => toggleBodega(bodega)}
+                                    className="w-full flex items-center justify-between gap-2 px-4 py-3 bg-gray-50 border-b hover:bg-gray-100 transition text-left"
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <Warehouse size={16} className="text-[#3B5BDB]" />
+                                        <h2 className="font-semibold text-gray-800">{bodega}</h2>
+                                        <span className="text-xs text-gray-400">
+                                            ({filas.length} {filas.length === 1 ? 'insumo' : 'insumos'})
+                                        </span>
+                                    </div>
+                                    {abierta ? (
+                                        <ChevronUp size={18} className="text-gray-500" />
+                                    ) : (
+                                        <ChevronDown size={18} className="text-gray-500" />
+                                    )}
+                                </button>
+
+                                {abierta && (
+                                    <table className="w-full text-sm">
+                                        <thead className="bg-[#3B5BDB] text-white">
+                                            <tr>
+                                                <th className="text-left px-4 py-3">Insumo</th>
+                                                <th className="text-right px-4 py-3">Existencia</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {filas.map((f, i) => (
+                                                <tr key={f.supply_id} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                                                    <td className="px-4 py-3 font-medium">{f.supply_name}</td>
+                                                    <td className="px-4 py-3 text-right">
+                                                        {Number(f.existencia).toLocaleString('es-EC')}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                )}
                             </div>
-                            <table className="w-full text-sm">
-                                <thead className="bg-[#3B5BDB] text-white">
-                                    <tr>
-                                        <th className="text-left px-4 py-3">Insumo</th>
-                                        <th className="text-right px-4 py-3">Existencia</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filas.map((f, i) => (
-                                        <tr key={f.supply_id} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                                            <td className="px-4 py-3 font-medium">{f.supply_name}</td>
-                                            <td className="px-4 py-3 text-right">
-                                                {Number(f.existencia).toLocaleString('es-EC')}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
         </div>

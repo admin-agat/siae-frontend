@@ -112,9 +112,8 @@ export default function MovementReasonsPage() {
         <div className="p-6">
             {/* Toast de éxito/error — mismo formato visual y helper que el resto del módulo */}
             {toast && (
-                <div className={`fixed top-6 left-1/2 -translate-x-1/2 text-white text-sm font-semibold px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-2 z-[70] ${
-                    toast.tipo === 'exito' ? 'bg-green-600' : 'bg-red-600'
-                }`}>
+                <div className={`fixed top-6 left-1/2 -translate-x-1/2 text-white text-sm font-semibold px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-2 z-[70] ${toast.tipo === 'exito' ? 'bg-green-600' : 'bg-red-600'
+                    }`}>
                     {toast.tipo === 'exito' ? <CheckCircle size={18} /> : <AlertTriangle size={18} />}
                     {toast.mensaje}
                 </div>
@@ -173,37 +172,35 @@ export default function MovementReasonsPage() {
                                 <tr
                                     key={r.id}
                                     onClick={() => setFilaSeleccionada(r.id)}
-                                    className={`cursor-pointer transition ${
-                                        filaSeleccionada === r.id
+                                    className={`cursor-pointer transition ${filaSeleccionada === r.id
                                             ? 'bg-blue-50'
                                             : i % 2 === 0 ? 'bg-gray-50' : 'bg-white'
-                                    } hover:bg-blue-50/60`}
+                                        } hover:bg-blue-50/60`}
                                 >
                                     <td className="px-4 py-3 font-medium">{r.name}</td>
                                     <td className="px-4 py-3 text-gray-600">{r.type}</td>
                                     <td className="px-4 py-3">
-                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                            r.status
+                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${r.status
                                                 ? 'bg-green-100 text-green-700'
                                                 : 'bg-gray-200 text-gray-600'
-                                        }`}>
+                                            }`}>
                                             {r.status ? 'Activo' : 'Inactivo'}
                                         </span>
                                     </td>
                                     <td className="px-4 py-3 flex gap-2" onClick={(e) => e.stopPropagation()}>
                                         {r.status ? (
                                             <>
-                                                <button onClick={() => handleEditar(r)} className="text-blue-500 hover:text-blue-700">
+                                                <button onClick={() => handleEditar(r)} className="bg-green-600 hover:bg-green-700 text-white p-1 rounded-lg transition">
                                                     <Pencil size={16} />
                                                 </button>
                                                 {/* Ban en vez de Trash2: el motivo se desactiva (reversible), no
                                                     se borra permanentemente — mismo ícono que Bodegas/Insumos */}
-                                                <button onClick={() => pedirConfirmacion(r, 'desactivar')} className="text-red-500 hover:text-red-700">
+                                                <button onClick={() => pedirConfirmacion(r, 'desactivar')} className="bg-red-600 hover:bg-red-700 text-white p-1 rounded-lg transition">
                                                     <Ban size={16} />
                                                 </button>
                                             </>
                                         ) : (
-                                            <button onClick={() => pedirConfirmacion(r, 'reactivar')} className="text-green-600 hover:text-green-800" title="Reactivar">
+                                            <button onClick={() => pedirConfirmacion(r, 'reactivar')} className="bg-blue-600 hover:bg-blue-700 text-white p-1 rounded-lg transition" title="Reactivar">
                                                 <RotateCcw size={16} />
                                             </button>
                                         )}
@@ -257,9 +254,8 @@ export default function MovementReasonsPage() {
                 <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
                         <div className="flex items-start gap-3 mb-4">
-                            <div className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
-                                confirmacion.accion === 'desactivar' ? 'bg-red-100' : 'bg-green-100'
-                            }`}>
+                            <div className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${confirmacion.accion === 'desactivar' ? 'bg-red-100' : 'bg-green-100'
+                                }`}>
                                 <AlertTriangle
                                     size={20}
                                     className={confirmacion.accion === 'desactivar' ? 'text-red-600' : 'text-green-600'}
@@ -283,11 +279,10 @@ export default function MovementReasonsPage() {
                             </button>
                             <button
                                 onClick={ejecutarConfirmacion}
-                                className={`px-4 py-2 text-sm font-semibold text-white rounded-lg ${
-                                    confirmacion.accion === 'desactivar'
+                                className={`px-4 py-2 text-sm font-semibold text-white rounded-lg ${confirmacion.accion === 'desactivar'
                                         ? 'bg-red-600 hover:bg-red-700'
                                         : 'bg-green-600 hover:bg-green-700'
-                                }`}
+                                    }`}
                             >
                                 Aceptar
                             </button>

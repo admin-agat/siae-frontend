@@ -4,8 +4,10 @@ import {
     LayoutDashboard, Users, LogOut, Sprout, Warehouse, Boxes,
     ArrowLeftRight, ClipboardList, FileText, ShoppingCart,
     FileSignature, Clock, Building2, Tag, Wallet, Ship, Container,
-    CircleDollarSign, History, Download, BarChart3, Percent
+    CircleDollarSign, History, Download, BarChart3, Percent,
+    MapPin, Globe
 } from "lucide-react";
+
 
 const menuItems = [
     {
@@ -13,19 +15,7 @@ const menuItems = [
         items: [
             { label: "Dashboard", ruta: "/dashboard", icono: LayoutDashboard },
         ],
-    },
-    {
-        seccion: "PERSONAS",
-        items: [
-            { label: "Productores / Comercializadoras", ruta: "/terceros", icono: Users },
-        ],
-    },
-    {
-        seccion: "FINCAS",
-        items: [
-            { label: "Fincas", ruta: "/fincas", icono: Sprout },
-        ],
-    },
+    }, 
     {
         seccion: "INVENTARIO",
         items: [
@@ -38,17 +28,26 @@ const menuItems = [
         ],
     },
     // --- Módulos en desarrollo: visuales por ahora, sin rutas funcionales ---    
-    {
-        seccion: "LOGISTICA",
+                        {
+        seccion: "EXPORTACIONES",
         items: [
-            { label: "Navieras", ruta: null, icono: Ship, proximamente: true },      // 🚢 barco: representa las empresas navieras
-            { label: "Embarques", ruta: null, icono: Container, proximamente: true }, // 📦 contenedor: representa el embarque/carga
+            { label: "Navieras", ruta: "/navieras", icono: Ship },
+            { label: "Bookings", ruta: "/bookings", icono: Clock },
+            { label: "Puertos", ruta: "/exportaciones/puertos", icono: Container },
+            { label: "Destinos", ruta: "/exportaciones/destinos", icono: MapPin },
+            { label: "Clientes", ruta: "/exportaciones/clientes", icono: Globe },
+            { label: "Embarques", ruta: null, icono: FileText, proximamente: true },
+            { label: "SKU / Recetas", ruta: null, icono: Boxes, proximamente: true },
+            { label: "Marca BL", ruta: null, icono: FileSignature, proximamente: true },
+            { label: "Invoice", ruta: null, icono: CircleDollarSign, proximamente: true },
         ],
     },
     {
         seccion: "COMERCIAL",
         items: [
+             { label: "Productores / Comercializadoras", ruta: "/terceros", icono: Users },
             { label: "Comercializadoras", ruta: null, icono: Building2, proximamente: true },
+            { label: "Fincas", ruta: "/fincas", icono: Sprout },
             { label: "Marcas", ruta: null, icono: Tag, proximamente: true },
         ],
     },
