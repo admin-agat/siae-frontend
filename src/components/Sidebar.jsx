@@ -5,7 +5,7 @@ import {
     ArrowLeftRight, ClipboardList, FileText, ShoppingCart,
     FileSignature, Clock, Building2, Tag, Wallet, Ship, Container,
     CircleDollarSign, History, Download, BarChart3, Percent,
-    MapPin, Globe
+    MapPin, Globe, CheckCircle2, Truck
 } from "lucide-react";
 
 
@@ -15,7 +15,7 @@ const menuItems = [
         items: [
             { label: "Dashboard", ruta: "/dashboard", icono: LayoutDashboard },
         ],
-    }, 
+    },
     {
         seccion: "INVENTARIO",
         items: [
@@ -24,11 +24,19 @@ const menuItems = [
             { label: "Motivos de Movimiento", ruta: "/motivos-movimiento", icono: ArrowLeftRight },
             { label: "Stock General", ruta: "/stock", icono: ClipboardList },
             { label: "Nuevo Movimiento", ruta: "/movimientos/nuevo", icono: FileText },
+            // Despacho a productor (receta/BOM por marca, cupo asignado). El BODEGUERO
+            // también lo ve: reemplaza el motivo "Entrega a Productor" del formulario libre.
+            { label: "Despacho de Materiales", ruta: "/despacho-materiales", icono: Truck },
+            // NUEVO: historial de despachos (quién retiró, valor, reimprimir guía, anular)
+            { label: "Historial de Despachos", ruta: "/despacho-materiales/historial", icono: History },
+            // soloCoordinador: exclusivo de COORDINADOR_INVENTARIO/ADMIN — un
+            // JEFE_BODEGA no debe verlo (el backend igual lo rechazaría con 403).
+            { label: "Transferencias Pendientes", ruta: "/transferencias-pendientes", icono: CheckCircle2, soloCoordinador: true },
             { label: "Órdenes de Compra", ruta: "/ordenes-compra", icono: ShoppingCart },
         ],
     },
-    // --- Módulos en desarrollo: visuales por ahora, sin rutas funcionales ---    
-                        {
+    // --- Módulos en desarrollo: visuales por ahora, sin rutas funcionales ---
+    {
         seccion: "EXPORTACIONES",
         items: [
             { label: "Navieras", ruta: "/navieras", icono: Ship },
@@ -40,18 +48,18 @@ const menuItems = [
             { label: "SKU / Recetas", ruta: null, icono: Boxes, proximamente: true },
             { label: "Marca BL", ruta: null, icono: FileSignature, proximamente: true },
             { label: "Invoice", ruta: null, icono: CircleDollarSign, proximamente: true },
+            { label: "Marcas", ruta: "/exportaciones/marcas", icono: FileSignature },
         ],
     },
     {
         seccion: "COMERCIAL",
         items: [
-             { label: "Productores / Comercializadoras", ruta: "/terceros", icono: Users },
+            { label: "Productores / Comercializadoras", ruta: "/terceros", icono: Users },
             { label: "Comercializadoras", ruta: null, icono: Building2, proximamente: true },
             { label: "Fincas", ruta: "/fincas", icono: Sprout },
             { label: "Marcas", ruta: null, icono: Tag, proximamente: true },
         ],
     },
-
     {
         seccion: "LIQUIDACIÓN",
         items: [
@@ -64,8 +72,14 @@ const menuItems = [
     },
 ];
 
-// Rutas que SÍ puede ver un BODEGUERO dentro de INVENTARIO (nada más)
-const RUTAS_BODEGUERO = ["/stock", "/movimientos/nuevo"];
+// Rutas que SÍ puede ver un BODEGUERO dentro de INVENTARIO (nada más).
+// Debe coincidir con las rutas sin RutaNoBodeguero en AppRouter.jsx.
+const RUTAS_BODEGUERO = [
+    "/stock",
+    "/movimientos/nuevo",
+    "/despacho-materiales",
+    "/despacho-materiales/historial", // NUEVO: para reimprimir guías de su bodega
+];
 
 export default function Sidebar() {
     const { user, logout } = useAuth();
@@ -79,10 +93,10 @@ export default function Sidebar() {
     // Jefe de Bodega y Coordinador de Inventario ven todo el módulo de Inventario
     // (Terceros y Fincas quedan reservados solo para ADMIN)
     const esRolBodega = user?.role === "JEFE_BODEGA" || user?.role === "COORDINADOR_INVENTARIO";
-    // El Bodeguero es más restringido: solo Stock General y Nuevo Movimiento,
-    // filtrado dentro de la misma sección INVENTARIO (no ve Bodegas, Insumos,
-    // Motivos ni Órdenes de Compra)
+    // El Bodeguero es más restringido: solo las rutas de RUTAS_BODEGUERO
     const esBodeguero = user?.role === "BODEGUERO";
+    // Ítems marcados con soloCoordinador: exclusivos de COORDINADOR_INVENTARIO/ADMIN
+    const esCoordinadorOAdmin = ["COORDINADOR_INVENTARIO", "ADMIN"].includes(user?.role);
 
     let menuVisible;
     if (esBodeguero) {
@@ -93,7 +107,12 @@ export default function Sidebar() {
                 items: grupo.items.filter((item) => RUTAS_BODEGUERO.includes(item.ruta)),
             }));
     } else if (esRolBodega) {
-        menuVisible = menuItems.filter((grupo) => grupo.seccion === "INVENTARIO");
+        menuVisible = menuItems
+            .filter((grupo) => grupo.seccion === "INVENTARIO")
+            .map((grupo) => ({
+                ...grupo,
+                items: grupo.items.filter((item) => !item.soloCoordinador || esCoordinadorOAdmin),
+            }));
     } else {
         menuVisible = menuItems;
     }

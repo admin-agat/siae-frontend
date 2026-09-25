@@ -1,8 +1,11 @@
 // InventoryStockPage.jsx
 // Vista general de stock: todas las bodegas con sus insumos y existencias actuales.
 // Cada bodega es un acordeón: clic en el encabezado para expandir/colapsar.
+// NUEVO: columna "En Tránsito" muestra cantidades que vienen en camino por
+// transferencias todavía PENDIENTE de confirmación (no cuentan como stock
+// disponible hasta que el Coordinador las confirme).
 import { useState, useEffect } from 'react';
-import { Search, Warehouse, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, Warehouse, ChevronDown, ChevronUp, Truck } from 'lucide-react';
 import { getGeneralStock } from '../../api/inventoryStock';
 
 export default function InventoryStockPage() {
@@ -119,17 +122,32 @@ export default function InventoryStockPage() {
                                             <tr>
                                                 <th className="text-left px-4 py-3">Insumo</th>
                                                 <th className="text-right px-4 py-3">Existencia</th>
+                                                <th className="text-right px-4 py-3">En Tránsito</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {filas.map((f, i) => (
-                                                <tr key={f.supply_id} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                                                    <td className="px-4 py-3 font-medium">{f.supply_name}</td>
-                                                    <td className="px-4 py-3 text-right">
-                                                        {Number(f.existencia).toLocaleString('es-EC')}
-                                                    </td>
-                                                </tr>
-                                            ))}
+                                            {filas.map((f, i) => {
+                                                const enTransito = Number(f.en_transito) || 0;
+
+                                                return (
+                                                    <tr key={f.supply_id} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                                                        <td className="px-4 py-3 font-medium">{f.supply_name}</td>
+                                                        <td className="px-4 py-3 text-right">
+                                                            {Number(f.existencia).toLocaleString('es-EC')}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-right">
+                                                            {enTransito > 0 ? (
+                                                                <span className="inline-flex items-center gap-1 text-amber-600 font-medium">
+                                                                    <Truck size={14} />
+                                                                    {enTransito.toLocaleString('es-EC')}
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-gray-300">—</span>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
                                         </tbody>
                                     </table>
                                 )}

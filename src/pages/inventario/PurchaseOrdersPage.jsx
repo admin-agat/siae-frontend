@@ -2,10 +2,15 @@
 // Listado de Órdenes de Compra (OC). Cada fila muestra el código generado,
 // proveedor, bodega destino, fecha/semana y estado (PENDIENTE hasta que se
 // reciba vía InventoryMovementFormPage). Desde aquí se navega a crear una
-// nueva OC, ver el detalle de una existente, o cancelarla (con motivo
-// obligatorio) si todavía está PENDIENTE o PARCIAL.
+// nueva OC, ver el detalle de una existente, o cancelarla/cerrarla (con
+// motivo obligatorio) si todavía está PENDIENTE o PARCIAL.
+//
+// Importante: el backend decide automáticamente el estado destino según lo
+// ya recibido (PurchaseOrderController@cancel) — PENDIENTE (nada recibido)
+// pasa a CANCELADA, PARCIAL (ya hay INGRESO real en bodega) pasa a CERRADA.
+// El frontend nunca envía el estado destino, solo refleja esa decisión.
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Eye, Ban } from 'lucide-react';
+import { Plus, Eye, Ban, Lock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getPurchaseOrders, cancelPurchaseOrder } from '../../api/purchaseOrders';
 
@@ -17,11 +22,15 @@ const ESTADO_ESTILOS = {
     COMPLETA: 'bg-green-100 text-green-800',
     RECIBIDA: 'bg-green-100 text-green-800',
     CANCELADA: 'bg-red-100 text-red-800',
+    // CERRADA: ni verde (no se completó) ni rojo (sí llegó algo, no fue
+    // una cancelación en blanco) — gris/ámbar propio para diferenciarlo
+    // de un vistazo en la tabla.
+    CERRADA: 'bg-gray-200 text-gray-700',
 };
 
-// Estados desde los que SÍ se puede cancelar una orden. COMPLETA y
-// CANCELADA quedan fuera (el backend también lo rechaza, esto es solo
-// para no mostrar un botón que de todas formas va a fallar).
+// Estados desde los que SÍ se puede cancelar/cerrar una orden. COMPLETA,
+// CANCELADA y CERRADA quedan fuera (el backend también lo rechaza, esto es
+// solo para no mostrar un botón que de todas formas va a fallar).
 const ESTADOS_CANCELABLES = ['PENDIENTE', 'PARCIAL'];
 
 export default function PurchaseOrdersPage() {
@@ -36,7 +45,7 @@ export default function PurchaseOrdersPage() {
     const [pagina, setPagina] = useState(1);
 
     // Estado del modal de cancelación: null cuando está cerrado, o la
-    // orden que se quiere cancelar mientras el modal está abierto.
+    // orden que se quiere cancelar/cerrar mientras el modal está abierto.
     const [ordenACancelar, setOrdenACancelar] = useState(null);
     const [motivoCancelacion, setMotivoCancelacion] = useState('');
     const [cancelando, setCancelando] = useState(false);
@@ -64,6 +73,11 @@ export default function PurchaseOrdersPage() {
         }
     };
 
+    // Ayuda a decidir, ANTES de llamar al backend, si la acción sobre esta
+    // orden va a cerrar (PARCIAL) o cancelar (PENDIENTE) — solo para texto
+    // en pantalla; la decisión real y definitiva la toma el backend.
+    const esCierre = (orden) => orden?.status === 'PARCIAL';
+
     const abrirModalCancelar = (orden) => {
         setOrdenACancelar(orden);
         setMotivoCancelacion('');
@@ -86,26 +100,36 @@ export default function PurchaseOrdersPage() {
         setCancelando(true);
         setErrorCancelacion('');
         try {
-            await cancelPurchaseOrder(ordenACancelar.id, motivoCancelacion.trim());
+            const res = await cancelPurchaseOrder(ordenACancelar.id, motivoCancelacion.trim());
+
+            // Toma el estado final DEL BACKEND (res.data.status), nunca lo
+            // asume en el frontend — es el backend quien decide CANCELADA
+            // vs CERRADA según lo que ya se había recibido.
+            const estadoFinal = res.data.status;
 
             // Actualiza la fila en memoria sin tener que recargar todo el listado
             setOrdenes((prev) =>
                 prev.map((o) =>
                     o.id === ordenACancelar.id
-                        ? { ...o, status: 'CANCELADA', cancellation_reason: motivoCancelacion.trim() }
+                        ? { ...o, status: estadoFinal, cancellation_reason: motivoCancelacion.trim() }
                         : o
                 )
             );
 
-            setToast({ tipo: 'exito', mensaje: `ORDEN ${ordenACancelar.code} CANCELADA CORRECTAMENTE` });
+            const mensajeToast =
+                estadoFinal === 'CERRADA'
+                    ? `ORDEN ${ordenACancelar.code} CERRADA — LO YA RECIBIDO QUEDA EN INVENTARIO`
+                    : `ORDEN ${ordenACancelar.code} CANCELADA CORRECTAMENTE`;
+
+            setToast({ tipo: 'exito', mensaje: mensajeToast });
             setTimeout(() => setToast(null), 2500);
 
             setOrdenACancelar(null);
             setMotivoCancelacion('');
         } catch (err) {
-            console.error('ERROR AL CANCELAR LA ORDEN:', err);
+            console.error('ERROR AL CANCELAR/CERRAR LA ORDEN:', err);
             const mensajeBackend = err?.response?.data?.message;
-            setErrorCancelacion(mensajeBackend || 'NO SE PUDO CANCELAR LA ORDEN');
+            setErrorCancelacion(mensajeBackend || 'NO SE PUDO PROCESAR LA ORDEN');
         } finally {
             setCancelando(false);
         }
@@ -180,6 +204,7 @@ export default function PurchaseOrdersPage() {
                     <option value="PENDIENTE">Pendiente</option>
                     <option value="PARCIAL">Parcial</option>
                     <option value="COMPLETA">Completa</option>
+                    <option value="CERRADA">Cerrada</option>
                     <option value="CANCELADA">Cancelada</option>
                 </select>
             </div>
@@ -243,9 +268,11 @@ export default function PurchaseOrdersPage() {
                                                 <button
                                                     onClick={() => abrirModalCancelar(orden)}
                                                     className="text-gray-500 hover:text-red-600"
-                                                    title="Cancelar orden"
+                                                    title={esCierre(orden) ? 'Cerrar orden' : 'Cancelar orden'}
                                                 >
-                                                    <Ban size={16} />
+                                                    {/* PARCIAL usa un candado (Lock) para diferenciarlo
+                                                        visualmente de una cancelación en blanco (Ban) */}
+                                                    {esCierre(orden) ? <Lock size={16} /> : <Ban size={16} />}
                                                 </button>
                                             )}
                                         </div>
@@ -281,16 +308,20 @@ export default function PurchaseOrdersPage() {
                 )}
             </div>
 
-            {/* Modal de cancelación — modal propio en React, nunca confirm()
-                nativo (Chrome lo bloquea después de varios usos). */}
+            {/* Modal de cancelación/cierre — modal propio en React, nunca
+                confirm() nativo (Chrome lo bloquea después de varios usos).
+                El título, texto y botón cambian según si la orden está
+                PARCIAL (cierre) o PENDIENTE (cancelación real). */}
             {ordenACancelar && (
                 <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-xl shadow-lg w-full max-w-md p-6">
                         <h2 className="text-lg font-bold text-gray-800 mb-1">
-                            Cancelar orden {ordenACancelar.code}
+                            {esCierre(ordenACancelar) ? 'Cerrar' : 'Cancelar'} orden {ordenACancelar.code}
                         </h2>
                         <p className="text-sm text-gray-500 mb-4">
-                            Esta acción cambia el estado a CANCELADA. Indica el motivo:
+                            {esCierre(ordenACancelar)
+                                ? 'Esta orden ya tiene material recibido en bodega. Al cerrarla, lo ya recibido queda intacto en inventario y solo se marca que no se espera el resto. Indica el motivo:'
+                                : 'Esta acción cambia el estado a CANCELADA. Indica el motivo:'}
                         </p>
 
                         <textarea
@@ -319,7 +350,11 @@ export default function PurchaseOrdersPage() {
                                 disabled={cancelando}
                                 className="px-4 py-2 text-sm font-semibold rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
                             >
-                                {cancelando ? 'Cancelando...' : 'Confirmar cancelación'}
+                                {cancelando
+                                    ? 'Procesando...'
+                                    : esCierre(ordenACancelar)
+                                        ? 'Confirmar cierre'
+                                        : 'Confirmar cancelación'}
                             </button>
                         </div>
                     </div>

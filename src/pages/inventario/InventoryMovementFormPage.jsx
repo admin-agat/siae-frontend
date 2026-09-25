@@ -2,11 +2,19 @@
 // Formulario para registrar un movimiento de inventario (Ingreso o Egreso)
 // con líneas dinámicas de insumos. Cabecera + detalle se envían juntos y el
 // backend los guarda en una sola transacción.
-import { useState, useEffect } from 'react';
-import { Plus, Trash2, Lock } from 'lucide-react';
+//
+// Caso especial: cuando Tipo=EGRESO y Motivo="TRANSFERENCIA A OTRA BODEGA",
+// el formulario cambia de modo — en vez de Proveedor/Productor se elige una
+// Bodega destino, la tabla de insumos se simplifica (cantidad + stock actual,
+// sin costos), y el guardado usa transferInventoryMovement() en vez de
+// createInventoryMovement(), que crea el EGRESO en estado PENDIENTE (el
+// INGRESO en destino lo crea después el Coordinador de Inventario al
+// confirmar la transferencia).
+import { useState, useEffect, Fragment } from 'react';
+import { Plus, Trash2, Lock, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { createInventoryMovement } from '../../api/inventoryMovements';
+import { createInventoryMovement, transferInventoryMovement, getStockByWarehouse } from '../../api/inventoryMovements';
 import { getWarehouses } from '../../api/warehouses';
 import { getThirdParties } from '../../api/thirdParties';
 import { getSupplies } from '../../api/supplies';
@@ -24,7 +32,20 @@ const lineaVacia = () => ({
     discount: '0',
     bloqueada: false, // true cuando la línea viene de una OC (insumo no editable)
     pendiente: null,  // cantidad pendiente de esa línea en la OC (solo informativo)
+    reception_note: '', // motivo de discrepancia — solo aplica si quantity < pendiente
 });
+
+
+const NOMBRE_MOTIVO_TRANSFERENCIA = 'TRANSFERENCIA A OTRA BODEGA';
+
+// Motivos visibles por tipo, solo para BODEGUERO/JEFE_BODEGA — Coordinador/Admin ven todo el catálogo.
+// "ENTREGA A PRODUCTOR" ya no está aquí: ese flujo vive en /despacho-materiales.
+const ROLES_RESTRINGIDOS = ['BODEGUERO', 'JEFE_BODEGA'];
+const MOTIVOS_PERMITIDOS_POR_TIPO = {
+    INGRESO: ['COMPRA A PROVEEDOR'],
+    EGRESO: ['TRANSFERENCIA A OTRA BODEGA'],
+    DEVOLUCION: ['DEVOLUCIÓN DE PRODUCTOR'],
+};
 
 // Calcula el número de semana ISO 8601 (lunes-domingo) para una fecha dada.
 // Esta es la "semana bananera" que usa AGAT — coincide con la semana ISO estándar.
@@ -57,6 +78,9 @@ export default function InventoryMovementFormPage() {
     const [deliveryNote, setDeliveryNote] = useState('');
     const [reference, setReference] = useState('');
 
+    // Bodega destino — solo se usa en modo Transferencia
+    const [destinationWarehouseId, setDestinationWarehouseId] = useState('');
+
     // Líneas de detalle
     const [lineas, setLineas] = useState([lineaVacia()]);
 
@@ -68,6 +92,11 @@ export default function InventoryMovementFormPage() {
     // OCs pendientes/parciales de la bodega seleccionada, solo cuando tipo = INGRESO
     const [ordenesCompra, setOrdenesCompra] = useState([]);
     const [cargandoOrdenes, setCargandoOrdenes] = useState(false);
+
+    // Stock actual de la bodega origen, solo en modo Transferencia.
+    // Mapa { supply_id: existencia } para lookup rápido por línea.
+    const [stockOrigen, setStockOrigen] = useState({});
+    const [cargandoStock, setCargandoStock] = useState(false);
 
     const [guardando, setGuardando] = useState(false);
     const [error, setError] = useState('');
@@ -115,6 +144,43 @@ export default function InventoryMovementFormPage() {
         setYear(hoy.getFullYear());
     }, []);
 
+    const motivoSeleccionado = motivos.find((m) => String(m.id) === String(movementReasonId));
+    const esTransferencia = tipo === 'EGRESO' && motivoSeleccionado?.name === NOMBRE_MOTIVO_TRANSFERENCIA;
+
+    // Filtra la lista visible del select de Motivo según el rol
+    const motivosVisibles = ROLES_RESTRINGIDOS.includes(user?.role)
+        ? motivos.filter((m) => (MOTIVOS_PERMITIDOS_POR_TIPO[tipo] || []).includes(m.name))
+        : motivos;
+
+    // NUEVO: cada vez que estamos en modo Transferencia y hay bodega origen
+    // seleccionada, trae el stock actual de esa bodega para validar cada
+    // línea contra la existencia real. Si se sale de Transferencia o cambia
+    // la bodega, se limpia el mapa para no arrastrar datos de otra bodega.
+    useEffect(() => {
+        if (esTransferencia && warehouseId) {
+            cargarStockOrigen(warehouseId);
+        } else {
+            setStockOrigen({});
+        }
+    }, [esTransferencia, warehouseId]);
+
+    const cargarStockOrigen = async (bodegaId) => {
+        try {
+            setCargandoStock(true);
+            const res = await getStockByWarehouse(bodegaId);
+            // res.data viene como [{ supply_id, existencia, ... }, ...] —
+            // lo convertimos a mapa { supply_id: existencia } para lookup O(1).
+            const mapa = {};
+            res.data.forEach((fila) => {
+                mapa[fila.supply_id] = Number(fila.existencia);
+            });
+            setStockOrigen(mapa);
+        } catch (err) {
+            console.error('ERROR AL CARGAR STOCK DE LA BODEGA ORIGEN:', err);
+        } finally {
+            setCargandoStock(false);
+        }
+    };
 
     const cargarCatalogos = async () => {
         try {
@@ -186,6 +252,7 @@ export default function InventoryMovementFormPage() {
                 discount: '0',
                 bloqueada: true,
                 pendiente,
+                reception_note: '',
             };
         });
 
@@ -231,6 +298,44 @@ export default function InventoryMovementFormPage() {
 
     const totalGeneral = lineas.reduce((acc, l) => acc + totalLinea(l), 0);
 
+    // Una línea "necesita motivo" cuando viene de una OC (bloqueada, con
+    // pendiente conocido) y lo que se está ingresando es menos que lo
+    // pendiente — sin importar el rol que esté viendo el formulario.
+    const necesitaMotivo = (linea) => {
+        if (!linea.bloqueada || linea.pendiente === null) return false;
+        const ingresada = parseFloat(linea.quantity) || 0;
+        const pendiente = parseFloat(linea.pendiente) || 0;
+        return ingresada < pendiente;
+    };
+
+    // NUEVO: stock disponible del insumo elegido en una línea, según el
+    // mapa cargado de la bodega origen. 0 si el insumo no tiene stock ahí.
+    const stockDisponibleDe = (supplyId) => stockOrigen[supplyId] ?? 0;
+
+    // NUEVO: true cuando la cantidad ingresada en una línea de Transferencia
+    // supera el stock disponible de ese insumo en la bodega origen.
+    const excedeStock = (linea) => {
+        if (!esTransferencia || !linea.supply_id) return false;
+        const cantidad = parseFloat(linea.quantity) || 0;
+        return cantidad > stockDisponibleDe(linea.supply_id);
+    };
+
+    // NUEVO: true si CUALQUIER línea actual excede su stock — se usa para
+    // deshabilitar el botón "Guardar movimiento" sin esperar el error 422
+    // del backend.
+    const hayLineasConExceso = esTransferencia && lineas.some((l) => excedeStock(l));
+
+    // Si se sale del modo Transferencia (cambia tipo o motivo), limpiamos
+    // la bodega destino para no arrastrar un valor viejo a un guardado normal.
+    useEffect(() => {
+        if (!esTransferencia) setDestinationWarehouseId('');
+    }, [esTransferencia]);
+
+    // Cuántas columnas ocupa la tabla según el modo (para el colSpan del
+    // renglón de motivo de discrepancia, que solo aplica al modo normal).
+    // Transferencia ahora tiene 4 columnas: Insumo, Stock actual, Cantidad, acción.
+    const totalColumnas = esTransferencia ? 4 : esBodeguero ? 4 : 6;
+
     // --- Guardar ---
 
     const handleSubmit = async (e) => {
@@ -242,15 +347,68 @@ export default function InventoryMovementFormPage() {
             return;
         }
 
+        if (esTransferencia && !destinationWarehouseId) {
+            setError('ELEGÍ LA BODEGA DESTINO DE LA TRANSFERENCIA');
+            return;
+        }
+
         const lineasValidas = lineas.filter((l) => l.supply_id && l.quantity);
         if (lineasValidas.length === 0) {
             setError('AGREGÁ AL MENOS UN INSUMO CON CANTIDAD');
             return;
         }
 
+        // NUEVO: bloqueo en frontend antes de llamar al backend — el backend
+        // igual valida (es la fuente de verdad), esto solo evita el viaje
+        // de red y da feedback inmediato.
+        if (esTransferencia) {
+            const lineasSinStock = lineasValidas.filter((l) => excedeStock(l));
+            if (lineasSinStock.length > 0) {
+                setError('HAY INSUMOS CON CANTIDAD MAYOR AL STOCK DISPONIBLE EN LA BODEGA ORIGEN');
+                return;
+            }
+        }
+
+        // La validación de discrepancia solo aplica al flujo normal (Ingreso
+        // contra una OC) — una transferencia no tiene "pendiente" que comparar.
+        if (!esTransferencia) {
+            const lineasSinMotivo = lineasValidas.filter(
+                (l) => necesitaMotivo(l) && !l.reception_note?.trim()
+            );
+            if (lineasSinMotivo.length > 0) {
+                setError('DEBÉS INDICAR EL MOTIVO DE DISCREPANCIA EN LOS INSUMOS QUE LLEGARON INCOMPLETOS');
+                return;
+            }
+        }
+
         setGuardando(true);
         try {
-            await createInventoryMovement({
+            if (esTransferencia) {
+                // Modo transferencia: crea SOLO el EGRESO en estado PENDIENTE.
+                // El INGRESO en destino lo crea el Coordinador de Inventario
+                // al confirmar (confirmTransfer en el backend).
+                await transferInventoryMovement({
+                    source_warehouse_id: warehouseId,
+                    destination_warehouse_id: destinationWarehouseId,
+                    date: fecha,
+                    week: week || null,
+                    year: year || null,
+                    delivery_note: deliveryNote || null,
+                    reference: reference || null,
+                    lines: lineasValidas.map((l) => ({
+                        supply_id: l.supply_id,
+                        quantity: l.quantity,
+                    })),
+                });
+
+                // El recibo imprimible todavía no soporta el caso de dos
+                // bodegas (par EGRESO+INGRESO) — pendiente para una próxima
+                // sesión. Por ahora vuelve a Stock, igual que antes.
+                navigate('/stock');
+                return;
+            }
+
+            const { data: movimientoGuardado } = await createInventoryMovement({
                 warehouse_id: warehouseId,
                 movement_reason_id: movementReasonId,
                 third_party_id: thirdPartyId || null,
@@ -266,13 +424,20 @@ export default function InventoryMovementFormPage() {
                     quantity: l.quantity,
                     unit_cost: l.unit_cost || 0,
                     discount: l.discount || 0,
+                    reception_note: l.reception_note?.trim() || null,
                 })),
             });
 
-            // Movimiento guardado: volvemos a Stock General para ver el resultado.
-            navigate('/stock');
+            // Movimiento guardado: navegamos al recibo imprimible en vez de
+            // ir directo a Stock. Pasamos el movimiento ya cargado (con sus
+            // relaciones) por state para no tener que volver a pedirlo.
+            navigate(`/inventory-movements/${movimientoGuardado.id}/recibo`, {
+                state: { movement: movimientoGuardado },
+            });
         } catch (err) {
             console.error('ERROR AL GUARDAR EL MOVIMIENTO:', err);
+            // Si el backend rechazó por stock insuficiente (422 con detalle
+            // de insuficientes), mostramos ese mensaje específico.
             setError(
                 err.response?.data?.message || 'OCURRIÓ UN ERROR AL GUARDAR EL MOVIMIENTO'
             );
@@ -299,11 +464,7 @@ export default function InventoryMovementFormPage() {
                 {/* Cabecera */}
                 <div className="bg-white rounded-xl shadow p-6 space-y-4">
 
-                   
-
                     {/* Fila 0: Tipo, Motivo */}
-
-                    
                     <div className="grid grid-cols-5 gap-4">
                          <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1.5">Semana</label>
@@ -328,28 +489,28 @@ export default function InventoryMovementFormPage() {
                                     setWeek(getISOWeek(new Date(e.target.value + 'T00:00:00')));
                                     setYear(new Date(e.target.value + 'T00:00:00').getFullYear());
                                 }}
-                            
+
                                 className="w-full bg-gray-200 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-600 outline-none cursor-not-allowed"
                             />
                         </div>
 
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1.5">Tipo *</label>
-                            <select
+                                                       <select
                                 value={tipo}
                                 onChange={(e) => setTipo(e.target.value)}
                                 className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none"
                             >
                                 <option value="INGRESO">INGRESO</option>
                                 <option value="EGRESO">EGRESO</option>
+                                <option value="DEVOLUCION">DEVOLUCIÓN</option>
                             </select>
                         </div>
-
 
                         {/*AQUI VA LA BODEGA */}
                          <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                                Bodega *
+                                {esTransferencia ? 'Bodega origen *' : 'Bodega *'}
                                 {esBodeguero && <Lock size={12} className="inline ml-1 text-gray-400" />}
                             </label>
                             <select
@@ -371,7 +532,6 @@ export default function InventoryMovementFormPage() {
                             </select>
                         </div>
 
-
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1.5">Motivo *</label>
                             <select
@@ -380,17 +540,15 @@ export default function InventoryMovementFormPage() {
                                 required
                                 className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none"
                             >
-                                <option value="">Seleccionar motivo...</option>
-                                {motivos.map((m) => (
+                                                                <option value="">Seleccionar motivo...</option>
+                                {motivosVisibles.map((m) => (
                                     <option key={m.id} value={m.id}>{m.name}</option>
                                 ))}
                             </select>
                         </div>
-
-                        
                     </div>
 
-                    {/* Fila 1: Orden de compra (selector real, solo en INGRESO), Guía de remisión */}
+                    {/* Fila 1: Orden de compra (solo INGRESO) / Bodega destino (solo Transferencia), Guía de remisión, Proveedor-Productor (oculto en Transferencia), Referencia */}
                     <div className="grid grid-cols-4 gap-4">
 
                         {tipo === 'INGRESO' && (
@@ -425,6 +583,30 @@ export default function InventoryMovementFormPage() {
                             </div>
                         )}
 
+                        {/* Bodega destino: solo aparece en modo Transferencia, ocupa el
+                            mismo lugar donde normalmente va Proveedor/Productor */}
+                        {esTransferencia && (
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                                    Bodega destino *
+                                </label>
+                                <select
+                                    value={destinationWarehouseId}
+                                    onChange={(e) => setDestinationWarehouseId(e.target.value)}
+                                    disabled={!warehouseId}
+                                    required
+                                    className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none disabled:opacity-50"
+                                >
+                                    <option value="">Seleccionar bodega destino...</option>
+                                    {bodegas
+                                        .filter((b) => String(b.id) !== String(warehouseId))
+                                        .map((b) => (
+                                            <option key={b.id} value={b.id}>{b.name}</option>
+                                        ))}
+                                </select>
+                            </div>
+                        )}
+
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1.5">Guía de remisión</label>
                             <input
@@ -434,32 +616,34 @@ export default function InventoryMovementFormPage() {
                                 className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none"
                             />
                         </div>
-                        
 
-                        
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                                (Proveedor / Productor)
-                            </label>
-                            {/* Filtrado según el tipo: INGRESO solo muestra PROVEEDOR, EGRESO solo PRODUCTOR/COMERCIALIZADORA.
-                                Si viene de una OC, ya se precargó arriba en handleSeleccionarOC. */}
-                            <select disabled
-                                value={thirdPartyId}
-                                onChange={(e) => setThirdPartyId(e.target.value)}
-                                    className="w-full bg-gray-200 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-600 outline-none cursor-not-allowed"
-                            >
-                                <option value="" >Sin tercero (movimiento interno)</option>
-                                {terceros
-                                    .filter((t) => {
-                                        if (tipo === 'INGRESO') return t.type === 'PROVEEDOR';
-                                        if (tipo === 'EGRESO') return ['PRODUCTOR', 'COMERCIALIZADORA'].includes(t.type);
-                                        return true;
-                                    })
-                                    .map((t) => (
-                                        <option key={t.id} value={t.id}>{t.name} — {t.type}</option>
-                                    ))}
-                            </select>
-                        </div>
+                        {/* Proveedor/Productor: no aplica en Transferencia (es
+                            movimiento interno entre bodegas propias, sin tercero) */}
+                        {!esTransferencia && (
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                                    (Proveedor / Productor)
+                                </label>
+                                {/* Filtrado según el tipo: INGRESO solo muestra PROVEEDOR, EGRESO solo PRODUCTOR/COMERCIALIZADORA.
+                                    Si viene de una OC, ya se precargó arriba en handleSeleccionarOC. */}
+                                                                <select
+                                    value={thirdPartyId}
+                                    onChange={(e) => setThirdPartyId(e.target.value)}
+                                    className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#3B5BDB]"
+                                >
+                                    <option value="" >Sin tercero (movimiento interno)</option>
+                                    {terceros
+                                        .filter((t) => {
+                                            if (tipo === 'INGRESO') return t.type === 'PROVEEDOR';
+                                            if (['EGRESO', 'DEVOLUCION'].includes(tipo)) return ['PRODUCTOR', 'COMERCIALIZADORA'].includes(t.type);
+                                            return true;
+                                        })
+                                        .map((t) => (
+                                            <option key={t.id} value={t.id}>{t.name} — {t.type}</option>
+                                        ))}
+                                </select>
+                            </div>
+                        )}
 
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1.5">Referencia / Observación</label>
@@ -470,13 +654,8 @@ export default function InventoryMovementFormPage() {
                                 className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none"
                             />
                         </div>
-
-
                     </div>
-
-                    
                 </div>
-
 
                 {/* Líneas de detalle */}
                 <div className="bg-white rounded-xl shadow overflow-hidden">
@@ -496,7 +675,14 @@ export default function InventoryMovementFormPage() {
     <thead className="bg-[#3B5BDB] text-white">
         <tr>
             <th className="text-left px-4 py-3">Insumo</th>
-            {esBodeguero ? (
+            {esTransferencia ? (
+                // Modo Transferencia: sin costos, es movimiento interno —
+                // se muestra el stock actual junto a la cantidad a mover.
+                <>
+                    <th className="text-right px-4 py-3 w-32">Stock actual</th>
+                    <th className="text-right px-4 py-3 w-36">Cantidad</th>
+                </>
+            ) : esBodeguero ? (
                 <>
                     <th className="text-right px-4 py-3 w-36">Cantidad comprada</th>
                     <th className="text-right px-4 py-3 w-36">Cantidad ingresada</th>
@@ -514,7 +700,8 @@ export default function InventoryMovementFormPage() {
     </thead>
     <tbody>
         {lineas.map((linea, index) => (
-            <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+            <Fragment key={index}>
+            <tr className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
                 <td className="px-4 py-2">
                     <select
                         value={linea.supply_id}
@@ -537,7 +724,39 @@ export default function InventoryMovementFormPage() {
                     )}
                 </td>
 
-                {esBodeguero ? (
+                {esTransferencia ? (
+                    <>
+                        {/* NUEVO: Stock actual — solo lectura, informativo,
+                            se recalcula cada vez que cambia la bodega origen */}
+                        <td className="px-4 py-2 text-right text-gray-600">
+                            {!linea.supply_id
+                                ? '—'
+                                : cargandoStock
+                                ? '...'
+                                : stockDisponibleDe(linea.supply_id)}
+                        </td>
+                        <td className="px-4 py-2">
+                            <input
+                                type="number"
+                                step="0.01"
+                                min="0.01"
+                                value={linea.quantity}
+                                onChange={(e) => actualizarLinea(index, 'quantity', e.target.value)}
+                                className={`w-full border rounded-lg px-2 py-1.5 text-sm text-right outline-none focus:ring-2 ${
+                                    excedeStock(linea)
+                                        ? 'bg-red-50 border-red-400 focus:ring-red-400 text-red-700'
+                                        : 'bg-white border-gray-200 focus:ring-[#3B5BDB]'
+                                }`}
+                            />
+                            {excedeStock(linea) && (
+                                <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                                    <AlertTriangle size={11} />
+                                    Supera el stock disponible ({stockDisponibleDe(linea.supply_id)})
+                                </p>
+                            )}
+                        </td>
+                    </>
+                ) : esBodeguero ? (
                     <>
                         {/* Cantidad comprada: viene de la OC (quantity_ordered - ya recibido),
                             solo lectura — el bodeguero NO puede tocar este valor */}
@@ -613,9 +832,30 @@ export default function InventoryMovementFormPage() {
                     )}
                 </td>
             </tr>
+
+            {/* Motivo de discrepancia: solo aplica al flujo normal (Ingreso
+                contra OC). En Transferencia no hay "pendiente" que comparar. */}
+            {!esTransferencia && necesitaMotivo(linea) && (
+                <tr className="bg-amber-50 border-b border-amber-200">
+                    <td colSpan={totalColumnas} className="px-4 py-3">
+                        <label className="flex items-center gap-1.5 text-xs font-semibold text-amber-700 mb-1.5">
+                            <AlertTriangle size={13} />
+                            Motivo de discrepancia * — llegó {linea.quantity || 0} de {linea.pendiente} pedidos
+                        </label>
+                        <textarea
+                            value={linea.reception_note}
+                            onChange={(e) => actualizarLinea(index, 'reception_note', e.target.value.toUpperCase())}
+                            rows={2}
+                            placeholder="EJ: FALTANTE POR DAÑO EN TRANSPORTE, PRODUCTO NO DISPONIBLE EN BODEGA DEL PROVEEDOR, ETC."
+                            className="w-full bg-white border border-amber-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-amber-400"
+                        />
+                    </td>
+                </tr>
+            )}
+            </Fragment>
         ))}
     </tbody>
-    {!esBodeguero && (
+    {!esBodeguero && !esTransferencia && (
         <tfoot>
             <tr className="bg-gray-50 border-t">
                 <td colSpan={4} className="px-4 py-3 text-right font-semibold text-gray-700">
@@ -643,7 +883,7 @@ export default function InventoryMovementFormPage() {
                     </button>
                     <button
                         type="submit"
-                        disabled={guardando}
+                        disabled={guardando || hayLineasConExceso}
                         className="px-5 py-2.5 text-sm font-semibold bg-[#3B5BDB] text-white rounded-lg hover:bg-[#2F49B8] disabled:opacity-50"
                     >
                         {guardando ? 'Guardando...' : 'Guardar movimiento'}

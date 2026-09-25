@@ -17,6 +17,8 @@ const ENTIDADES = {
   movimiento: { nombre: "Movimiento", genero: "m" },
   tercero: { nombre: "Tercero", genero: "m" },
   finca: { nombre: "Finca", genero: "f" },
+  receta: { nombre: "Receta", genero: "f" }, // NUEVO: recetas de materiales (BOM por marca)
+  marca: { nombre: "Marca", genero: "f" }, // NUEVO: marcas de despacho (GLOBAL VILLAGE, PALM BANANA, etc.)
 };
 
 // Participios base por acción, en masculino singular.

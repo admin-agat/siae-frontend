@@ -9,7 +9,12 @@ import { getMensajeExito, getMensajeError } from '../utils/toastMessages';
 
 import ModalShell from './common/ModalShell';
 
-const UNIDADES = ['CAJAS', 'LIBRAS', 'ROLLOS', 'SACOS', 'UNIDAD'];
+// Unidades de medida disponibles para supplies.unit.
+// La columna en BD es varchar sin CHECK, así que esta lista es la única
+// que controla las opciones: para agregar una unidad nueva basta con
+// sumarla aquí, respetando el orden alfabético.
+// FRASCOS: usado por los químicos (ACIDO CITRICO, MERTEC, QUATTRO, NLARGE, AQUA FORT, SB 100).
+const UNIDADES = ['CAJAS', 'FRASCOS', 'LIBRAS', 'ROLLOS', 'SACOS', 'UNIDAD'];
 
 export default function SupplyModal({ supply, onClose, onGuardado }) {
     const esEdicion = Boolean(supply?.id);
@@ -249,10 +254,10 @@ export default function SupplyModal({ supply, onClose, onGuardado }) {
                         {!esEdicion && (
                             <span className="text-gray-400 font-normal ml-1">(generado automáticamente)</span>
                         )}
-                    </label>
+                    </label> 
                     <input
                         disabled
-                        name="code"
+                        name="code" 
                         value={form.code}
                         onChange={handleChange}
                         required
@@ -272,6 +277,7 @@ export default function SupplyModal({ supply, onClose, onGuardado }) {
                         required
                         className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-blue-500"
                     >
+                        {/* Opciones tomadas de la constante UNIDADES (arriba del componente) */}
                         {UNIDADES.map(u => (
                             <option key={u} value={u}>{u}</option>
                         ))}
