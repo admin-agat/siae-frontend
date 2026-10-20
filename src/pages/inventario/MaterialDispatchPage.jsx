@@ -1,10 +1,13 @@
 // MaterialDispatchPage.jsx
-// Despacho de Materiales: calcula la receta (BOM) según el cupo POR MARCA del
-// productor, descuenta lo que ya retiró esta semana, deja editable lo que
-// realmente se entrega y guarda un EGRESO (motivo ENTREGA A PRODUCTOR) que
-// descuenta stock y queda con costo congelado para la liquidación.
-// El backend recalcula y valida todo (stock, receta, cupo liquidado):
-// esta pantalla solo ayuda al bodeguero a no equivocarse.
+// Despacho de Materiales: UN RETIRO = UNA SOLA MARCA.
+// El bodeguero elige la marca y las cajas, da clic en CALCULAR y ve:
+//   - RECOMENDADO (sugerido): lo que da la receta (cajas × ratio_per_box),
+//     menos lo que ya retiró de esa marca esta semana. Solo lectura.
+//   - A RETIRAR (real): arranca igual al recomendado y se ajusta a mano
+//     (ej. 100 cajas pero solo lleva 80 cartones porque tiene sobrante).
+// Se guarda un EGRESO (motivo ENTREGA A PRODUCTOR) que descuenta stock con
+// lo REAL y deja el RECOMENDADO en recommended_quantity como referencia.
+// El backend recalcula y valida todo (stock, receta, cupo liquidado).
 import { useState, useEffect, useMemo } from 'react';
 import { Calculator, AlertTriangle, CheckCircle, Save, Info, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -49,8 +52,9 @@ export default function MaterialDispatchPage() {
     const [retiraNombre, setRetiraNombre] = useState('');
     const [retiraCedula, setRetiraCedula] = useState('');
 
-    // ---- Cupo por marca: { GLOBAL_VILLAGE: '700', DONA_ELENA: '300' } (llave = brands.code) ----
-    const [cupos, setCupos] = useState({});
+    // ---- Cupo del retiro: UNA marca (brands.code) + sus cajas ----
+    const [marcaCode, setMarcaCode] = useState('');
+    const [cajas, setCajas] = useState('');
 
     // ---- Catálogos ----
     const [bodegas, setBodegas] = useState([]);
@@ -74,12 +78,12 @@ export default function MaterialDispatchPage() {
         cargarCatalogos();
     }, []);
 
-    // Si cambia bodega, productor o cupo, el cálculo anterior ya no vale:
+    // Si cambia bodega, productor, marca o cajas, el cálculo anterior ya no vale:
     // se limpia para obligar a recalcular (evita guardar con números viejos).
     useEffect(() => {
         setMateriales([]);
         setCupoExistente(null);
-    }, [warehouseId, thirdPartyId, cupos]);
+    }, [warehouseId, thirdPartyId, marcaCode, cajas]);
 
     const cargarCatalogos = async () => {
         try {
@@ -91,7 +95,7 @@ export default function MaterialDispatchPage() {
             setBodegas(comoLista(resBodegas).filter((b) => b.status));
             // Solo quienes reciben material: PRODUCTOR / COMERCIALIZADORA
             setTerceros(comoLista(resTerceros).filter((t) => ['PRODUCTOR', 'COMERCIALIZADORA'].includes(t.type)));
-            // Una casilla de cupo por cada marca ACTIVA (nuevas marcas aparecen solas)
+            // Solo marcas ACTIVAS en el selector (las nuevas aparecen solas)
             setMarcas(comoLista(resMarcas).filter((m) => m.status));
         } catch (err) {
             console.error('ERROR AL CARGAR CATÁLOGOS:', err);
@@ -121,30 +125,18 @@ export default function MaterialDispatchPage() {
 
     const nombreMarca = (code) => marcas.find((m) => m.code === code)?.name ?? code;
 
-    // ---- Cupo ----
+    // ---- Cupo del retiro ----
     // Cajas enteras: solo dígitos
-    const handleCupo = (code, valor) => {
-        const limpio = valor.replace(/[^0-9]/g, '');
-        setCupos((prev) => ({ ...prev, [code]: limpio }));
-    };
+    const handleCajas = (valor) => setCajas(valor.replace(/[^0-9]/g, ''));
+    const cajasNum = parseInt(cajas, 10) || 0;
 
-    // Cupos > 0 como números (lo que se envía al backend)
-    const cuposNumericos = () =>
-        Object.fromEntries(
-            Object.entries(cupos)
-                .map(([code, v]) => [code, parseInt(v, 10) || 0])
-                .filter(([, v]) => v > 0)
-        );
+    // Línea del cupo de la semana que corresponde a la marca elegida (si existe)
+    const lineaCupoMarca = (cupoExistente?.lines || []).find((l) => l.variety === marcaCode);
 
-    const totalCajas = Object.values(cuposNumericos()).reduce((a, b) => a + b, 0);
-
-    // Segundo viaje: rellena las casillas con el cupo que ya quedó registrado esta semana
+    // Segundo viaje de la misma marca: carga las cajas que ya quedaron registradas
     const usarCupoRegistrado = () => {
-        const nuevos = {};
-        (cupoExistente?.lines || []).forEach((l) => {
-            nuevos[l.variety] = String(parseInt(l.quantity_cajas, 10) || 0);
-        });
-        setCupos(nuevos);
+        if (!lineaCupoMarca) return;
+        setCajas(String(parseInt(lineaCupoMarca.quantity_cajas, 10) || 0));
         mostrarToast('exito', 'CUPO REGISTRADO CARGADO — VUELVE A CALCULAR');
     };
 
@@ -154,10 +146,12 @@ export default function MaterialDispatchPage() {
             mostrarToast('error', 'SELECCIONA BODEGA Y PRODUCTOR ANTES DE CALCULAR');
             return;
         }
-
-        const cuposEnviar = cuposNumericos();
-        if (Object.keys(cuposEnviar).length === 0) {
-            mostrarToast('error', 'INGRESA EL CUPO DE AL MENOS UNA MARCA');
+        if (!marcaCode) {
+            mostrarToast('error', 'SELECCIONA LA MARCA DEL RETIRO');
+            return;
+        }
+        if (cajasNum <= 0) {
+            mostrarToast('error', 'INGRESA LAS CAJAS DEL CUPO');
             return;
         }
 
@@ -165,10 +159,11 @@ export default function MaterialDispatchPage() {
         try {
             const data = await calcularDespacho({
                 warehouse_id: warehouseId,
-                third_party_id: thirdPartyId, // para descontar lo ya retirado esta semana
-                cupos: cuposEnviar,
+                third_party_id: thirdPartyId, // para descontar lo ya retirado de esta marca
+                brand_code: marcaCode,
+                cajas: cajasNum,
             });
-            // "A retirar" arranca igual al recomendado; el bodeguero lo ajusta
+            // "A retirar" (real) arranca igual al recomendado (sugerido); el bodeguero lo ajusta
             setMateriales(
                 (data.materiales || []).map((m) => ({ ...m, valor_a_retirar: String(m.valor_recomendado) }))
             );
@@ -190,19 +185,28 @@ export default function MaterialDispatchPage() {
         );
     };
 
+    // Vuelve todas las filas al recomendado (por si el bodeguero se equivocó)
+    const restaurarRecomendado = () => {
+        setMateriales((prev) => prev.map((m) => ({ ...m, valor_a_retirar: String(m.valor_recomendado) })));
+    };
+
     // ---- Derivados de la tabla (se recalculan en cada render) ----
     const filas = materiales.map((m) => {
         const cantidad = parseFloat(m.valor_a_retirar) || 0;
         return {
             ...m,
             cantidad,
-            sinStock: cantidad > Number(m.stock_disponible), // pide más de lo que hay en bodega
-            valor: cantidad * Number(m.unit_cost),            // lo que se descontará al productor
+            ajustado: cantidad !== Number(m.valor_recomendado), // el real difiere del sugerido
+            sinStock: cantidad > Number(m.stock_disponible),    // pide más de lo que hay en bodega
+            valor: cantidad * Number(m.unit_cost),               // lo que se descontará al productor
         };
     });
 
+    // Las columnas FÓRMULA y YA RETIRADO solo aparecen si hubo un retiro previo de esta marca
+    const hayRetiroPrevio = filas.some((f) => Number(f.ya_despachado) > 0);
     const valorTotal = filas.reduce((suma, f) => suma + f.valor, 0);
     const haySinStock = filas.some((f) => f.sinStock);
+    const cantAjustados = filas.filter((f) => f.ajustado).length;
     const lineasARetirar = filas.filter((f) => f.cantidad > 0);
     const cupoLiquidado = cupoExistente?.status === 'LIQUIDADO';
     const terceroSeleccionado = terceros.find((t) => String(t.id) === String(thirdPartyId));
@@ -235,7 +239,8 @@ export default function MaterialDispatchPage() {
             const movimiento = await guardarDespacho({
                 warehouse_id: warehouseId,
                 third_party_id: thirdPartyId,
-                cupos: cuposNumericos(),
+                brand_code: marcaCode,
+                cajas: cajasNum,
                 vapor: vapor.trim() || null,
                 delivery_note: deliveryNote.trim() || null,
                 received_by_name: retiraNombre.trim(),
@@ -261,7 +266,7 @@ export default function MaterialDispatchPage() {
             <div>
                 <h1 className="text-2xl font-bold text-gray-800">DESPACHO DE MATERIALES</h1>
                 <p className="text-gray-500 text-sm">
-                    Calcula los materiales recomendados según el cupo del productor y ajusta lo que realmente se le entrega
+                    Elige la marca y las cajas, calcula el material recomendado y ajusta lo que realmente se entrega
                 </p>
             </div>
 
@@ -336,34 +341,39 @@ export default function MaterialDispatchPage() {
                 </div>
             </div>
 
-            {/* ===== 2. CUPO POR MARCA ===== */}
+            {/* ===== 2. CUPO DEL RETIRO: UNA MARCA + CAJAS ===== */}
             <div className="bg-white rounded-2xl shadow p-6">
-                <h2 className="font-semibold mb-1">CUPO ASIGNADO POR MARCA</h2>
-                <p className="text-xs text-gray-400 mb-4">Dato de la jefa comercial. Deja en blanco las marcas que no maneja esta semana.</p>
+                <h2 className="font-semibold mb-1">CUPO DEL RETIRO</h2>
+                <p className="text-xs text-gray-400 mb-4">
+                    Un retiro es de una sola marca. Si el productor lleva dos marcas, registra dos retiros.
+                </p>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                    {marcas.map((m) => (
-                        <div key={m.id}>
-                            <label className="block text-sm text-gray-600 mb-1">{m.name} (CAJAS)</label>
-                            <input
-                                inputMode="numeric"
-                                value={cupos[m.code] ?? ''}
-                                onChange={(e) => handleCupo(m.code, e.target.value)}
-                                placeholder="0"
-                                className={INPUT}
-                            />
-                        </div>
-                    ))}
-                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                    <div>
+                        <label className={LABEL}>Marca *</label>
+                        <select value={marcaCode} onChange={(e) => setMarcaCode(e.target.value)} className={INPUT}>
+                            <option value="">Seleccionar marca...</option>
+                            {marcas.map((m) => (
+                                <option key={m.id} value={m.code}>{m.name}</option>
+                            ))}
+                        </select>
+                    </div>
 
-                <div className="flex flex-wrap items-center justify-between gap-4">
-                    <p className="text-sm text-gray-600">
-                        TOTAL CUPO: <span className="font-bold text-gray-800">{totalCajas.toLocaleString('es-EC')} CAJAS</span>
-                    </p>
+                    <div>
+                        <label className={LABEL}>Cajas *</label>
+                        <input
+                            inputMode="numeric"
+                            value={cajas}
+                            onChange={(e) => handleCajas(e.target.value)}
+                            placeholder="0"
+                            className={INPUT}
+                        />
+                    </div>
+
                     <button
                         onClick={handleCalcular}
                         disabled={calculando}
-                        className="flex items-center gap-2 bg-white border-2 border-blue-600 text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-2xl font-semibold text-sm disabled:opacity-50"
+                        className="flex items-center justify-center gap-2 bg-white border-2 border-blue-600 text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-2xl font-semibold text-sm disabled:opacity-50"
                     >
                         <Calculator size={18} />
                         {calculando ? 'CALCULANDO...' : 'CALCULAR MATERIALES'}
@@ -391,13 +401,14 @@ export default function MaterialDispatchPage() {
                                     .map((l) => `${nombreMarca(l.variety)}: ${parseInt(l.quantity_cajas, 10)} CAJAS`)
                                     .join(' · ')}
                             </p>
-                            {!cupoLiquidado && (
+                            {!cupoLiquidado && lineaCupoMarca && (
                                 <p className="mt-1 text-xs">
-                                    El RECOMENDADO ya descuenta lo retirado antes. Al guardar, el cupo registrado se reemplaza con las casillas de arriba.
+                                    El RECOMENDADO ya descuenta lo retirado antes de {nombreMarca(marcaCode)}. Al guardar, el cupo de esta marca se actualiza con las cajas de arriba; las demás marcas no se tocan.
                                 </p>
                             )}
                         </div>
-                        {!cupoLiquidado && (
+                        {/* Solo si esta marca ya tiene cupo y las cajas son distintas */}
+                        {!cupoLiquidado && lineaCupoMarca && parseInt(lineaCupoMarca.quantity_cajas, 10) !== cajasNum && (
                             <button
                                 onClick={usarCupoRegistrado}
                                 className="shrink-0 px-3 py-1.5 rounded-xl bg-amber-600 text-white text-xs font-semibold hover:bg-amber-700"
@@ -409,10 +420,22 @@ export default function MaterialDispatchPage() {
                 </div>
             )}
 
-            {/* ===== 3. MATERIALES ===== */}
+            {/* ===== 3. MATERIALES: RECOMENDADO (sugerido) vs A RETIRAR (real) ===== */}
             {filas.length > 0 && (
                 <div className="bg-white rounded-2xl shadow p-6 space-y-6">
-                    <h2 className="font-semibold">MATERIALES A DESPACHAR</h2>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                        <h2 className="font-semibold">
+                            MATERIALES A DESPACHAR — {nombreMarca(marcaCode)} · {cajasNum.toLocaleString('es-EC')} CAJAS
+                        </h2>
+                        {cantAjustados > 0 && (
+                            <button
+                                onClick={restaurarRecomendado}
+                                className="text-xs font-semibold text-blue-600 hover:underline"
+                            >
+                                VOLVER AL RECOMENDADO
+                            </button>
+                        )}
+                    </div>
 
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
@@ -421,8 +444,8 @@ export default function MaterialDispatchPage() {
                                     <th className="py-2 pr-2">CÓDIGO</th>
                                     <th className="py-2 pr-2">INSUMO</th>
                                     <th className="py-2 pr-2">UNIDAD</th>
-                                    <th className="py-2 pr-2 text-right">FÓRMULA</th>
-                                    <th className="py-2 pr-2 text-right">YA RETIRADO</th>
+                                    {hayRetiroPrevio && <th className="py-2 pr-2 text-right">FÓRMULA</th>}
+                                    {hayRetiroPrevio && <th className="py-2 pr-2 text-right">YA RETIRADO</th>}
                                     <th className="py-2 pr-2 text-right">RECOMENDADO</th>
                                     <th className="py-2 pr-2 text-right">STOCK</th>
                                     <th className="py-2 pr-2 text-right">A RETIRAR</th>
@@ -435,19 +458,28 @@ export default function MaterialDispatchPage() {
                                         <td className="py-2 pr-2 text-gray-500">{f.code}</td>
                                         <td className="py-2 pr-2">{f.name}</td>
                                         <td className="py-2 pr-2 text-gray-500">{f.unit}</td>
-                                        <td className="py-2 pr-2 text-right text-gray-500">{f.valor_formula}</td>
-                                        <td className="py-2 pr-2 text-right text-gray-500">{f.ya_despachado || '—'}</td>
+                                        {hayRetiroPrevio && (
+                                            <td className="py-2 pr-2 text-right text-gray-500">{f.valor_formula}</td>
+                                        )}
+                                        {hayRetiroPrevio && (
+                                            <td className="py-2 pr-2 text-right text-gray-500">{f.ya_despachado || '—'}</td>
+                                        )}
                                         <td className="py-2 pr-2 text-right font-semibold">{f.valor_recomendado}</td>
                                         <td className={`py-2 pr-2 text-right ${f.sinStock ? 'text-red-600 font-bold' : 'text-gray-500'}`}>
                                             {f.stock_disponible}
                                         </td>
                                         <td className="py-2 pr-2 text-right">
+                                            {/* Rojo = sin stock · Ámbar = ajustado a mano · Gris = igual al recomendado */}
                                             <input
                                                 inputMode="decimal"
                                                 value={f.valor_a_retirar}
                                                 onChange={(e) => handleCambiarRetirar(f.supply_id, e.target.value)}
                                                 className={`w-24 rounded-xl px-2 py-1 text-right outline-none focus:ring-2 ${
-                                                    f.sinStock ? 'bg-red-100 text-red-700 focus:ring-red-400' : 'bg-gray-100 focus:ring-blue-500'
+                                                    f.sinStock
+                                                        ? 'bg-red-100 text-red-700 focus:ring-red-400'
+                                                        : f.ajustado
+                                                            ? 'bg-amber-100 text-amber-800 font-semibold focus:ring-amber-400'
+                                                            : 'bg-gray-100 focus:ring-blue-500'
                                                 }`}
                                             />
                                         </td>
@@ -457,6 +489,12 @@ export default function MaterialDispatchPage() {
                             </tbody>
                         </table>
                     </div>
+
+                    {cantAjustados > 0 && (
+                        <p className="text-xs text-amber-700">
+                            {cantAjustados} MATERIAL(ES) AJUSTADO(S) A MANO — SE ENTREGA Y SE COBRA LO DE "A RETIRAR".
+                        </p>
+                    )}
 
                     {/* ===== 4. QUIÉN RETIRA ===== */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t">
@@ -507,8 +545,11 @@ export default function MaterialDispatchPage() {
                         <h3 className="text-base font-bold text-gray-800 mb-3">¿Confirmar el despacho?</h3>
                         <div className="text-sm text-gray-600 space-y-1 mb-6">
                             <p>PRODUCTOR: <span className="font-semibold text-gray-800">{terceroSeleccionado?.name}</span></p>
+                            <p>MARCA: <span className="font-semibold text-gray-800">{nombreMarca(marcaCode)} — {cajasNum.toLocaleString('es-EC')} CAJAS</span></p>
                             <p>RETIRA: <span className="font-semibold text-gray-800">{retiraNombre} — C.I. {retiraCedula}</span></p>
-                            <p>MATERIALES: <span className="font-semibold text-gray-800">{lineasARetirar.length}</span></p>
+                            <p>MATERIALES: <span className="font-semibold text-gray-800">{lineasARetirar.length}</span>
+                                {cantAjustados > 0 && <span className="text-amber-700"> ({cantAjustados} AJUSTADOS)</span>}
+                            </p>W
                             <p>VALOR A DESCONTAR: <span className="font-semibold text-gray-800">{dinero(valorTotal)}</span></p>
                             <p className="text-xs text-gray-400 pt-2">Se descontará del stock de la bodega de inmediato.</p>
                         </div>
