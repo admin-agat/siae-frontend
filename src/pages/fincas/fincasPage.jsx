@@ -1,46 +1,84 @@
 // Página principal del módulo Fincas
+// Ubicación: src/pages/fincas/FincasPage.jsx   (F mayúscula — PascalCase, igual que el componente)
+//
+// 27/10/2026 — migrada a los componentes comunes (mismo patrón que TercerosPage.jsx):
+//   - EncabezadoPagina → título, subtítulo y botón "+ Nueva finca" en AZUL
+//   - TablaEstandar    → buscador, pestañas ACTIVOS/INACTIVOS/TODOS, encabezado morado,
+//                        filas alternadas, resaltado al clic y paginación
+//   - EstadoBadge      → ACTIVO / INACTIVO
+//   - AccionesFila     → ✏️ verde, 🚫 rojo, 🔄 azul (ya no Trash2)
+// Además:
+//   - Se ELIMINÓ el confirm() nativo (Chrome lo bloquea en silencio) → modal propio
+//   - Se agregó REACTIVAR (antes una finca desactivada no podía volver)
+//   - Toast de éxito/error con toastMessages ('finca' ya estaba registrada)
+//   - Patrón defensivo al cargar (evita el error ".filter is not a function")
 import { useState, useEffect } from 'react';
-import { getFarms, deleteFarm } from '../../api/farms';
-import { Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { AlertTriangle, CheckCircle } from 'lucide-react';
+import { getFarms, deactivateFarm, reactivateFarm } from '../../api/farms';
 import FarmModal from '../../components/FarmModal';
-
-const POR_PAGINA = 10;
+import EncabezadoPagina from '../../components/common/EncabezadoPagina';
+import TablaEstandar from '../../components/common/TablaEstandar';
+import EstadoBadge from '../../components/common/EstadoBadge';
+import AccionesFila from '../../components/common/AccionesFila';
+import { getMensajeExito, getMensajeError } from '../../utils/toastMessages';
 
 export default function FincasPage() {
     const [fincas, setFincas] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [busqueda, setBusqueda] = useState('');
     const [showModal, setShowModal] = useState(false);
     const [fincaEdit, setFincaEdit] = useState(null);
-    const [paginaActual, setPaginaActual] = useState(1);
+
+    // Modal de confirmación propio (nunca confirm() nativo)
+    // confirmacion = null (cerrado) o { finca, accion: 'desactivar' | 'reactivar' }
+    const [confirmacion, setConfirmacion] = useState(null);
+
+    // toast = null (oculto) o { tipo: 'exito'|'error', mensaje: string }
+    const [toast, setToast] = useState(null);
 
     useEffect(() => {
         cargarFincas();
     }, []);
 
+    // Oculta el toast automáticamente después de un momento
     useEffect(() => {
-        setPaginaActual(1);
-    }, [busqueda]);
+        if (!toast) return;
+        const timer = setTimeout(() => setToast(null), 2500);
+        return () => clearTimeout(timer);
+    }, [toast]);
 
     const cargarFincas = async () => {
         try {
             setLoading(true);
             const res = await getFarms();
-            setFincas(res.data);
+            // Patrón defensivo: acepta array directo o { data: [...] }
+            const data = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+            setFincas(data);
         } catch (error) {
             console.error('Error cargando fincas:', error);
+            setFincas([]);
         } finally {
             setLoading(false);
         }
     };
 
-    const handleEliminar = async (id) => {
-        if (!confirm('¿Estás seguro de desactivar esta finca?')) return;
+    // Ejecuta la acción confirmada: desactivar o reactivar
+    const ejecutarConfirmacion = async () => {
+        if (!confirmacion) return;
+        const { finca, accion } = confirmacion;
         try {
-            await deleteFarm(id);
+            if (accion === 'desactivar') {
+                await deactivateFarm(finca.id);
+            } else {
+                await reactivateFarm(finca.id);
+            }
             cargarFincas();
+            // toastMessages arma el texto: "Finca desactivada/reactivada correctamente"
+            setToast({ tipo: 'exito', mensaje: getMensajeExito('finca', accion) });
         } catch (error) {
-            console.error('Error eliminando finca:', error);
+            console.error(`Error al ${accion} finca:`, error);
+            setToast({ tipo: 'error', mensaje: getMensajeError('finca', accion) });
+        } finally {
+            setConfirmacion(null);
         }
     };
 
@@ -54,135 +92,110 @@ export default function FincasPage() {
         setShowModal(true);
     };
 
-    const fincasFiltradas = fincas.filter(f =>
-        f.name.toLowerCase().includes(busqueda.toLowerCase()) ||
-        (f.magap_code || '').toLowerCase().includes(busqueda.toLowerCase()) ||
-        (f.third_party?.name || '').toLowerCase().includes(busqueda.toLowerCase())
-    );
+    // Columnas: título + qué dato mostrar. El productor viene anidado
+    // (FarmController carga with('thirdParty') → en JSON llega como third_party).
+    const columnas = [
+        { titulo: 'Finca', render: (f) => f.name, className: 'font-medium' },
+        { titulo: 'Productor', render: (f) => f.third_party?.name },
+        { titulo: 'Código MAGAP', render: (f) => f.magap_code },
+        { titulo: 'Zona', render: (f) => f.zone },
+        { titulo: 'Estado', render: (f) => <EstadoBadge activo={f.status} /> },
+        {
+            titulo: 'Acciones',
+            render: (f) => (
+                <AccionesFila
+                    activo={f.status}
+                    onEditar={() => handleEditar(f)}
+                    onDesactivar={() => setConfirmacion({ finca: f, accion: 'desactivar' })}
+                    onReactivar={() => setConfirmacion({ finca: f, accion: 'reactivar' })}
+                />
+            ),
+        },
+    ];
 
-    const totalPaginas = Math.max(1, Math.ceil(fincasFiltradas.length / POR_PAGINA));
-    const inicio = (paginaActual - 1) * POR_PAGINA;
-    const fincasPagina = fincasFiltradas.slice(inicio, inicio + POR_PAGINA);
-
-    const irPaginaAnterior = () => setPaginaActual(p => Math.max(1, p - 1));
-    const irPaginaSiguiente = () => setPaginaActual(p => Math.min(totalPaginas, p + 1));
+    const esDesactivar = confirmacion?.accion === 'desactivar';
 
     return (
         <div className="p-6">
-            <div className="flex justify-between items-center mb-6">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-800">Fincas</h1>
-                    <p className="text-gray-500 text-sm">Fincas registradas por productor</p>
+            {/* Toast de éxito/error */}
+            {toast && (
+                <div className={`fixed top-6 left-1/2 -translate-x-1/2 text-white text-sm font-semibold px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-2 z-[70] ${
+                    toast.tipo === 'exito' ? 'bg-green-600' : 'bg-red-600'
+                }`}>
+                    {toast.tipo === 'exito' ? <CheckCircle size={18} /> : <AlertTriangle size={18} />}
+                    {toast.mensaje}
                 </div>
-                <button
-                    onClick={handleNuevo}
-                    className="flex items-center gap-2 bg-[#3B5BDB] text-white px-4 py-2 rounded-lg hover:bg-[#2F49B8] transition"
-                >
-                    <Plus size={18} />
-                    Nueva finca
-                </button>
-            </div>
+            )}
 
-            <div className="flex items-center gap-2 bg-white border rounded-lg px-3 py-2 mb-4 w-full max-w-md">
-                <Search size={18} className="text-gray-400" />
-                <input
-                    type="text"
-                    placeholder="Buscar por finca, código MAGAP o productor..."
-                    className="outline-none w-full text-sm uppercase placeholder:normal-case"
-                    value={busqueda}
-                    onChange={(e) => setBusqueda(e.target.value.toUpperCase())}
-                />
-            </div>
+            {/* Encabezado estándar */}
+            <EncabezadoPagina
+                titulo="Fincas"
+                subtitulo="Fincas registradas por productor"
+                textoBoton="Nueva finca"
+                onNuevo={handleNuevo}
+            />
 
-            <div className="bg-white rounded-xl shadow overflow-hidden">
-                <table className="w-full text-sm">
-                    <thead className="bg-[#3B5BDB] text-white">
-                        <tr>
-                            <th className="text-left px-4 py-3">Finca</th>
-                            <th className="text-left px-4 py-3">Productor</th>
-                            <th className="text-left px-4 py-3">Código MAGAP</th>
-                            <th className="text-left px-4 py-3">Zona</th>
-                            <th className="text-left px-4 py-3">Estado</th>
-                            <th className="text-left px-4 py-3">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {loading ? (
-                            <tr>
-                                <td colSpan="6" className="text-center py-8 text-gray-400">
-                                    Cargando fincas...
-                                </td>
-                            </tr>
-                        ) : fincasPagina.length === 0 ? (
-                            <tr>
-                                <td colSpan="6" className="text-center py-8 text-gray-400">
-                                    No hay fincas registradas
-                                </td>
-                            </tr>
-                        ) : (
-                            fincasPagina.map((f, i) => (
-                                <tr key={f.id} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                                    <td className="px-4 py-3 font-medium">{f.name}</td>
-                                    <td className="px-4 py-3">{f.third_party?.name || '—'}</td>
-                                    <td className="px-4 py-3">{f.magap_code || '—'}</td>
-                                    <td className="px-4 py-3">{f.zone || '—'}</td>
-                                    <td className="px-4 py-3">
-                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                            f.status ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                                        }`}>
-                                            {f.status ? 'Activo' : 'Inactivo'}
-                                        </span>
-                                    </td>
-                                    <td className="px-4 py-3 flex gap-2">
-                                        <button onClick={() => handleEditar(f)} className="text-blue-500 hover:text-blue-700">
-                                            <Pencil size={16} />
-                                        </button>
-                                        <button onClick={() => handleEliminar(f.id)} className="text-red-500 hover:text-red-700">
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
+            {/* Tabla estándar: buscador + pestañas + paginación incluidos */}
+            <TablaEstandar
+                columnas={columnas}
+                datos={fincas}
+                cargando={loading}
+                nombreRegistros="fincas"
+                placeholderBusqueda="Buscar por finca, código MAGAP o productor..."
+                textosBusqueda={(f) => [f.name, f.magap_code, f.third_party?.name, f.zone]}
+            />
 
-                {!loading && fincasFiltradas.length > 0 && (
-                    <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50">
-                        <span className="text-xs text-gray-500">
-                            Mostrando {inicio + 1}–{Math.min(inicio + POR_PAGINA, fincasFiltradas.length)} de {fincasFiltradas.length} fincas
-                        </span>
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={irPaginaAnterior}
-                                disabled={paginaActual === 1}
-                                className="flex items-center gap-1 px-3 py-1.5 rounded-lg border text-sm text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100"
-                            >
-                                <ChevronLeft size={16} />
-                                Anterior
-                            </button>
-                            <span className="text-sm text-gray-600 px-2">
-                                Página {paginaActual} de {totalPaginas}
-                            </span>
-                            <button
-                                onClick={irPaginaSiguiente}
-                                disabled={paginaActual === totalPaginas}
-                                className="flex items-center gap-1 px-3 py-1.5 rounded-lg border text-sm text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100"
-                            >
-                                Siguiente
-                                <ChevronRight size={16} />
-                            </button>
-                        </div>
-                    </div>
-                )}
-            </div>
-
+            {/* Modal crear/editar (FarmModal ya estaba estandarizado) */}
             {showModal && (
                 <FarmModal
                     farm={fincaEdit}
                     onClose={() => setShowModal(false)}
                     onGuardado={cargarFincas}
                 />
+            )}
+
+            {/* Modal de confirmación — sirve para desactivar y reactivar */}
+            {confirmacion && (
+                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+                        <div className="flex items-start gap-3 mb-4">
+                            <div className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
+                                esDesactivar ? 'bg-red-100' : 'bg-green-100'
+                            }`}>
+                                {esDesactivar
+                                    ? <AlertTriangle size={20} className="text-red-600" />
+                                    : <CheckCircle size={20} className="text-green-600" />}
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-gray-800">
+                                    {esDesactivar ? 'Desactivar finca' : 'Reactivar finca'}
+                                </h3>
+                                <p className="text-sm text-gray-500 mt-1">
+                                    ¿Estás seguro de {esDesactivar ? 'desactivar' : 'reactivar'}{' '}
+                                    <strong>{confirmacion.finca.name}</strong>?
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => setConfirmacion(null)}
+                                className="px-4 py-2 text-sm font-semibold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={ejecutarConfirmacion}
+                                className={`px-4 py-2 text-sm font-semibold text-white rounded-lg ${
+                                    esDesactivar
+                                        ? 'bg-red-600 hover:bg-red-700'
+                                        : 'bg-green-600 hover:bg-green-700'
+                                }`}
+                            >
+                                Aceptar
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

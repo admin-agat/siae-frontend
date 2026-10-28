@@ -7,7 +7,9 @@ import DashboardPage from '../pages/dashboard/DashboardPage';
 import BrandsPage from "../pages/exportaciones/BrandsPage";
 //call pages
 import TercerosPage from '../pages/terceros/TercerosPage';
-import FincasPage from '../pages/fincas/fincasPage';
+// 27/10/2026: CORREGIDO — antes importaba '../pages/fincas/fincasPage' (f minúscula).
+// En Windows funcionaba, pero en Linux (producción) rompe la pantalla si no coincide exacto.
+import FincasPage from '../pages/fincas/FincasPage';
 import WarehousesPage from '../pages/inventario/WarehousesPage';
 import MovementReasonsPage from "../pages/inventario/MovementReasonsPage";
 import InventoryStockPage from "../pages/inventario/InventoryStockPage";
@@ -22,9 +24,11 @@ import BookingsPage from "../pages/exportaciones/BookingsPage";
 import PortsMasterDetailPage from "../pages/exportaciones/PortsMasterDetailPage";
 import DestinationsPage from "../pages/exportaciones/DestinationsPage";
 import CustomersPage from "../pages/exportaciones/CustomersPage";
+// Contratos de CLIENTES — vigencia y precio por caja (no confundir con contratos MAGAP de productores)
+import CustomerContractsPage from "../pages/exportaciones/CustomerContractsPage";
 // Despacho de Materiales — cálculo de receta/BOM por cupo de productor + guardado del EGRESO
 import MaterialDispatchPage from "../pages/inventario/MaterialDispatchPage";
-// NUEVO: Historial de despachos (quién retiró, valor a descontar, reimprimir guía, anular)
+// Historial de despachos (quién retiró, valor a descontar, reimprimir guía, anular)
 import MaterialDispatchHistoryPage from "../pages/inventario/MaterialDispatchHistoryPage";
 
 //ordenes de compras
@@ -35,8 +39,9 @@ function RutaPrivada({ children }) {
   const { token } = useAuth();
   return token ? children : <Navigate to="/login" />;
 }
-// Componente que protege rutas exclusivas de ADMIN (Terceros, Fincas)
-// Si un usuario de rol bodega intenta entrar por URL directa, lo manda a /bodegas
+// Componente que protege rutas exclusivas de ADMIN (sección CONFIGURACIÓN del menú:
+// Terceros, Fincas, Clientes, Destinos y Contratos de clientes).
+// Si otro rol intenta entrar por URL directa, lo manda a /bodegas
 function RutaSoloAdmin({ children }) {
   const { user } = useAuth();
   return user?.role === "ADMIN" ? children : <Navigate to="/bodegas" />;
@@ -70,21 +75,24 @@ export default function AppRouter() {
         }>
           <Route index element={<RutaNoBodeguero><DashboardPage /></RutaNoBodeguero>} />
           <Route path="dashboard" element={<RutaNoBodeguero><DashboardPage /></RutaNoBodeguero>} />
-          {/* Módulo Terceros — solo ADMIN */}
-          <Route path="terceros" element={<RutaSoloAdmin><TercerosPage /></RutaSoloAdmin>} />
-          {/* Módulo Fincas — solo ADMIN */}
-          <Route path="fincas" element={<RutaSoloAdmin><FincasPage /></RutaSoloAdmin>} />
 
-          {/* Módulo Exportaciones — CORREGIDO: antes no tenían RutaNoBodeguero,
-              un BODEGUERO podía entrar escribiendo la URL a mano */}
+          {/* ===== CONFIGURACIÓN — datos maestros, solo ADMIN ===== */}
+          <Route path="terceros" element={<RutaSoloAdmin><TercerosPage /></RutaSoloAdmin>} />
+          <Route path="fincas" element={<RutaSoloAdmin><FincasPage /></RutaSoloAdmin>} />
+          {/* 27/10/2026: Clientes, Destinos y Contratos pasaron a CONFIGURACIÓN → RutaSoloAdmin
+              (antes RutaNoBodeguero: un JEFE_BODEGA o COORDINADOR podía entrar por URL).
+              La URL /exportaciones/... se mantiene para no romper enlaces. */}
+          <Route path="/exportaciones/clientes" element={<RutaSoloAdmin><CustomersPage /></RutaSoloAdmin>} />
+          <Route path="/exportaciones/destinos" element={<RutaSoloAdmin><DestinationsPage /></RutaSoloAdmin>} />
+          <Route path="/exportaciones/contratos-clientes" element={<RutaSoloAdmin><CustomerContractsPage /></RutaSoloAdmin>} />
+
+          {/* ===== Módulo Exportaciones (operación) ===== */}
           <Route path="navieras" element={<RutaNoBodeguero><ShippingLinesPage /></RutaNoBodeguero>} />
           <Route path="bookings" element={<RutaNoBodeguero><BookingsPage /></RutaNoBodeguero>} />
           <Route path="/exportaciones/puertos" element={<RutaNoBodeguero><PortsMasterDetailPage /></RutaNoBodeguero>} />
-          <Route path="/exportaciones/destinos" element={<RutaNoBodeguero><DestinationsPage /></RutaNoBodeguero>} />
-          <Route path="/exportaciones/clientes" element={<RutaNoBodeguero><CustomersPage /></RutaNoBodeguero>} />
           <Route path="/exportaciones/marcas" element={<RutaNoBodeguero><BrandsPage /></RutaNoBodeguero>} />
 
-          {/* Módulo Inventario */}
+          {/* ===== Módulo Inventario ===== */}
           <Route path="bodegas" element={<RutaNoBodeguero><WarehousesPage /></RutaNoBodeguero>} />
           {/* Insumos: vista maestro-detalle (categorías + insumos combinados) */}
           <Route path="/insumos-categorias" element={<RutaNoBodeguero><SuppliesMasterDetailPage /></RutaNoBodeguero>} />
@@ -96,7 +104,7 @@ export default function AppRouter() {
           <Route path="/movimientos/nuevo" element={<InventoryMovementFormPage />} />
           <Route path="/inventory-movements/:id/recibo" element={<InventoryMovementReceiptPage />} />
           <Route path="/despacho-materiales" element={<MaterialDispatchPage />} />
-          {/* NUEVO: historial — el backend le filtra al BODEGUERO solo su bodega */}
+          {/* Historial — el backend le filtra al BODEGUERO solo su bodega */}
           <Route path="/despacho-materiales/historial" element={<MaterialDispatchHistoryPage />} />
 
           {/* Bandeja de transferencias pendientes — solo Coordinador de Inventario y Admin */}

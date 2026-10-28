@@ -1,10 +1,19 @@
-// Modal para crear/editar un Customer (cliente internacional comprador de banano).
-// Cada Customer está ligado a un Tercero ya existente (third_party_id).
+// Modal para crear/editar un Cliente (cliente internacional comprador de banano, ej. GT, RVI).
+// Cada Cliente está ligado a un Tercero ya existente (third_party_id).
+// Cambios en esta versión:
+//   1. "Tipo de negociación" pasa de texto libre a selector CONTRATO / SPOT
+//      (el backend y el CHECK constraint de customers solo aceptan esos dos valores).
+//   2. Títulos y textos en español: "cliente" en vez de "customer".
+//   3. Mensajes de toast usan la clave 'cliente', que es la registrada en toastMessages.js.
+//   4. Carga defensiva de terceros (Array.isArray) para evitar el error ".map is not a function".
 import { useState, useEffect, useRef } from 'react';
 import { createCustomer, updateCustomer } from '../api/customers';
-import { getThirdParties } from '../api/thirdParties'; // ajustar nombre real si difiere
+import { getThirdParties } from '../api/thirdParties';
 import { getMensajeExito, getMensajeError } from '../utils/toastMessages';
 import ModalShell from './common/ModalShell';
+
+// Únicos valores válidos para la modalidad comercial (mismos del CHECK en la base)
+const TIPOS_NEGOCIACION = ['CONTRATO', 'SPOT'];
 
 const formVacio = {
     third_party_id: '',
@@ -14,6 +23,7 @@ const formVacio = {
 };
 
 export default function CustomerModal({ customer, onClose, onGuardado }) {
+    // Es edición solo si el cliente tiene id real (no si llega un objeto parcial)
     const esEdicion = Boolean(customer?.id);
 
     const [form, setForm] = useState(formVacio);
@@ -27,8 +37,12 @@ export default function CustomerModal({ customer, onClose, onGuardado }) {
     const [terceros, setTerceros] = useState([]);
 
     useEffect(() => {
-        getThirdParties({ status: true }).then((res) => setTerceros(res.data));
+        // Carga terceros activos; si la API no devuelve un arreglo, deja la lista vacía
+        getThirdParties({ status: true })
+            .then((res) => setTerceros(Array.isArray(res.data) ? res.data : []))
+            .catch(() => setTerceros([]));
 
+        // Datos iniciales: los del cliente si es edición, vacíos si es nuevo
         const dataInicial = {
             third_party_id: customer?.third_party_id || '',
             country: customer?.country || '',
@@ -36,24 +50,28 @@ export default function CustomerModal({ customer, onClose, onGuardado }) {
             negotiation_type: customer?.negotiation_type || '',
         };
         setForm(dataInicial);
-        formInicialRef.current = dataInicial;
+        formInicialRef.current = dataInicial; // referencia para detectar cambios sin guardar
     }, [customer]);
 
+    // Compara el formulario actual con el inicial para saber si hay cambios
     const hayCambiosSinGuardar = () => {
         if (formInicialRef.current === null) return false;
         return JSON.stringify(form) !== JSON.stringify(formInicialRef.current);
     };
 
+    // Cambio normal (selectores)
     const handleChange = (e) => {
         const { name, value } = e.target;
         setForm((prev) => ({ ...prev, [name]: value }));
     };
 
+    // Cambio en campos de texto: convierte a MAYÚSCULAS mientras se escribe
     const handleTextUpperChange = (e) => {
         const { name, value } = e.target;
         setForm((prev) => ({ ...prev, [name]: value.toUpperCase() }));
     };
 
+    // Cancelar: si hay cambios, pide confirmación antes de cerrar
     const handleCancelar = () => {
         if (hayCambiosSinGuardar()) {
             setMostrarConfirmarSalida(true);
@@ -66,8 +84,13 @@ export default function CustomerModal({ customer, onClose, onGuardado }) {
         e.preventDefault();
         setError('');
 
+        // Validaciones mínimas en el frontend (el backend vuelve a validar)
         if (!form.third_party_id) {
             setError('DEBES SELECCIONAR UN TERCERO');
+            return;
+        }
+        if (!TIPOS_NEGOCIACION.includes(form.negotiation_type)) {
+            setError('DEBES SELECCIONAR EL TIPO DE NEGOCIACIÓN (CONTRATO O SPOT)');
             return;
         }
 
@@ -87,15 +110,16 @@ export default function CustomerModal({ customer, onClose, onGuardado }) {
                 await createCustomer(data);
             }
 
+            // Muestra el toast de éxito y cierra después de 1.2 s
             setMostrarExito(true);
             setTimeout(() => {
                 onGuardado();
                 onClose();
             }, 1200);
         } catch (err) {
-            console.error('ERROR AL GUARDAR EL CUSTOMER:', err);
+            console.error('ERROR AL GUARDAR EL CLIENTE:', err);
             setError(
-                err.response?.data?.message || getMensajeError('customer', accion)
+                err.response?.data?.message || getMensajeError('cliente', accion)
             );
             setGuardando(false);
         }
@@ -108,15 +132,16 @@ export default function CustomerModal({ customer, onClose, onGuardado }) {
     return (
         <>
             <ModalShell
-                title={esEdicion ? 'Editar customer' : 'Nuevo customer'}
+                title={esEdicion ? 'Editar cliente' : 'Nuevo cliente'}
                 onClose={handleCancelar}
                 onSubmit={handleSubmit}
                 esEdicion={esEdicion}
                 guardando={guardando}
                 error={error}
-                toast={mostrarExito ? getMensajeExito('customer', esEdicion ? 'actualizar' : 'crear') : ''}
+                toast={mostrarExito ? getMensajeExito('cliente', esEdicion ? 'actualizar' : 'crear') : ''}
             >
                 <div className="space-y-4">
+                    {/* Tercero base: no se puede cambiar al editar */}
                     <div>
                         <label className={labelClass}>Tercero *</label>
                         <select
@@ -127,7 +152,7 @@ export default function CustomerModal({ customer, onClose, onGuardado }) {
                             disabled={esEdicion}
                             className={`${inputClass} disabled:opacity-50`}
                         >
-                            <option value="">Seleccionar...</option>
+                            <option value="">SELECCIONAR...</option>
                             {terceros.map((t) => (
                                 <option key={t.id} value={t.id}>{t.name}</option>
                             ))}
@@ -159,19 +184,26 @@ export default function CustomerModal({ customer, onClose, onGuardado }) {
                         />
                     </div>
 
+                    {/* Modalidad comercial: solo CONTRATO o SPOT (no confundir con incoterm FOB/CIF) */}
                     <div>
-                        <label className={labelClass}>Tipo de negociación</label>
-                        <input
+                        <label className={labelClass}>Tipo de negociación *</label>
+                        <select
                             name="negotiation_type"
                             value={form.negotiation_type}
-                            onChange={handleTextUpperChange}
-                            placeholder="Ej: FOB, CIF..."
+                            onChange={handleChange}
+                            required
                             className={inputClass}
-                        />
+                        >
+                            <option value="">SELECCIONAR...</option>
+                            {TIPOS_NEGOCIACION.map((tipo) => (
+                                <option key={tipo} value={tipo}>{tipo}</option>
+                            ))}
+                        </select>
                     </div>
                 </div>
             </ModalShell>
 
+            {/* Confirmación de salida con cambios sin guardar */}
             {mostrarConfirmarSalida && (
                 <div className="fixed inset-0 flex items-center justify-center z-[60]" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm px-6 py-6">
