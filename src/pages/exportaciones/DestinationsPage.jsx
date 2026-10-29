@@ -1,30 +1,44 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Plus, Pencil, Ban, RotateCcw, MapPin } from 'lucide-react';
+// Página de Destinos (países/ciudades de destino de las exportaciones)
+// Ubicación: src/pages/exportaciones/DestinationsPage.jsx
+//
+// 28/10/2026 — migrada a los componentes comunes con la paleta oficial
+// (EncabezadoPagina, TablaEstandar, AccionesFila, EstadoBadge, DialogoConfirmacion, ToastFlotante).
+// Ahora se cargan TODOS los destinos una sola vez y TablaEstandar filtra por pestaña en pantalla.
+import { useState, useEffect } from 'react';
 import DestinationModal from '../../components/DestinationModal';
 import { getDestinations, deactivateDestination, reactivateDestination } from '../../api/destinations';
-
-const TABS = ['Activos', 'Inactivos', 'Todos'];
-const PAGE_SIZE = 10;
+import EncabezadoPagina from '../../components/common/EncabezadoPagina';
+import TablaEstandar from '../../components/common/TablaEstandar';
+import EstadoBadge from '../../components/common/EstadoBadge';
+import AccionesFila from '../../components/common/AccionesFila';
+import DialogoConfirmacion from '../../components/common/DialogoConfirmacion';
+import ToastFlotante from '../../components/common/ToastFlotante';
+import { getMensajeExito, getMensajeError } from '../../utils/toastMessages';
 
 export default function DestinationsPage() {
   const [destinos, setDestinos] = useState([]);
-  const [tab, setTab] = useState('Activos');
-  const [pagina, setPagina] = useState(1);
+  const [cargando, setCargando] = useState(true);
   const [modalAbierto, setModalAbierto] = useState(false);
   const [editando, setEditando] = useState(null);
+  // confirmacion = null (cerrado) o { destino, accion: 'desactivar' | 'reactivar' }
   const [confirmacion, setConfirmacion] = useState(null);
+  const [toast, setToast] = useState(null);
 
-  const cargar = useCallback(async () => {
-    const params = {};
-    if (tab !== 'Todos') params.status = tab === 'Activos';
-    const res = await getDestinations(params);
-    setDestinos(res.data);
-  }, [tab]);
+  const cargar = async () => {
+    try {
+      setCargando(true);
+      const res = await getDestinations();
+      // Patrón defensivo: acepta array directo o { data: [...] }
+      setDestinos(Array.isArray(res.data) ? res.data : (res.data?.data || []));
+    } catch (err) {
+      console.error('ERROR AL CARGAR DESTINOS:', err);
+      setDestinos([]);
+    } finally {
+      setCargando(false);
+    }
+  };
 
-  useEffect(() => { cargar(); }, [cargar]);
-  useEffect(() => { setPagina(1); }, [tab]);
-
-  const destinosPagina = destinos.slice((pagina - 1) * PAGE_SIZE, pagina * PAGE_SIZE);
+  useEffect(() => { cargar(); }, []);
 
   const handleConfirmarAccion = async () => {
     const { destino, accion } = confirmacion;
@@ -35,86 +49,52 @@ export default function DestinationsPage() {
         await reactivateDestination(destino.id);
       }
       await cargar();
+      setToast({ tipo: 'exito', mensaje: getMensajeExito('destino', accion) });
     } catch (err) {
       console.error('ERROR AL CAMBIAR ESTADO DEL DESTINO:', err);
+      setToast({ tipo: 'error', mensaje: getMensajeError('destino', accion) });
     } finally {
       setConfirmacion(null);
     }
   };
 
+  const columnas = [
+    { titulo: 'Nombre', render: (d) => d.name, className: 'font-medium' },
+    { titulo: 'Estado', render: (d) => <EstadoBadge activo={d.status} /> },
+    {
+      titulo: 'Acciones',
+      render: (d) => (
+        <AccionesFila
+          activo={d.status}
+          onEditar={() => { setEditando(d); setModalAbierto(true); }}
+          onDesactivar={() => setConfirmacion({ destino: d, accion: 'desactivar' })}
+          onReactivar={() => setConfirmacion({ destino: d, accion: 'reactivar' })}
+        />
+      ),
+    },
+  ];
+
+  const esDesactivar = confirmacion?.accion === 'desactivar';
+
   return (
-    <div className="p-4">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
-          <MapPin size={22} /> Destinos
-        </h1>
-        <button
-          onClick={() => { setEditando(null); setModalAbierto(true); }}
-          className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg flex items-center gap-1"
-        >
-          <Plus size={18} /> Nuevo Destino
-        </button>
-      </div>
+    <div className="p-6">
+      <ToastFlotante toast={toast} onCerrar={() => setToast(null)} />
 
-      <div className="flex gap-2 mb-4">
-        {TABS.map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`px-3 py-1 rounded-lg text-sm ${tab === t ? 'bg-green-700 text-white' : 'bg-gray-100 text-gray-600'}`}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
+      <EncabezadoPagina
+        titulo="Destinos"
+        subtitulo="Destinos de las exportaciones"
+        textoBoton="Nuevo destino"
+        onNuevo={() => { setEditando(null); setModalAbierto(true); }}
+      />
 
-      <table className="w-full text-sm bg-white rounded-lg overflow-hidden shadow">
-        <thead className="bg-white border-b">
-          <tr className="text-left text-gray-700">
-            <th className="p-3 font-semibold">Nombre</th>
-            <th className="p-3 font-semibold text-right">Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {destinosPagina.map((destino) => (
-            <tr key={destino.id} className="border-t hover:bg-gray-50">
-              <td className="p-3">{destino.name}</td>
-              <td className="p-3">
-                <div className="flex justify-end gap-1">
-                  <button
-                    onClick={() => { setEditando(destino); setModalAbierto(true); }}
-                    className="bg-blue-600 text-white p-1 rounded-lg"
-                  >
-                    <Pencil size={14} />
-                  </button>
-                  {destino.status ? (
-                    <button onClick={() => setConfirmacion({ destino, accion: 'desactivar' })} className="bg-red-600 text-white p-1 rounded-lg">
-                      <Ban size={14} />
-                    </button>
-                  ) : (
-                    <button onClick={() => setConfirmacion({ destino, accion: 'reactivar' })} className="bg-green-600 text-white p-1 rounded-lg">
-                      <RotateCcw size={14} />
-                    </button>
-                  )}
-                </div>
-              </td>
-            </tr>
-          ))}
-          {destinosPagina.length === 0 && (
-            <tr>
-              <td colSpan={2} className="p-4 text-center text-gray-400">Sin destinos en esta vista.</td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-
-      {destinos.length > PAGE_SIZE && (
-        <div className="flex justify-center gap-2 mt-3">
-          <button disabled={pagina === 1} onClick={() => setPagina((p) => p - 1)} className="text-sm disabled:opacity-30">‹</button>
-          <span className="text-sm">{pagina}</span>
-          <button disabled={pagina * PAGE_SIZE >= destinos.length} onClick={() => setPagina((p) => p + 1)} className="text-sm disabled:opacity-30">›</button>
-        </div>
-      )}
+      <TablaEstandar
+        columnas={columnas}
+        datos={destinos}
+        cargando={cargando}
+        nombreRegistros="destinos"
+        placeholderBusqueda="Buscar destino..."
+        textosBusqueda={(d) => [d.name]}
+      />
 
       {modalAbierto && (
         <DestinationModal
@@ -125,22 +105,15 @@ export default function DestinationsPage() {
       )}
 
       {confirmacion && (
-        <div className="fixed inset-0 flex items-center justify-center z-[60]" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm px-6 py-6">
-            <h3 className="text-base font-bold text-gray-800 mb-2">
-              ¿{confirmacion.accion === 'desactivar' ? 'Desactivar' : 'Reactivar'} destino?
-            </h3>
-            <p className="text-sm text-gray-500 mb-6">{confirmacion.destino.name}</p>
-            <div className="flex justify-end gap-3">
-              <button onClick={() => setConfirmacion(null)} className="px-4 py-2 text-sm font-semibold text-gray-600 hover:text-gray-800 rounded-lg transition">
-                Cancelar
-              </button>
-              <button onClick={handleConfirmarAccion} className="px-4 py-2 text-sm font-semibold bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
-                Confirmar
-              </button>
-            </div>
-          </div>
-        </div>
+        <DialogoConfirmacion
+          titulo={esDesactivar ? 'Desactivar destino' : 'Reactivar destino'}
+          peligro={esDesactivar}
+          onCancelar={() => setConfirmacion(null)}
+          onAceptar={handleConfirmarAccion}
+        >
+          ¿Estás seguro de {esDesactivar ? 'desactivar' : 'reactivar'}{' '}
+          <strong>{confirmacion.destino.name}</strong>?
+        </DialogoConfirmacion>
       )}
     </div>
   );

@@ -208,7 +208,7 @@ export default function PendingTransfersPage() {
 
             <div className="bg-white rounded-xl shadow overflow-hidden">
                 <table className="w-full text-sm">
-                    <thead className="bg-[#3B5BDB] text-white">
+                    <thead className="bg-primario text-white">
                         <tr>
                             <th className="text-left px-4 py-3">Origen → Destino</th>
                             <th className="text-left px-4 py-3">Fecha</th>
@@ -266,15 +266,10 @@ export default function PendingTransfersPage() {
                                                 <CheckCircle2 size={14} />
                                                 Confirmar
                                             </button>
-                                            {/* Cancelar — rojo sólido con texto blanco + ícono X,
-                                                mismo color coral (#e2593f/#c94a32 hover) que
-                                                ModalShell.jsx usa para Cancelar en todos los modales */}
+                                            {/* Cancelar transferencia — acción de peligro → rojo (red-600) de la paleta */}
                                             <button
                                                 onClick={() => abrirCancelacionDirecta(t)}
-                                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded-lg transition"
-                                                style={{ backgroundColor: '#e2593f' }}
-                                                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#c94a32')}
-                                                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#e2593f')}
+                                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition"
                                             >
                                                 <XCircle size={14} />
                                                 Cancelar
@@ -374,10 +369,7 @@ export default function PendingTransfersPage() {
                                     <button
                                         onClick={cancelarTransferencia}
                                         disabled={cancelando}
-                                        className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-lg text-white disabled:opacity-50"
-                                        style={{ backgroundColor: '#e2593f' }}
-                                        onMouseEnter={(e) => !cancelando && (e.currentTarget.style.backgroundColor = '#c94a32')}
-                                        onMouseLeave={(e) => !cancelando && (e.currentTarget.style.backgroundColor = '#e2593f')}
+                                        className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-lg text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:hover:bg-red-600"
                                     >
                                         <XCircle size={14} />
                                         {cancelando ? 'Cancelando...' : 'Sí, cancelar'}
@@ -388,8 +380,7 @@ export default function PendingTransfersPage() {
                             <div className="flex justify-between items-center mt-5">
                                 <button
                                     onClick={() => setConfirmandoCancelacion(true)}
-                                    className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-lg border text-[#e2593f] hover:bg-red-50"
-                                    style={{ borderColor: '#e2593f' }}
+                                    className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-lg border border-red-600 text-red-600 hover:bg-red-50"
                                 >
                                     <XCircle size={14} />
                                     Cancelar transferencia
@@ -442,7 +433,7 @@ export default function PendingTransfersPage() {
                                                     min="0"
                                                     value={linea.quantity}
                                                     onChange={(e) => actualizarLineaModal(index, 'quantity', e.target.value)}
-                                                    className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-right outline-none focus:ring-2 focus:ring-[#3B5BDB]"
+                                                    className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-right outline-none focus:ring-2 focus:ring-primario"
                                                 />
                                             </td>
                                         </tr>

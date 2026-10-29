@@ -23,3 +23,22 @@ export const deactivateFarm = (id) => axios.patch(`/farms/${id}/deactivate`);
 
 // Reactiva una finca (status = true) — solo ADMIN
 export const reactivateFarm = (id) => axios.patch(`/farms/${id}/reactivate`);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

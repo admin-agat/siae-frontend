@@ -99,14 +99,15 @@ export default function ShippingLineModal({ isOpen, onClose, onGuardado, shippin
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="px-4 py-2 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-100"
+              className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-cancelar text-cancelar-texto hover:bg-cancelar-hover"
             >
+              <X size={16} />
               Cancelar
             </button>
             <button
               type="submit"
               disabled={loading || !nombre.trim()}
-              className="flex items-center gap-2 px-4 py-2 text-sm rounded bg-green-700 text-white hover:bg-green-800 disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-guardar text-guardar-texto hover:bg-guardar-hover disabled:opacity-50"
             >
               <Save size={16} />
               {loading ? "Guardando..." : "Guardar"}

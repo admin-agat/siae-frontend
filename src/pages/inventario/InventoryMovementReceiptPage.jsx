@@ -58,7 +58,7 @@ export default function InventoryMovementReceiptPage() {
                 <p className="text-sm text-red-600 mb-4">{error || 'MOVIMIENTO NO ENCONTRADO'}</p>
                 <button
                     onClick={() => navigate(rutaVolver)}
-                    className="text-sm font-semibold text-[#3B5BDB] hover:text-[#2F49B8]"
+                    className="text-sm font-semibold text-primario hover:text-primario-hover"
                 >
                     {textoVolver}
                 </button>
@@ -111,7 +111,7 @@ export default function InventoryMovementReceiptPage() {
                 </button>
                 <button
                     onClick={() => window.print()}
-                    className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold bg-[#3B5BDB] text-white rounded-lg hover:bg-[#2F49B8]"
+                    className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold bg-primario text-white rounded-lg hover:bg-primario-hover"
                 >
                     <Printer size={16} />
                     {esDespacho ? 'Imprimir guía' : 'Imprimir recibo'}

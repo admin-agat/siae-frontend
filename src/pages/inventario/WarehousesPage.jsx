@@ -145,7 +145,7 @@ export default function WarehousesPage() {
 
             <div className="bg-white rounded-xl shadow overflow-hidden">
                 <table className="w-full text-sm">
-                    <thead className="bg-[#3B5BDB] text-white">
+                    <thead className="bg-primario text-white">
                         <tr>
                             <th className="text-left px-4 py-3">Código</th>
                             <th className="text-left px-4 py-3">Nombre</th>

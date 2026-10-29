@@ -25,3 +25,7 @@ export const getDespacho = (id) =>
 // Anula un despacho (solo COORDINADOR_INVENTARIO / ADMIN). El stock regresa a la bodega.
 export const anularDespacho = (id) =>
   axios.patch(`/material-dispatch/${id}/deactivate`).then((res) => res.data);
+// Fase 3 — cupos que Comercial asignó a un productor/comercializadora (sin liquidar), por
+// semana y marca: [{ producer_quota_id, week, year, status, brand_code, brand_name, cajas }]
+export const getCuposAsignados = (thirdPartyId) =>
+  axios.get(`/material-dispatch/quotas/${thirdPartyId}`).then((res) => res.data);

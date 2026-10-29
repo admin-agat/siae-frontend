@@ -185,7 +185,7 @@ export default function ShippingLinesPage() {
                         </div>
                         <button
                             onClick={() => { setNavieraEdit(null); setShowNavieraModal(true); }}
-                            className="flex items-center gap-2 bg-[#3B5BDB] text-white px-4 py-2 rounded-lg hover:bg-[#2F49B8] transition"
+                            className="flex items-center gap-2 bg-primario text-white px-4 py-2 rounded-lg hover:bg-primario-hover transition"
                         >
                             <Plus size={16} />
                             Nueva
@@ -231,7 +231,7 @@ export default function ShippingLinesPage() {
                                     onClick={() => setNavieraSeleccionada(n)}
                                     className={`flex items-center justify-between px-4 py-3 border-b last:border-0 cursor-pointer transition ${
                                         navieraSeleccionada?.id === n.id
-                                            ? 'bg-green-50 border-l-4 border-l-[#3B5BDB]'
+                                            ? 'bg-primario-claro border-l-4 border-l-primario'
                                             : 'hover:bg-slate-50'
                                     }`}
                                 >
@@ -296,10 +296,10 @@ export default function ShippingLinesPage() {
                 </div>
 
                 {/* Columna derecha: Barcos */}
-                <div className="col-span-2 bg-[#3B5BDB]/[0.03] border border-[#3B5BDB]/20 rounded-2xl p-4">
+                <div className="col-span-2 bg-primario/[0.03] border border-primario/20 rounded-2xl p-4">
                     <div className="flex justify-between items-center mb-3">
                         <div className="flex items-center gap-2">
-                            <div className="w-1.5 h-5 bg-[#3B5BDB] rounded-full" />
+                            <div className="w-1.5 h-5 bg-primario rounded-full" />
                             <h2 className="font-semibold text-gray-800">
                                 {navieraSeleccionada
                                     ? `Barcos de ${navieraSeleccionada.name}`
@@ -309,7 +309,7 @@ export default function ShippingLinesPage() {
                         <button
                             onClick={handleNuevoBarco}
                             disabled={!navieraSeleccionada}
-                            className="flex items-center gap-2 bg-[#3B5BDB] text-white px-4 py-2 rounded-lg hover:bg-[#2F49B8] transition disabled:opacity-40"
+                            className="flex items-center gap-2 bg-primario text-white px-4 py-2 rounded-lg hover:bg-primario-hover transition disabled:opacity-40"
                         >
                             <Plus size={18} />
                             Nuevo barco
@@ -317,7 +317,7 @@ export default function ShippingLinesPage() {
                     </div>
 
                     <div className="flex items-center gap-3 mb-3 flex-nowrap">
-                        <div className="flex items-center gap-2 bg-white border border-[#3B5BDB]/20 rounded-lg px-3 py-2 flex-1 min-w-0">
+                        <div className="flex items-center gap-2 bg-white border border-primario/20 rounded-lg px-3 py-2 flex-1 min-w-0">
                             <Search size={16} className="text-gray-400 shrink-0" />
                             <input
                                 type="text"
@@ -328,14 +328,14 @@ export default function ShippingLinesPage() {
                             />
                         </div>
 
-                        <div className="flex gap-1 bg-[#3B5BDB]/10 rounded-lg p-1 shrink-0">
+                        <div className="flex gap-1 bg-primario/10 rounded-lg p-1 shrink-0">
                             {['ACTIVOS', 'INACTIVOS', 'TODOS'].map((opcion) => (
                                 <button
                                     key={opcion}
                                     onClick={() => setFiltroEstadoBarco(opcion)}
                                     className={`text-xs font-semibold px-3 py-1.5 rounded-md transition whitespace-nowrap ${
                                         filtroEstadoBarco === opcion
-                                            ? 'bg-white text-[#3B5BDB] shadow-sm'
+                                            ? 'bg-white text-primario shadow-sm'
                                             : 'text-gray-500 hover:text-gray-700'
                                     }`}
                                 >
@@ -345,9 +345,9 @@ export default function ShippingLinesPage() {
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-xl border border-[#3B5BDB]/15 shadow-sm overflow-hidden">
+                    <div className="bg-white rounded-xl border border-primario/15 shadow-sm overflow-hidden">
                         <table className="w-full text-sm">
-                            <thead className="bg-[#3B5BDB] text-white">
+                            <thead className="bg-primario text-white">
                                 <tr>
                                     <th className="text-left px-4 py-3">Barco</th>
                                     <th className="text-left px-4 py-3">Estado</th>
@@ -421,11 +421,11 @@ export default function ShippingLinesPage() {
                         </table>
 
                         {navieraSeleccionada && !loadingBarcos && barcosFiltrados.length > POR_PAGINA && (
-                            <div className="flex items-center justify-between px-4 py-3 border-t border-[#3B5BDB]/10 text-sm">
+                            <div className="flex items-center justify-between px-4 py-3 border-t border-primario/10 text-sm">
                                 <button
                                     onClick={() => setPaginaBarco(p => Math.max(1, p - 1))}
                                     disabled={paginaBarco === 1}
-                                    className="flex items-center gap-1 text-gray-600 hover:text-[#3B5BDB] disabled:opacity-30 disabled:hover:text-gray-600"
+                                    className="flex items-center gap-1 text-gray-600 hover:text-primario disabled:opacity-30 disabled:hover:text-gray-600"
                                 >
                                     <ChevronLeft size={16} />
                                     Anterior
@@ -436,7 +436,7 @@ export default function ShippingLinesPage() {
                                 <button
                                     onClick={() => setPaginaBarco(p => Math.min(totalPaginasBarco, p + 1))}
                                     disabled={paginaBarco === totalPaginasBarco}
-                                    className="flex items-center gap-1 text-gray-600 hover:text-[#3B5BDB] disabled:opacity-30 disabled:hover:text-gray-600"
+                                    className="flex items-center gap-1 text-gray-600 hover:text-primario disabled:opacity-30 disabled:hover:text-gray-600"
                                 >
                                     Siguiente
                                     <ChevronRight size={16} />

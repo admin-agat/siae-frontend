@@ -54,4 +54,9 @@ export const confirmTransfer = (id, data) => {
 };
 
 
-export const cancelTransfer = (id) => axios.post(`/inventory-movements/${id}/cancel-transfer`);
+// PATCH (no POST): así está la ruta en el backend (routes/api.php). Con POST daba 405.
+// 29/10/2026: semanas (cupos) sin liquidar a las que un productor puede devolver material,
+// con lo retirado y lo pendiente por devolver de cada insumo
+export const getReturnableQuotas = (thirdPartyId) => axios.get(`/inventory-movements/returnable-quotas/${thirdPartyId}`);
+
+export const cancelTransfer = (id) => axios.patch(`/inventory-movements/${id}/cancel-transfer`);

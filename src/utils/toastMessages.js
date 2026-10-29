@@ -19,6 +19,13 @@ const ENTIDADES = {
   finca: { nombre: "Finca", genero: "f" },
   receta: { nombre: "Receta", genero: "f" }, // NUEVO: recetas de materiales (BOM por marca)
   marca: { nombre: "Marca", genero: "f" }, // NUEVO: marcas de despacho (GLOBAL VILLAGE, PALM BANANA, etc.)
+  cliente: { nombre: "Cliente", genero: "m" },
+  destino: { nombre: "Destino", genero: "m" },
+  puerto: { nombre: "Puerto", genero: "m" },
+  pedido: { nombre: "Pedido", genero: "m" }, // pedido semanal de Rusia
+  anticipo: { nombre: "Anticipo", genero: "m" }, // anticipos y préstamos al productor (Liquidación)
+  "concepto tarifa": { nombre: "Concepto de tarifa", genero: "m" }, // tarifas por puerto (PortTariffItemModal)
+  usuario: { nombre: "Usuario", genero: "m" }, // CONFIGURACIÓN → Usuarios (29/10/2026)
 };
 
 // Participios base por acción, en masculino singular.

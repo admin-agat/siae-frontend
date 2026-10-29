@@ -5,7 +5,7 @@
 // Qué resuelve sola (la página ya no lo escribe):
 //   - Buscador (texto en MAYÚSCULAS mientras se escribe)
 //   - Pestañas ACTIVOS / INACTIVOS / TODOS
-//   - Encabezado morado #3B5BDB con títulos en MAYÚSCULAS
+//   - Encabezado color primario (#3B5BDB) con títulos en MAYÚSCULAS
 //   - Filas de "Cargando..." y "Sin registros"
 //   - Filas alternadas gris/blanco + resaltado azul claro al hacer clic
 //   - Paginación de 10 en 10 (configurable)
@@ -28,7 +28,7 @@
 //
 // Las clases de Tailwind están escritas COMPLETAS (no armadas con variables), porque
 // en Tailwind v4 las clases construidas dinámicamente no se generan y fallan en silencio.
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
 
 // Pestañas de estado. "valor" es lo que se compara contra el campo de estado del registro.
@@ -56,9 +56,9 @@ export default function TablaEstandar({
     const [filaSeleccionada, setFilaSeleccionada] = useState(null);
 
     // Si cambia la búsqueda o la pestaña, se vuelve a la página 1
-    useEffect(() => {
-        setPaginaActual(1);
-    }, [busqueda, pestana]);
+    // (en el mismo evento, no en un useEffect, para evitar un render extra)
+    const cambiarBusqueda = (valor) => { setBusqueda(valor); setPaginaActual(1); };
+    const cambiarPestana = (clave) => { setPestana(clave); setPaginaActual(1); };
 
     // Defensivo: si llega algo que no es array, se trata como lista vacía
     const lista = Array.isArray(datos) ? datos : [];
@@ -96,7 +96,7 @@ export default function TablaEstandar({
                                 placeholder={placeholderBusqueda}
                                 className="outline-none w-full text-sm"
                                 value={busqueda}
-                                onChange={(e) => setBusqueda(e.target.value.toUpperCase())}
+                                onChange={(e) => cambiarBusqueda(e.target.value.toUpperCase())}
                             />
                         </div>
                     ) : <div />}
@@ -107,10 +107,10 @@ export default function TablaEstandar({
                                 <button
                                     key={p.clave}
                                     type="button"
-                                    onClick={() => setPestana(p.clave)}
+                                    onClick={() => cambiarPestana(p.clave)}
                                     className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${
                                         pestana === p.clave
-                                            ? 'bg-blue-600 text-white'
+                                            ? 'bg-primario text-white'
                                             : 'text-gray-600 hover:bg-gray-100'
                                     }`}
                                 >
@@ -125,8 +125,8 @@ export default function TablaEstandar({
             {/* Tabla */}
             <div className="bg-white rounded-xl shadow overflow-hidden">
                 <table className="w-full text-sm">
-                    {/* Encabezado morado de identidad; "uppercase" pone los títulos en MAYÚSCULAS */}
-                    <thead className="bg-[#3B5BDB] text-white">
+                    {/* Encabezado color primario; "uppercase" pone los títulos en MAYÚSCULAS */}
+                    <thead className="bg-primario text-white">
                         <tr>
                             {columnas.map((col) => (
                                 <th key={col.titulo} className="text-left px-4 py-3 uppercase">
@@ -157,7 +157,7 @@ export default function TablaEstandar({
                                         onClick={() => setFilaSeleccionada(id)}
                                         className={`cursor-pointer transition ${
                                             filaSeleccionada === id
-                                                ? 'bg-blue-100'
+                                                ? 'bg-primario-claro'
                                                 : (i % 2 === 0 ? 'bg-gray-50' : 'bg-white')
                                         }`}
                                     >
@@ -208,7 +208,33 @@ export default function TablaEstandar({
             </div>
         </>
     );
-} 
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

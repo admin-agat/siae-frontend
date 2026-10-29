@@ -143,7 +143,7 @@ export default function SupplyCategoryModal({ supplyCategory, onClose, onGuardad
                         id="chargeable_to_producer"
                         checked={form.chargeable_to_producer}
                         onChange={handleCheckboxChange}
-                        style={{ accentColor: '#2563eb' }}
+                        className="accent-primario"
                         className="w-4 h-4"
                     />
                     <label htmlFor="chargeable_to_producer" className="text-sm text-gray-700">

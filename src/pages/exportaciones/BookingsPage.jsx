@@ -100,7 +100,7 @@ export default function BookingsPage() {
                 </div>
                 <button
                     onClick={handleNuevo}
-                    className="flex items-center gap-2 bg-[#3B5BDB] text-white px-4 py-2 rounded-lg hover:bg-[#2f49b0] transition"
+                    className="flex items-center gap-2 bg-primario text-white px-4 py-2 rounded-lg hover:bg-primario-hover transition"
                 >
                     <Plus size={18} />
                     Nuevo booking
@@ -120,7 +120,7 @@ export default function BookingsPage() {
 
             <div className="bg-white rounded-xl shadow overflow-hidden">
                 <table className="w-full text-sm">
-                    <thead className="bg-[#3B5BDB] text-white">
+                    <thead className="bg-primario text-white">
                         <tr>
                             <th className="text-left px-4 py-3"># Booking</th>
                             <th className="text-left px-4 py-3">Naviera</th>

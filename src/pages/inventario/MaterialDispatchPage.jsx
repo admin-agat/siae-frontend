@@ -8,10 +8,12 @@
 // Se guarda un EGRESO (motivo ENTREGA A PRODUCTOR) que descuenta stock con
 // lo REAL y deja el RECOMENDADO en recommended_quantity como referencia.
 // El backend recalcula y valida todo (stock, receta, cupo liquidado).
+// 28/10/2026 (Fase 3): si COMERCIAL le asignó cupo al productor, se elige ese cupo y la marca y
+// las cajas salen de él (no se escriben a mano). Sin cupo de Comercial se sigue como antes.
 import { useState, useEffect, useMemo } from 'react';
 import { Calculator, AlertTriangle, CheckCircle, Save, Info, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { calcularDespacho, guardarDespacho } from '../../api/materialDispatch';
+import { calcularDespacho, guardarDespacho, getCuposAsignados } from '../../api/materialDispatch';
 import { getWarehouses } from '../../api/warehouses';
 import { getThirdParties } from '../../api/thirdParties';
 import { getBrands } from '../../api/brands';
@@ -56,6 +58,10 @@ export default function MaterialDispatchPage() {
     const [marcaCode, setMarcaCode] = useState('');
     const [cajas, setCajas] = useState('');
 
+    // ---- Cupos asignados por Comercial al productor elegido (Fase 3) ----
+    const [cuposComercial, setCuposComercial] = useState([]);
+    const [cupoSel, setCupoSel] = useState(''); // "producer_quota_id|brand_code"
+
     // ---- Catálogos ----
     const [bodegas, setBodegas] = useState([]);
     const [terceros, setTerceros] = useState([]);
@@ -77,6 +83,48 @@ export default function MaterialDispatchPage() {
     useEffect(() => {
         cargarCatalogos();
     }, []);
+
+    // 29/10/2026: Comercial indica en cada compra la bodega donde se retiran los materiales.
+    // Un cupo solo se despacha desde su bodega (sin bodega = cualquiera).
+    const claveCupo = (c) => `${c.producer_quota_id}|${c.brand_code}|${c.warehouse_id ?? ''}`;
+    const retiraAqui = (c, bodega = warehouseId) => !c.warehouse_id || !bodega || String(c.warehouse_id) === String(bodega);
+    const elegirCupo = (c) => {
+        setCupoSel(c ? claveCupo(c) : '');
+        if (c) {
+            setMarcaCode(c.brand_code);
+            setCajas(String(c.cajas));
+        }
+    };
+    const cupoElegido = cuposComercial.find((c) => claveCupo(c) === cupoSel) || null;
+
+    // Al elegir productor se traen sus cupos de Comercial. Si tiene, se elige el primero:
+    // la marca y las cajas salen del cupo (Comercial ya decidió cuánto se le compra).
+    useEffect(() => {
+        setCuposComercial([]);
+        setCupoSel('');
+        if (!thirdPartyId) return;
+        getCuposAsignados(thirdPartyId)
+            .then((lista) => {
+                const cupos = Array.isArray(lista) ? lista : [];
+                setCuposComercial(cupos);
+                const primero = cupos.find((c) => retiraAqui(c));
+                if (primero) elegirCupo(primero);
+            })
+            .catch(() => setCuposComercial([]));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [thirdPartyId]);
+
+    // Al cambiar la bodega: si el cupo elegido se retira en otra, se elige uno de esta bodega
+    const cambiarBodega = (bodega) => {
+        setWarehouseId(bodega);
+        if (!cupoElegido || retiraAqui(cupoElegido, bodega)) return;
+        const otro = cuposComercial.find((c) => retiraAqui(c, bodega));
+        if (otro) elegirCupo(otro);
+        else setCupoSel('');
+    };
+
+    const cuposOtraBodega = cuposComercial.filter((c) => !retiraAqui(c));
+    const sinCupoEnEstaBodega = cuposComercial.length > 0 && cuposOtraBodega.length === cuposComercial.length;
 
     // Si cambia bodega, productor, marca o cajas, el cálculo anterior ya no vale:
     // se limpia para obligar a recalcular (evita guardar con números viejos).
@@ -162,6 +210,7 @@ export default function MaterialDispatchPage() {
                 third_party_id: thirdPartyId, // para descontar lo ya retirado de esta marca
                 brand_code: marcaCode,
                 cajas: cajasNum,
+                producer_quota_id: cupoElegido?.producer_quota_id ?? null,
             });
             // "A retirar" (real) arranca igual al recomendado (sugerido); el bodeguero lo ajusta
             setMateriales(
@@ -241,6 +290,7 @@ export default function MaterialDispatchPage() {
                 third_party_id: thirdPartyId,
                 brand_code: marcaCode,
                 cajas: cajasNum,
+                producer_quota_id: cupoElegido?.producer_quota_id ?? null,
                 vapor: vapor.trim() || null,
                 delivery_note: deliveryNote.trim() || null,
                 received_by_name: retiraNombre.trim(),
@@ -288,7 +338,7 @@ export default function MaterialDispatchPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                         <label className={LABEL}>Bodega *</label>
-                        <select value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} className={INPUT}>
+                        <select value={warehouseId} onChange={(e) => cambiarBodega(e.target.value)} className={INPUT}>
                             <option value="">Seleccionar bodega...</option>
                             {bodegas.map((b) => (
                                 <option key={b.id} value={b.id}>{b.name}</option>
@@ -314,7 +364,9 @@ export default function MaterialDispatchPage() {
 
                     <div>
                         <label className={LABEL}>Semana</label>
-                        <div className={`${INPUT} text-gray-500 cursor-not-allowed`}>SEMANA {semanaActual}</div>
+                        <div className={`${INPUT} text-gray-500 cursor-not-allowed`}>
+                            SEMANA {cupoElegido ? `${cupoElegido.week} / ${cupoElegido.year} (CUPO)` : semanaActual}
+                        </div>
                     </div>
 
                     <div>
@@ -348,10 +400,36 @@ export default function MaterialDispatchPage() {
                     Un retiro es de una sola marca. Si el productor lleva dos marcas, registra dos retiros.
                 </p>
 
+                {/* Cupos que dio Comercial: si existen, el despacho se hace contra uno de ellos */}
+                {cuposComercial.length > 0 && (
+                    <div className="mb-4">
+                        <label className={LABEL}>Cupo asignado por Comercial *</label>
+                        <select
+                            value={cupoSel}
+                            onChange={(e) => elegirCupo(cuposComercial.find((c) => claveCupo(c) === e.target.value))}
+                            className={INPUT}
+                        >
+                            {sinCupoEnEstaBodega && <option value="">SIN CUPO PARA RETIRAR EN ESTA BODEGA</option>}
+                            {cuposComercial.map((c) => (
+                                <option key={claveCupo(c)} value={claveCupo(c)} disabled={!retiraAqui(c)}>
+                                    SEMANA {c.week}/{c.year} — {c.brand_name} — {Number(c.cajas).toLocaleString('es-EC')} CAJAS ({c.status}){c.warehouse_name ? ` — RETIRA EN ${c.warehouse_name}` : ''}
+                                </option>
+                            ))}
+                        </select>
+                        {cuposOtraBodega.length > 0 && (
+                            <p className="text-xs text-amber-700 font-semibold mt-1">
+                                {sinCupoEnEstaBodega ? 'Este productor no retira en esta bodega. ' : ''}
+                                Cupos para retirar en otra bodega: {[...new Set(cuposOtraBodega.map((c) => c.warehouse_name))].join(', ')}.
+                            </p>
+                        )}
+                        <p className="text-xs text-gray-400 mt-1">La marca y las cajas las define Comercial en Compra de fruta.</p>
+                    </div>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                     <div>
                         <label className={LABEL}>Marca *</label>
-                        <select value={marcaCode} onChange={(e) => setMarcaCode(e.target.value)} className={INPUT}>
+                        <select value={marcaCode} onChange={(e) => setMarcaCode(e.target.value)} disabled={Boolean(cupoElegido)} className={`${INPUT} disabled:opacity-60`}>
                             <option value="">Seleccionar marca...</option>
                             {marcas.map((m) => (
                                 <option key={m.id} value={m.code}>{m.name}</option>
@@ -366,7 +444,8 @@ export default function MaterialDispatchPage() {
                             value={cajas}
                             onChange={(e) => handleCajas(e.target.value)}
                             placeholder="0"
-                            className={INPUT}
+                            readOnly={Boolean(cupoElegido)}
+                            className={`${INPUT} ${cupoElegido ? 'opacity-60 cursor-not-allowed' : ''}`}
                         />
                     </div>
 
@@ -558,8 +637,7 @@ export default function MaterialDispatchPage() {
                                 type="button"
                                 onClick={() => setMostrarConfirmacion(false)}
                                 disabled={guardando}
-                                className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white rounded-lg disabled:opacity-50"
-                                style={{ backgroundColor: '#e2593f' }}
+                                className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold bg-cancelar text-cancelar-texto hover:bg-cancelar-hover rounded-lg disabled:opacity-50"
                             >
                                 <X size={16} />
                                 Cancelar
@@ -568,8 +646,7 @@ export default function MaterialDispatchPage() {
                                 type="button"
                                 onClick={handleGuardar}
                                 disabled={guardando}
-                                className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white rounded-lg disabled:opacity-50"
-                                style={{ backgroundColor: '#2563eb' }}
+                                className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-guardar-texto bg-guardar hover:bg-guardar-hover rounded-lg disabled:opacity-50"
                             >
                                 <Save size={16} />
                                 {guardando ? 'Guardando...' : 'Guardar despacho'}

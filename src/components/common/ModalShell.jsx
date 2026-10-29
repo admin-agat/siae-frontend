@@ -1,12 +1,9 @@
 // Wrapper estándar para todos los modales de formulario de SIAE.
 // Unifica: header (título azul + X), grid de 2 columnas, banner de error,
-// toast de éxito, y footer con botones Cancelar (coral) / Guardar (azul).
+// toast de éxito, y footer con botones Cancelar (gris, secundario) / Guardar (primario).
+// Colores desde la paleta de index.css (@theme): primario = #3B5BDB.
+// Cancelar va en gris (28/10/2026): el rojo/coral queda solo para acciones de peligro.
 import { X, Save, CheckCircle } from 'lucide-react';
-
-const COLOR_PRIMARY = '#2563eb';
-const COLOR_PRIMARY_HOVER = '#1d4ed8';
-const COLOR_CANCEL = '#e2593f';
-const COLOR_CANCEL_HOVER = '#c94a32';
 
 export default function ModalShell({
     isOpen = true,
@@ -49,7 +46,7 @@ export default function ModalShell({
                 )}
 
                 <div className="flex justify-between items-center px-7 py-5 border-b border-gray-100">
-                    <h2 className="text-lg font-bold" style={{ color: COLOR_PRIMARY }}>{title}</h2>
+                    <h2 className="text-lg font-bold text-primario">{title}</h2>
                     <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600">
                         <X size={22} />
                     </button>
@@ -69,10 +66,7 @@ export default function ModalShell({
                         <button
                             type="button"
                             onClick={onClose}
-                            className="flex items-center gap-2 text-white px-4 py-2.5 rounded-lg shadow-sm transition font-medium"
-                            style={{ backgroundColor: COLOR_CANCEL }}
-                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = COLOR_CANCEL_HOVER; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = COLOR_CANCEL; }}
+                            className="flex items-center gap-2 bg-cancelar hover:bg-cancelar-hover text-cancelar-texto px-4 py-2.5 rounded-lg shadow-sm transition font-medium"
                         >
                             <X size={16} />
                             Cancelar
@@ -80,10 +74,7 @@ export default function ModalShell({
                         <button
                             type="submit"
                             disabled={botonDeshabilitado}
-                            className="flex items-center gap-2 text-white px-4 py-2.5 rounded-lg shadow-sm transition disabled:opacity-50"
-                            style={{ backgroundColor: COLOR_PRIMARY }}
-                            onMouseEnter={(e) => { if (!botonDeshabilitado) e.currentTarget.style.backgroundColor = COLOR_PRIMARY_HOVER; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = COLOR_PRIMARY; }}
+                            className="flex items-center gap-2 bg-guardar hover:bg-guardar-hover text-guardar-texto px-4 py-2.5 rounded-lg shadow-sm transition disabled:opacity-50 disabled:hover:bg-guardar"
                         >
                             <Save size={18} />
                             {guardando ? 'Guardando...' : (esEdicion ? 'Actualizar' : 'Guardar')}

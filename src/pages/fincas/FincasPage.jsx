@@ -2,24 +2,26 @@
 // Ubicación: src/pages/fincas/FincasPage.jsx   (F mayúscula — PascalCase, igual que el componente)
 //
 // 27/10/2026 — migrada a los componentes comunes (mismo patrón que TercerosPage.jsx):
-//   - EncabezadoPagina → título, subtítulo y botón "+ Nueva finca" en AZUL
-//   - TablaEstandar    → buscador, pestañas ACTIVOS/INACTIVOS/TODOS, encabezado morado,
+//   - EncabezadoPagina → título, subtítulo y botón "+ Nueva finca" en color primario
+//   - TablaEstandar    → buscador, pestañas ACTIVOS/INACTIVOS/TODOS, encabezado primario,
 //                        filas alternadas, resaltado al clic y paginación
 //   - EstadoBadge      → ACTIVO / INACTIVO
-//   - AccionesFila     → ✏️ verde, 🚫 rojo, 🔄 azul (ya no Trash2)
+//   - AccionesFila     → ✏️ verde, 🚫 rojo, 🔄 primario (ya no Trash2)
+//   - DialogoConfirmacion / ToastFlotante (28/10/2026) → confirmación y toast comunes
 // Además:
 //   - Se ELIMINÓ el confirm() nativo (Chrome lo bloquea en silencio) → modal propio
 //   - Se agregó REACTIVAR (antes una finca desactivada no podía volver)
 //   - Toast de éxito/error con toastMessages ('finca' ya estaba registrada)
 //   - Patrón defensivo al cargar (evita el error ".filter is not a function")
 import { useState, useEffect } from 'react';
-import { AlertTriangle, CheckCircle } from 'lucide-react';
 import { getFarms, deactivateFarm, reactivateFarm } from '../../api/farms';
 import FarmModal from '../../components/FarmModal';
 import EncabezadoPagina from '../../components/common/EncabezadoPagina';
 import TablaEstandar from '../../components/common/TablaEstandar';
 import EstadoBadge from '../../components/common/EstadoBadge';
 import AccionesFila from '../../components/common/AccionesFila';
+import DialogoConfirmacion from '../../components/common/DialogoConfirmacion';
+import ToastFlotante from '../../components/common/ToastFlotante';
 import { getMensajeExito, getMensajeError } from '../../utils/toastMessages';
 
 export default function FincasPage() {
@@ -35,17 +37,6 @@ export default function FincasPage() {
     // toast = null (oculto) o { tipo: 'exito'|'error', mensaje: string }
     const [toast, setToast] = useState(null);
 
-    useEffect(() => {
-        cargarFincas();
-    }, []);
-
-    // Oculta el toast automáticamente después de un momento
-    useEffect(() => {
-        if (!toast) return;
-        const timer = setTimeout(() => setToast(null), 2500);
-        return () => clearTimeout(timer);
-    }, [toast]);
-
     const cargarFincas = async () => {
         try {
             setLoading(true);
@@ -60,6 +51,10 @@ export default function FincasPage() {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        cargarFincas();
+    }, []);
 
     // Ejecuta la acción confirmada: desactivar o reactivar
     const ejecutarConfirmacion = async () => {
@@ -117,15 +112,7 @@ export default function FincasPage() {
 
     return (
         <div className="p-6">
-            {/* Toast de éxito/error */}
-            {toast && (
-                <div className={`fixed top-6 left-1/2 -translate-x-1/2 text-white text-sm font-semibold px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-2 z-[70] ${
-                    toast.tipo === 'exito' ? 'bg-green-600' : 'bg-red-600'
-                }`}>
-                    {toast.tipo === 'exito' ? <CheckCircle size={18} /> : <AlertTriangle size={18} />}
-                    {toast.mensaje}
-                </div>
-            )}
+            <ToastFlotante toast={toast} onCerrar={() => setToast(null)} />
 
             {/* Encabezado estándar */}
             <EncabezadoPagina
@@ -156,46 +143,15 @@ export default function FincasPage() {
 
             {/* Modal de confirmación — sirve para desactivar y reactivar */}
             {confirmacion && (
-                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
-                        <div className="flex items-start gap-3 mb-4">
-                            <div className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
-                                esDesactivar ? 'bg-red-100' : 'bg-green-100'
-                            }`}>
-                                {esDesactivar
-                                    ? <AlertTriangle size={20} className="text-red-600" />
-                                    : <CheckCircle size={20} className="text-green-600" />}
-                            </div>
-                            <div>
-                                <h3 className="font-bold text-gray-800">
-                                    {esDesactivar ? 'Desactivar finca' : 'Reactivar finca'}
-                                </h3>
-                                <p className="text-sm text-gray-500 mt-1">
-                                    ¿Estás seguro de {esDesactivar ? 'desactivar' : 'reactivar'}{' '}
-                                    <strong>{confirmacion.finca.name}</strong>?
-                                </p>
-                            </div>
-                        </div>
-                        <div className="flex justify-end gap-3">
-                            <button
-                                onClick={() => setConfirmacion(null)}
-                                className="px-4 py-2 text-sm font-semibold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                onClick={ejecutarConfirmacion}
-                                className={`px-4 py-2 text-sm font-semibold text-white rounded-lg ${
-                                    esDesactivar
-                                        ? 'bg-red-600 hover:bg-red-700'
-                                        : 'bg-green-600 hover:bg-green-700'
-                                }`}
-                            >
-                                Aceptar
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                <DialogoConfirmacion
+                    titulo={esDesactivar ? 'Desactivar finca' : 'Reactivar finca'}
+                    peligro={esDesactivar}
+                    onCancelar={() => setConfirmacion(null)}
+                    onAceptar={ejecutarConfirmacion}
+                >
+                    ¿Estás seguro de {esDesactivar ? 'desactivar' : 'reactivar'}{' '}
+                    <strong>{confirmacion.finca.name}</strong>?
+                </DialogoConfirmacion>
             )}
         </div>
     );

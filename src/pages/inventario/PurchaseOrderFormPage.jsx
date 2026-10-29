@@ -4,7 +4,7 @@
 // por línea — igual que el formato que ya usa Contífico. El código (OC-2026-0001)
 // y la Semana se generan/calculan automáticamente.
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, CheckCircle } from 'lucide-react';
+import { Plus, Trash2, CheckCircle, Save, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { createPurchaseOrder, getNextPurchaseOrderCode } from '../../api/purchaseOrders';
 import { getWarehouses } from '../../api/warehouses';
@@ -273,7 +273,7 @@ export default function PurchaseOrderFormPage() {
         <div className="max-w-full mx-auto p-6 space-y-4">
             {codigoCreado && (
                 <div className="fixed top-6 right-6 z-50 bg-white border border-green-200 shadow-lg rounded-xl px-5 py-4 flex items-center gap-3">
-                    <CheckCircle size={22} className="text-[#3B5BDB] flex-shrink-0" />
+                    <CheckCircle size={22} className="text-primario flex-shrink-0" />
                     <div>
                         <p className="font-semibold text-gray-800 text-sm">Orden de compra creada</p>
                         <p className="text-gray-500 text-sm">{codigoCreado}</p>
@@ -391,7 +391,7 @@ export default function PurchaseOrderFormPage() {
                             type="button"
                             onClick={agregarLinea}
                             disabled={!thirdPartyId}
-                            className="flex items-center gap-1 text-sm font-semibold text-[#3B5BDB] hover:text-[#2F49B8] disabled:opacity-40 disabled:cursor-not-allowed"
+                            className="flex items-center gap-1 text-sm font-semibold text-primario hover:text-primario-hover disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                             <Plus size={16} />
                             Agregar insumo
@@ -406,7 +406,7 @@ export default function PurchaseOrderFormPage() {
 
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
-                            <thead className="bg-[#3B5BDB] text-white">
+                            <thead className="bg-primario text-white">
                                 <tr>
                                     <th className="text-left px-3 py-3">Insumo</th>
                                     <th className="text-right px-3 py-3 w-28">Cantidad</th>
@@ -428,7 +428,7 @@ export default function PurchaseOrderFormPage() {
                                                     value={linea.supply_id}
                                                     onChange={(e) => actualizarLinea(index, 'supply_id', e.target.value)}
                                                     disabled={!thirdPartyId || cargandoInsumos}
-                                                    className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-[#3B5BDB] disabled:bg-gray-100"
+                                                    className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primario disabled:bg-gray-100"
                                                 >
                                                     <option value="">
                                                         {cargandoInsumos ? 'Cargando...' : 'Seleccionar...'}
@@ -447,7 +447,7 @@ export default function PurchaseOrderFormPage() {
                                                     onChange={(e) => actualizarLinea(index, 'quantity_ordered', e.target.value)}
                                                     onKeyDown={bloquearTeclasInvalidas}
                                                     onPaste={bloquearPegadoInvalido}
-                                                    className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-right outline-none focus:ring-2 focus:ring-[#3B5BDB]"
+                                                    className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-right outline-none focus:ring-2 focus:ring-primario"
                                                 />
                                             </td>
                                             <td className="px-3 py-2">
@@ -459,14 +459,14 @@ export default function PurchaseOrderFormPage() {
                                                     onChange={(e) => actualizarLinea(index, 'unit_price', e.target.value)}
                                                     onKeyDown={bloquearTeclasInvalidas}
                                                     onPaste={bloquearPegadoInvalido}
-                                                    className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-right outline-none focus:ring-2 focus:ring-[#3B5BDB]"
+                                                    className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-right outline-none focus:ring-2 focus:ring-primario"
                                                 />
                                             </td>
                                             <td className="px-3 py-2">
                                                 <select
                                                     value={linea.tax_rate}
                                                     onChange={(e) => actualizarLinea(index, 'tax_rate', e.target.value)}
-                                                    className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center outline-none focus:ring-2 focus:ring-[#3B5BDB]"
+                                                    className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center outline-none focus:ring-2 focus:ring-primario"
                                                 >
                                                     <option value={15}>15%</option>
                                                     <option value={5}>5%</option>
@@ -483,7 +483,7 @@ export default function PurchaseOrderFormPage() {
                                                     onChange={(e) => actualizarLinea(index, 'discount_percent', e.target.value)}
                                                     onKeyDown={bloquearTeclasInvalidas}
                                                     onPaste={bloquearPegadoInvalido}
-                                                    className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center outline-none focus:ring-2 focus:ring-[#3B5BDB]"
+                                                    className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center outline-none focus:ring-2 focus:ring-primario"
                                                 />
                                             </td>
                                             <td className="px-3 py-2">
@@ -496,7 +496,7 @@ export default function PurchaseOrderFormPage() {
                                                     onChange={(e) => actualizarLinea(index, 'retention_rate', e.target.value)}
                                                     onKeyDown={bloquearTeclasInvalidas}
                                                     onPaste={bloquearPegadoInvalido}
-                                                    className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center outline-none focus:ring-2 focus:ring-[#3B5BDB]"
+                                                    className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center outline-none focus:ring-2 focus:ring-primario"
                                                 />
                                             </td>
                                             <td className="px-3 py-2 text-right font-medium whitespace-nowrap">
@@ -550,7 +550,7 @@ export default function PurchaseOrderFormPage() {
                                 <span>Retención IR</span>
                                 <span>-${retencionTotal.toFixed(2)}</span>
                             </div>
-                            <div className="flex justify-between font-bold text-[#3B5BDB] text-base pt-2 border-t">
+                            <div className="flex justify-between font-bold text-primario text-base pt-2 border-t">
                                 <span>Total</span>
                                 <span>${totalGeneral.toFixed(2)}</span>
                             </div>
@@ -563,15 +563,17 @@ export default function PurchaseOrderFormPage() {
                     <button
                         type="button"
                         onClick={() => navigate('/ordenes-compra')}
-                        className="px-5 py-2.5 text-sm font-semibold bg-red-600 text-white rounded-lg hover:bg-red-700"
+                        className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold bg-cancelar text-cancelar-texto rounded-lg hover:bg-cancelar-hover"
                     >
+                        <X size={16} />
                         Cancelar
                     </button>
                     <button
                         type="submit"
                         disabled={guardando}
-                        className="px-5 py-2.5 text-sm font-semibold bg-[#3B5BDB] text-white rounded-lg hover:bg-[#2F49B8] disabled:opacity-50"
+                        className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold bg-guardar text-guardar-texto rounded-lg hover:bg-guardar-hover disabled:opacity-50"
                     >
+                        <Save size={16} />
                         {guardando ? 'Guardando...' : 'Guardar orden de compra'}
                     </button>
                 </div>

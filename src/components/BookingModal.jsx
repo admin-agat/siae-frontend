@@ -222,7 +222,7 @@ export default function BookingModal({ booking, onClose, onGuardado }) {
                         <select name="client_id" value={form.client_id} onChange={handleChange} className={inputClass}>
                             <option value="">Seleccionar...</option>
                             {clientes.map((c) => (
-                                <option key={c.id} value={c.id}>{c.customer_code} — {c.thirdParty?.name}</option>
+                                <option key={c.id} value={c.id}>{c.customer_code} — {c.third_party?.name}</option>
                             ))}
                         </select>
                     </div>

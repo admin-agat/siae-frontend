@@ -4,9 +4,9 @@ import { useNavigate, useLocation } from "react-router-dom";
 import {
     LayoutDashboard, Users, LogOut, Sprout, Warehouse, Boxes,
     ArrowLeftRight, ClipboardList, FileText, ShoppingCart,
-    FileSignature, Clock, Building2, Tag, Wallet, Ship, Container,
-    CircleDollarSign, History, Download, BarChart3, Percent,
-    MapPin, Globe, CheckCircle2, Truck, ChevronDown
+    FileSignature, Clock, Building2, Tag, Ship, Container,
+    CircleDollarSign, History, ClipboardCheck, HandCoins, Calculator,
+    MapPin, Globe, CheckCircle2, Truck, ChevronDown, Anchor, ShoppingBasket, UserCog
 } from "lucide-react";
 
 
@@ -22,14 +22,17 @@ const menuItems = [
         items: [
             // 27/10/2026: Destinos, Clientes y Contratos clientes se movieron a CONFIGURACIÓN
             // (son datos maestros que solo configura el ADMIN). Aquí queda la operación.
+            // Pedido semanal de Rusia (primer paso del flujo: pedido → barcos → productores)
+            { label: "Pedido semanal", ruta: "/exportaciones/pedidos", icono: ClipboardList },
+            // Fase 2: Logística reparte el pedido en barcos (antes "Embarques — Próximamente")
+            { label: "Distribución en barcos", ruta: "/exportaciones/embarques", icono: Anchor },
+            // 29/10/2026: lo realmente embarcado por booking (DAE, B/L, tarja del puerto)
+            { label: "Cierre de embarque", ruta: "/exportaciones/cierre", icono: ClipboardCheck },
             { label: "Navieras", ruta: "/navieras", icono: Ship },
             { label: "Bookings", ruta: "/bookings", icono: Clock },
-            { label: "Puertos", ruta: "/exportaciones/puertos", icono: Container },
-            { label: "Embarques", ruta: null, icono: FileText, proximamente: true },
-            { label: "SKU / Recetas", ruta: null, icono: Boxes, proximamente: true },
             { label: "Marca BL", ruta: null, icono: FileSignature, proximamente: true },
             { label: "Invoice", ruta: null, icono: CircleDollarSign, proximamente: true },
-            { label: "Marcas", ruta: "/exportaciones/marcas", icono: FileSignature },
+            // 28/10/2026: Marcas se movió a CONFIGURACIÓN (dato maestro del ADMIN)
         ],
     },   
     // --- Módulos en desarrollo: visuales por ahora, sin rutas funcionales ---
@@ -38,8 +41,9 @@ const menuItems = [
         items: [
             // "Productores / Comercializadoras" y "Fincas" se movieron a CONFIGURACIÓN
             // (son datos maestros que solo ingresa el ADMIN, para evitar duplicados)
-            { label: "Comercializadoras", ruta: null, icono: Building2, proximamente: true },
-            { label: "Marcas", ruta: null, icono: Tag, proximamente: true },
+            // Fase 3: Comercial compra la fruta (productor + marca + cajas + precio oficial y real)
+            { label: "Compra de fruta", ruta: "/comercial/compras", icono: ShoppingBasket },
+            // "Marcas" (Próximamente) se quitó: las marcas ya se administran en CONFIGURACIÓN
         ],
     },
      {
@@ -63,12 +67,14 @@ const menuItems = [
     },
     {
         seccion: "LIQUIDACIÓN",
+        // 29/10/2026: tarjas (lo recibido en puerto) → liquidar → registrar pagos 80/20 o 100 %.
+        // soloAdmin: es dinero al productor (el backend también lo limita a ADMIN).
+        soloAdmin: true,
         items: [
-            { label: "Nueva liquidación", ruta: null, icono: FileText, proximamente: true },
-            { label: "Pendientes pago", ruta: null, icono: Clock, proximamente: true },
-            { label: "Pago 80%", ruta: null, icono: Percent, proximamente: true },
-            { label: "Pago 20%", ruta: null, icono: CircleDollarSign, proximamente: true },
-            { label: "Historial pagos", ruta: null, icono: History, proximamente: true },
+            { label: "Tarjas", ruta: "/liquidacion/tarjas", icono: ClipboardCheck },
+            { label: "Anticipos y préstamos", ruta: "/liquidacion/anticipos", icono: HandCoins },
+            { label: "Liquidar", ruta: "/liquidacion", icono: Calculator },
+            { label: "Pagos e historial", ruta: "/liquidacion/pagos", icono: CircleDollarSign },
         ],
     },
     // CONFIGURACIÓN — datos maestros que SOLO ingresa el ADMIN, para que no se
@@ -80,12 +86,23 @@ const menuItems = [
         soloAdmin: true,
         items: [
             // Un solo formulario para productores, comercializadoras, proveedores y clientes
+            // 29/10/2026: usuarios del sistema y su rol
+            { label: "Usuarios", ruta: "/usuarios", icono: UserCog },
             { label: "Terceros (maestro)", ruta: "/terceros", icono: Users },
+            // 29/10/2026: movida desde COMERCIAL ("Próximamente"). Es la misma pantalla de
+            // Terceros, filtrada a COMERCIALIZADORA (un solo maestro, sin datos repetidos)
+            { label: "Comercializadoras", ruta: "/comercializadoras", icono: Building2 },
             { label: "Fincas", ruta: "/fincas", icono: Sprout },
             // 27/10/2026: movidos desde EXPORTACIONES (las rutas /exportaciones/... no cambian)
             { label: "Clientes", ruta: "/exportaciones/clientes", icono: Globe },
             { label: "Destinos", ruta: "/exportaciones/destinos", icono: MapPin },
             { label: "Contratos de clientes", ruta: "/exportaciones/contratos-clientes", icono: FileSignature },
+            // 28/10/2026: movida desde EXPORTACIONES (la ruta /exportaciones/marcas no cambia)
+            // 29/10/2026: "Marcas y recetas" — la receta de materiales (BOM) de cada marca se
+            // administra en la misma pantalla; se quitó "SKU / Recetas — Próximamente" de EXPORTACIONES
+            { label: "Marcas y recetas", ruta: "/exportaciones/marcas", icono: Tag },
+            // 29/10/2026: movido desde EXPORTACIONES (la ruta /exportaciones/puertos no cambia)
+            { label: "Puertos", ruta: "/exportaciones/puertos", icono: Container },
         ],
     },
 ];
@@ -162,6 +179,9 @@ export default function Sidebar() {
                 ...grupo,
                 items: grupo.items.filter((item) => RUTAS_BODEGUERO.includes(item.ruta)),
             }));
+    } else if (user?.role === "EXPORTACIONES" || user?.role === "COMERCIAL") {
+        // 29/10/2026: cada área ve solo su sección (el Dashboard tiene datos de ejemplo)
+        menuVisible = menuItems.filter((grupo) => grupo.seccion === user.role);
     } else if (esRolBodega) {
         menuVisible = menuItems
             .filter((grupo) => grupo.seccion === "INVENTARIO")
@@ -236,8 +256,8 @@ export default function Sidebar() {
                 key={item.ruta}
                 onClick={() => navigate(item.ruta)}
                 className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-2 transition border-l-4 ${activo
-                    ? "bg-green-50 text-[#3B5BDB] font-semibold border-[#4C6EF5]"
-                    : "text-gray-600 hover:bg-green-50 hover:text-[#3B5BDB] border-transparent"
+                    ? "bg-primario-claro text-primario font-semibold border-primario"
+                    : "text-gray-600 hover:bg-green-50 hover:text-primario border-transparent"
                     }`}
             >
                 <Icono size={15} />
@@ -250,7 +270,7 @@ export default function Sidebar() {
         <div className="w-70 h-screen sticky top-0 flex flex-col bg-white" style={{ borderRight: "1px solid #e5e7eb" }}>
             {/* Logo */}
             <div className="px-5 py-4" style={{ borderBottom: "1px solid #e5e7eb" }}>
-                <span className="font-bold text-lg" style={{ color: "#3B5BDB" }}>AGAT · SIAE</span>
+                <span className="font-bold text-lg text-primario">AGAT · SIAE</span>
             </div>
             {/* Menú */}
             <nav className="flex-1 px-3 py-4 space-y-3 overflow-y-auto">
@@ -276,7 +296,7 @@ export default function Sidebar() {
                                         {grupo.seccion}
                                         {/* Punto azul si la página actual está dentro de una sección cerrada */}
                                         {!estaAbierta && contieneActiva && (
-                                            <span className="w-1.5 h-1.5 rounded-full bg-[#3B5BDB]" />
+                                            <span className="w-1.5 h-1.5 rounded-full bg-primario" />
                                         )}
                                     </span>
                                     <ChevronDown

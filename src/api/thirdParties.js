@@ -5,7 +5,9 @@ import api from "./axios";
 
 // Lista todos los terceros (cada uno trae su ficha "customer" si es CLIENTE)
 // Se agregó "/" al inicio para que todas las rutas del archivo sigan el mismo formato
-export const getThirdParties = () => api.get('/third-parties');
+// params opcionales (el backend ya los soporta): { type: 'PRODUCTOR', status: true, search: '...' }
+// 28/10/2026: antes no recibía params y CustomerModal, que pide { type: 'CLIENTE' }, recibía TODOS los terceros.
+export const getThirdParties = (params = {}) => api.get('/third-parties', { params });
 
 // Obtiene un tercero por id
 export const getThirdParty = (id) => api.get(`/third-parties/${id}`);

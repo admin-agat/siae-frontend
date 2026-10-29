@@ -11,10 +11,10 @@
 // INGRESO en destino lo crea después el Coordinador de Inventario al
 // confirmar la transferencia).
 import { useState, useEffect, Fragment } from 'react';
-import { Plus, Trash2, Lock, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, Lock, AlertTriangle, Save, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { createInventoryMovement, transferInventoryMovement, getStockByWarehouse } from '../../api/inventoryMovements';
+import { createInventoryMovement, transferInventoryMovement, getStockByWarehouse, getReturnableQuotas } from '../../api/inventoryMovements';
 import { getWarehouses } from '../../api/warehouses';
 import { getThirdParties } from '../../api/thirdParties';
 import { getSupplies } from '../../api/supplies';
@@ -98,6 +98,11 @@ export default function InventoryMovementFormPage() {
     const [stockOrigen, setStockOrigen] = useState({});
     const [cargandoStock, setCargandoStock] = useState(false);
 
+    // 29/10/2026 — DEVOLUCIÓN de productor: semana (cupo) a la que vuelve el material.
+    // Así la devolución se resta de su liquidación. Obligatoria si tiene semanas sin liquidar.
+    const [cuposDevolucion, setCuposDevolucion] = useState([]);
+    const [cupoDevolucionId, setCupoDevolucionId] = useState('');
+
     const [guardando, setGuardando] = useState(false);
     const [error, setError] = useState('');
 
@@ -143,6 +148,33 @@ export default function InventoryMovementFormPage() {
         setWeek(getISOWeek(hoy));
         setYear(hoy.getFullYear());
     }, []);
+
+    // DEVOLUCIÓN + productor elegido → trae sus semanas con material por devolver
+    useEffect(() => {
+        setCupoDevolucionId('');
+        if (tipo !== 'DEVOLUCION' || !thirdPartyId) {
+            setCuposDevolucion([]);
+            return;
+        }
+        getReturnableQuotas(thirdPartyId)
+            .then((res) => {
+                const lista = Array.isArray(res.data) ? res.data : [];
+                setCuposDevolucion(lista);
+                if (lista.length === 1) setCupoDevolucionId(String(lista[0].id));
+            })
+            .catch((err) => {
+                console.error('ERROR AL CARGAR LAS SEMANAS DEL PRODUCTOR:', err);
+                setCuposDevolucion([]);
+            });
+    }, [tipo, thirdPartyId]);
+
+    const cupoDevolucion = cuposDevolucion.find((c) => String(c.id) === cupoDevolucionId);
+
+    // Copia a las líneas lo que el productor tiene pendiente por devolver (luego se ajusta la cantidad)
+    const usarPendientes = () => {
+        if (!cupoDevolucion) return;
+        setLineas(cupoDevolucion.supplies.map((s) => ({ ...lineaVacia(), supply_id: String(s.supply_id), quantity: String(s.pendiente) })));
+    };
 
     const motivoSeleccionado = motivos.find((m) => String(m.id) === String(movementReasonId));
     const esTransferencia = tipo === 'EGRESO' && motivoSeleccionado?.name === NOMBRE_MOTIVO_TRANSFERENCIA;
@@ -347,6 +379,11 @@ export default function InventoryMovementFormPage() {
             return;
         }
 
+        if (tipo === 'DEVOLUCION' && cuposDevolucion.length > 0 && !cupoDevolucionId) {
+            setError('ELIGE LA SEMANA (CUPO) A LA QUE EL PRODUCTOR DEVUELVE EL MATERIAL');
+            return;
+        }
+
         if (esTransferencia && !destinationWarehouseId) {
             setError('ELEGÍ LA BODEGA DESTINO DE LA TRANSFERENCIA');
             return;
@@ -419,6 +456,7 @@ export default function InventoryMovementFormPage() {
                 year: year || null,
                 delivery_note: deliveryNote || null,
                 reference: reference || null,
+                producer_quota_id: tipo === 'DEVOLUCION' && cupoDevolucionId ? Number(cupoDevolucionId) : null,
                 lines: lineasValidas.map((l) => ({
                     supply_id: l.supply_id,
                     quantity: l.quantity,
@@ -573,7 +611,7 @@ export default function InventoryMovementFormPage() {
                                     </option>
                                     {ordenesCompra.map((o) => (
                                         <option key={o.id} value={o.id}>
-                                            {o.code} — {o.thirdParty?.name} ({o.status})
+                                            {o.code} — {o.third_party?.name} ({o.status})
                                         </option>
                                     ))}
                                 </select>
@@ -629,7 +667,7 @@ export default function InventoryMovementFormPage() {
                                                                 <select
                                     value={thirdPartyId}
                                     onChange={(e) => setThirdPartyId(e.target.value)}
-                                    className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#3B5BDB]"
+                                    className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-primario"
                                 >
                                     <option value="" >Sin tercero (movimiento interno)</option>
                                     {terceros
@@ -642,6 +680,36 @@ export default function InventoryMovementFormPage() {
                                             <option key={t.id} value={t.id}>{t.name} — {t.type}</option>
                                         ))}
                                 </select>
+                            </div>
+                        )}
+
+                        {/* DEVOLUCIÓN: semana (cupo) del productor a la que vuelve el material */}
+                        {tipo === 'DEVOLUCION' && cuposDevolucion.length > 0 && (
+                            <div className="col-span-4 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                                <div className="flex flex-wrap items-end gap-3">
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">Semana a la que devuelve *</label>
+                                        <select
+                                            value={cupoDevolucionId}
+                                            onChange={(e) => setCupoDevolucionId(e.target.value)}
+                                            className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-primario"
+                                        >
+                                            <option value="">SELECCIONAR...</option>
+                                            {cuposDevolucion.map((c) => <option key={c.id} value={String(c.id)}>SEMANA {c.week} / {c.year}</option>)}
+                                        </select>
+                                    </div>
+                                    {cupoDevolucion && (
+                                        <button type="button" onClick={usarPendientes} className="px-3 py-2 text-xs font-semibold rounded-lg bg-primario text-white hover:bg-primario-hover">
+                                            Cargar lo pendiente en Insumos
+                                        </button>
+                                    )}
+                                </div>
+                                {cupoDevolucion && (
+                                    <p className="text-xs text-gray-600 mt-2">
+                                        Pendiente por devolver: {cupoDevolucion.supplies.map((s) => `${s.name} ${Number(s.pendiente).toLocaleString('es-EC')} ${s.unit || ''}`).join(' · ')}
+                                    </p>
+                                )}
+                                <p className="text-xs text-gray-500 mt-1">Lo devuelto se resta de los materiales que se le cobran en la liquidación de esa semana.</p>
                             </div>
                         )}
 
@@ -664,7 +732,7 @@ export default function InventoryMovementFormPage() {
                         <button
                             type="button"
                             onClick={agregarLinea}
-                            className="flex items-center gap-1 text-sm font-semibold text-[#3B5BDB] hover:text-[#2F49B8]"
+                            className="flex items-center gap-1 text-sm font-semibold text-primario hover:text-primario-hover"
                         >
                             <Plus size={16} />
                             Agregar insumo
@@ -672,7 +740,7 @@ export default function InventoryMovementFormPage() {
                     </div>
 
                     <table className="w-full text-sm">
-    <thead className="bg-[#3B5BDB] text-white">
+    <thead className="bg-primario text-white">
         <tr>
             <th className="text-left px-4 py-3">Insumo</th>
             {esTransferencia ? (
@@ -707,7 +775,7 @@ export default function InventoryMovementFormPage() {
                         value={linea.supply_id}
                         onChange={(e) => actualizarLinea(index, 'supply_id', e.target.value)}
                         disabled={linea.bloqueada}
-                        className={`w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-[#3B5BDB] ${
+                        className={`w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primario ${
                             linea.bloqueada ? 'bg-gray-100 text-gray-600 cursor-not-allowed' : 'bg-white'
                         }`}
                     >
@@ -745,7 +813,7 @@ export default function InventoryMovementFormPage() {
                                 className={`w-full border rounded-lg px-2 py-1.5 text-sm text-right outline-none focus:ring-2 ${
                                     excedeStock(linea)
                                         ? 'bg-red-50 border-red-400 focus:ring-red-400 text-red-700'
-                                        : 'bg-white border-gray-200 focus:ring-[#3B5BDB]'
+                                        : 'bg-white border-gray-200 focus:ring-primario'
                                 }`}
                             />
                             {excedeStock(linea) && (
@@ -778,7 +846,7 @@ export default function InventoryMovementFormPage() {
                                 min="0.01"
                                 value={linea.quantity}
                                 onChange={(e) => actualizarLinea(index, 'quantity', e.target.value)}
-                                className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-right outline-none focus:ring-2 focus:ring-[#3B5BDB]"
+                                className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-right outline-none focus:ring-2 focus:ring-primario"
                             />
                         </td>
                     </>
@@ -791,7 +859,7 @@ export default function InventoryMovementFormPage() {
                                 min="0.01"
                                 value={linea.quantity}
                                 onChange={(e) => actualizarLinea(index, 'quantity', e.target.value)}
-                                className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-right outline-none focus:ring-2 focus:ring-[#3B5BDB]"
+                                className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-right outline-none focus:ring-2 focus:ring-primario"
                             />
                         </td>
                         <td className="px-4 py-2">
@@ -801,7 +869,7 @@ export default function InventoryMovementFormPage() {
                                 min="0"
                                 value={linea.unit_cost}
                                 onChange={(e) => actualizarLinea(index, 'unit_cost', e.target.value)}
-                                className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-right outline-none focus:ring-2 focus:ring-[#3B5BDB]"
+                                className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-right outline-none focus:ring-2 focus:ring-primario"
                             />
                         </td>
                         <td className="px-4 py-2">
@@ -811,7 +879,7 @@ export default function InventoryMovementFormPage() {
                                 min="0"
                                 value={linea.discount}
                                 onChange={(e) => actualizarLinea(index, 'discount', e.target.value)}
-                                className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-right outline-none focus:ring-2 focus:ring-[#3B5BDB]"
+                                className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-right outline-none focus:ring-2 focus:ring-primario"
                             />
                         </td>
                         <td className="px-4 py-2 text-right font-medium">
@@ -861,7 +929,7 @@ export default function InventoryMovementFormPage() {
                 <td colSpan={4} className="px-4 py-3 text-right font-semibold text-gray-700">
                     Total general
                 </td>
-                <td className="px-4 py-3 text-right font-bold text-[#3B5BDB]">
+                <td className="px-4 py-3 text-right font-bold text-primario">
                     ${totalGeneral.toFixed(2)}
                 </td>
                 <td></td>
@@ -877,15 +945,17 @@ export default function InventoryMovementFormPage() {
                     <button
                         type="button"
                         onClick={() => navigate('/stock')}
-                        className="text-sm font-semibold text-gray-700 hover:text-gray-900 px-2"
+                        className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold bg-cancelar text-cancelar-texto rounded-lg hover:bg-cancelar-hover"
                     >
+                        <X size={16} />
                         Cancelar
                     </button>
                     <button
                         type="submit"
                         disabled={guardando || hayLineasConExceso}
-                        className="px-5 py-2.5 text-sm font-semibold bg-[#3B5BDB] text-white rounded-lg hover:bg-[#2F49B8] disabled:opacity-50"
+                        className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold bg-guardar text-guardar-texto rounded-lg hover:bg-guardar-hover disabled:opacity-50"
                     >
+                        <Save size={16} />
                         {guardando ? 'Guardando...' : 'Guardar movimiento'}
                     </button>
                 </div>

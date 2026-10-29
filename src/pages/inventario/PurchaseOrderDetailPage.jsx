@@ -68,7 +68,7 @@ export default function PurchaseOrderDetailPage() {
                 </div>
                 <button
                     onClick={() => navigate('/ordenes-compra')}
-                    className="text-sm font-semibold text-[#3B5BDB] hover:text-[#2F49B8]"
+                    className="text-sm font-semibold text-primario hover:text-primario-hover"
                 >
                     ← Volver al listado
                 </button>
@@ -96,7 +96,7 @@ export default function PurchaseOrderDetailPage() {
             <div className="flex items-center gap-3 mb-2 print:hidden">
                 <button
                     onClick={() => navigate('/ordenes-compra')}
-                    className="text-gray-500 hover:text-[#3B5BDB]"
+                    className="text-gray-500 hover:text-primario"
                     title="Volver al listado"
                 >
                     <ArrowLeft size={20} />
@@ -114,7 +114,7 @@ export default function PurchaseOrderDetailPage() {
                 </span>
                 <button
                     onClick={() => window.print()}
-                    className="flex items-center gap-2 bg-[#3B5BDB] text-white px-4 py-2 rounded-lg hover:bg-[#2F49B8] transition"
+                    className="flex items-center gap-2 bg-primario text-white px-4 py-2 rounded-lg hover:bg-primario-hover transition"
                 >
                     Imprimir
                 </button>
@@ -171,7 +171,7 @@ export default function PurchaseOrderDetailPage() {
                         así que se reduce más que el resto para que quepan
                         varias líneas sin saltar de página */}
                     <table className="w-full text-sm print:text-[10px]">
-                        <thead className="bg-[#3B5BDB] text-white print:bg-gray-200 print:text-gray-800">
+                        <thead className="bg-primario text-white print:bg-gray-200 print:text-gray-800">
                             <tr>
                                 <th className="text-left px-2 py-2 print:py-1">Insumo</th>
                                 <th className="text-right px-2 py-2 print:py-1 w-24">Pedido</th>
@@ -240,7 +240,7 @@ export default function PurchaseOrderDetailPage() {
                             <span>Retención IR</span>
                             <span>-${parseFloat(orden.retencion_total).toFixed(2)}</span>
                         </div>
-                        <div className="flex justify-between font-bold text-[#3B5BDB] print:text-gray-900 text-base print:text-xs pt-2 print:pt-1 border-t">
+                        <div className="flex justify-between font-bold text-primario print:text-gray-900 text-base print:text-xs pt-2 print:pt-1 border-t">
                             <span>Total</span>
                             <span>${parseFloat(orden.total).toFixed(2)}</span>
                         </div>

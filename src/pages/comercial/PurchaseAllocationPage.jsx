@@ -1,0 +1,588 @@
+// Compra de fruta de una semana (Comercial) — por BLOQUES, como la hoja semanal "wk"
+// Ubicación: src/pages/comercial/PurchaseAllocationPage.jsx
+// Ruta: /comercial/compras/:id   (id = pedido semanal)
+//
+// 29/10/2026: rehecha según la hoja real de Comercial (wk 37):
+//   BLOQUE = barco de la semana (con su viaje) + marca + cliente + modalidad + puerto + META de cajas.
+//   Dentro de cada bloque, las compras: a quién se le compra (COMERCIAL o PRODUCTOR directo),
+//   productor real (si se compró a un comercial), finca, código MAG, ejecutivo, día de corte,
+//   puerto de entrega, cajas, precio oficial/real, CONTRATO/SPOT, forma de pago (100 % / 80-20)
+//   y transporte de contenedor negociado (se descuenta en la liquidación).
+// La meta del bloque es referencia (se puede pasar, como en la hoja).
+// 29/10/2026: se puede comprar para un cliente MÁS de lo pedido (se completa con SPOT para embarcar
+// la mayor cantidad de fruta): se avisa en ámbar, no se bloquea. Cada compra lleva la BODEGA donde el
+// vendedor retira cartón y materiales (se propone la última que usó). Varios usuarios cargan compras
+// durante la semana: se guarda con la "version" del GET y, si otro guardó antes, el backend responde 409.
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, Plus, Trash2, Save, X, Lock, ChevronDown, ChevronRight, AlertTriangle } from 'lucide-react';
+import { getOrderPurchases, saveOrderPurchases } from '../../api/customerOrders';
+import { getThirdParties } from '../../api/thirdParties';
+import { getPorts } from '../../api/ports';
+import DialogoConfirmacion from '../../components/common/DialogoConfirmacion';
+import ToastFlotante from '../../components/common/ToastFlotante';
+
+const formatoCajas = (n) => Number(n || 0).toLocaleString('es-EC');
+const formatoDinero = (n) => Number(n || 0).toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const n = (v) => Number(v) || 0;
+
+const MODALIDADES = { BAJO_CUBIERTA: 'BAJO CUBIERTA', CONTENEDOR: 'CONTENEDOR' };
+const PAGO_POR_TIPO = { CONTRATO: '100', SPOT: '80_20' };
+
+let contador = 0;
+const nuevaClave = (p) => `${p}-${++contador}`;
+const texto = (v) => (v === null || v === undefined ? '' : String(v));
+
+const compraDesdeBackend = (c) => ({
+  _key: `c-${c.id}`,
+  id: c.id,
+  third_party_id: texto(c.third_party_id),
+  producer_id: texto(c.producer_id),
+  farm_name: texto(c.farm_name),
+  mag_code: texto(c.mag_code),
+  executive: texto(c.executive),
+  cut_date: texto(c.cut_date),
+  delivery_port_id: texto(c.delivery_port_id),
+  boxes: texto(c.boxes),
+  official_price: texto(c.official_price),
+  real_price: texto(c.real_price),
+  negotiation_type: c.negotiation_type || 'SPOT',
+  payment_scheme: c.payment_scheme || '80_20',
+  transport_deduction: Number(c.transport_deduction) ? texto(c.transport_deduction) : '',
+  notes: texto(c.notes),
+  pickup_warehouse_id: texto(c.pickup_warehouse_id),
+  bloqueo: c.quota_status === 'LIQUIDADO' ? 'CUPO LIQUIDADO' : c.con_tarjas ? 'YA TIENE TARJAS' : c.despachada ? 'YA RETIRÓ MATERIALES' : null,
+  liquidada: c.quota_status === 'LIQUIDADO',
+});
+
+const bloqueDesdeBackend = (b) => ({
+  _key: `b-${b.id}`,
+  id: b.id,
+  shipment_id: texto(b.shipment_id),
+  brand_id: texto(b.brand_id),
+  customer_id: texto(b.customer_id),
+  cargo_mode: b.cargo_mode || 'BAJO_CUBIERTA',
+  departure_port_id: texto(b.departure_port_id),
+  target_boxes: texto(b.target_boxes),
+  notes: texto(b.notes),
+  purchases: (b.purchases || []).map(compraDesdeBackend),
+});
+
+// Compra nueva: copia ejecutivo, día de corte, puerto, precio oficial y bodega de retiro de la fila anterior
+const compraVacia = (anterior, puertoBloque) => ({
+  _key: nuevaClave('c'), id: null,
+  third_party_id: '', producer_id: '', farm_name: '', mag_code: '',
+  executive: anterior?.executive || '', cut_date: anterior?.cut_date || '',
+  delivery_port_id: anterior ? anterior.delivery_port_id : puertoBloque,
+  boxes: '', official_price: anterior?.official_price || '', real_price: '',
+  negotiation_type: 'SPOT', payment_scheme: '80_20', transport_deduction: '', notes: '',
+  pickup_warehouse_id: anterior?.pickup_warehouse_id || '',
+  bloqueo: null, liquidada: false,
+});
+
+export default function PurchaseAllocationPage() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+
+  const [pedido, setPedido] = useState(null);
+  const [clientes, setClientes] = useState([]);
+  const [barcos, setBarcos] = useState([]);
+  const [bloques, setBloques] = useState([]);
+  const [ejecutivos, setEjecutivos] = useState([]);
+  const [inicial, setInicial] = useState(null);
+  const [abiertos, setAbiertos] = useState({}); // { _key: true }
+  const [version, setVersion] = useState(null); // huella de lo guardado (control de cambios simultáneos)
+  const [bodegas, setBodegas] = useState([]);
+  const [ultimaBodega, setUltimaBodega] = useState({}); // { third_party_id: warehouse_id }
+
+  const [vendedores, setVendedores] = useState([]);
+  const [puertosSalida, setPuertosSalida] = useState([]);
+
+  const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
+  const [errores, setErrores] = useState([]);
+  const [toast, setToast] = useState(null);
+  const [mostrarConfirmarSalida, setMostrarConfirmarSalida] = useState(false);
+
+  const aplicarRespuesta = (data) => {
+    setPedido(data.order);
+    setClientes(data.customers);
+    setBarcos(data.shipments);
+    setEjecutivos(data.executives || []);
+    setBodegas(data.warehouses || []);
+    setUltimaBodega(data.last_pickup || {});
+    setVersion(data.version);
+    const lista = data.blocks.map(bloqueDesdeBackend);
+    setBloques(lista);
+    setInicial(JSON.stringify(lista));
+  };
+
+  useEffect(() => {
+    const cargar = async () => {
+      try {
+        const [resCompras, resTerceros, resPuertos] = await Promise.all([
+          getOrderPurchases(id),
+          getThirdParties({ status: true }),
+          getPorts({ status: true, port_type: 'SALIDA' }),
+        ]);
+        aplicarRespuesta(resCompras.data);
+        const terceros = Array.isArray(resTerceros.data) ? resTerceros.data : [];
+        setVendedores(terceros.filter((t) => ['PRODUCTOR', 'COMERCIALIZADORA'].includes(t.type)));
+        setPuertosSalida(Array.isArray(resPuertos.data) ? resPuertos.data : []);
+      } catch (err) {
+        console.error('ERROR AL CARGAR LAS COMPRAS:', err);
+        setErrores(['NO SE PUDIERON CARGAR LAS COMPRAS DE ESTA SEMANA.']);
+      } finally {
+        setCargando(false);
+      }
+    };
+    cargar();
+  }, [id]);
+
+  // ---------------- Cálculos ----------------
+
+  const compradoBloque = (b) => b.purchases.reduce((s, c) => s + n(c.boxes), 0);
+  const compradoCliente = (clienteId) => bloques
+    .filter((b) => b.customer_id === String(clienteId))
+    .reduce((s, b) => s + compradoBloque(b), 0);
+  const todas = bloques.flatMap((b) => b.purchases);
+  const totalPedido = clientes.reduce((s, c) => s + c.pedido, 0);
+  const totalComprado = todas.reduce((s, c) => s + n(c.boxes), 0);
+  const totalReal = todas.reduce((s, c) => s + n(c.boxes) * n(c.real_price), 0);
+  const totalTransporte = todas.reduce((s, c) => s + n(c.transport_deduction), 0);
+  const hayExceso = clientes.some((c) => compradoCliente(c.id) > c.pedido);
+  const avance = totalPedido ? Math.min(100, (totalComprado / totalPedido) * 100) : 0;
+
+  const productores = vendedores.filter((v) => v.type === 'PRODUCTOR');
+  const comercializadoras = vendedores.filter((v) => v.type === 'COMERCIALIZADORA');
+  const tipoDe = (tpId) => vendedores.find((v) => String(v.id) === tpId)?.type;
+  const nombreBarco = (shipId) => {
+    const b = barcos.find((x) => String(x.id) === String(shipId));
+    const nombre = b?.vessel?.name || b?.vessel_name || '';
+    // El nombre del barco ya puede traer el viaje (DITLEV UNI1402): no se repite
+    return b ? `${nombre}${b.voyage && !nombre.includes(b.voyage) ? ` · ${b.voyage}` : ''}` : '—';
+  };
+
+  // ---------------- Cambios ----------------
+
+  const cambiarBloque = (key, campo, valor) => {
+    setBloques((prev) => prev.map((b) => {
+      if (b._key !== key) return b;
+      const nuevo = { ...b, [campo]: valor };
+      if (campo === 'customer_id') {
+        const marcas = clientes.find((x) => String(x.id) === valor)?.brands || [];
+        nuevo.brand_id = marcas.length === 1 ? String(marcas[0].id) : '';
+      }
+      // El puerto del barco se propone como puerto del bloque
+      if (campo === 'shipment_id' && !b.departure_port_id) {
+        nuevo.departure_port_id = texto(barcos.find((x) => String(x.id) === valor)?.departure_port_id);
+      }
+      return nuevo;
+    }));
+  };
+
+  const cambiarCompra = (bKey, cKey, campo, valor) => {
+    setBloques((prev) => prev.map((b) => (b._key !== bKey ? b : {
+      ...b,
+      purchases: b.purchases.map((c) => {
+        if (c._key !== cKey) return c;
+        const nueva = { ...c, [campo]: valor };
+        if (campo === 'negotiation_type') nueva.payment_scheme = PAGO_POR_TIPO[valor];
+        // Si se le compra directo a un productor, no hay "productor real" aparte
+        if (campo === 'third_party_id' && tipoDe(valor) === 'PRODUCTOR') nueva.producer_id = '';
+        // Al elegir vendedor se propone la última bodega donde retiró materiales
+        if (campo === 'third_party_id' && ultimaBodega[valor]) nueva.pickup_warehouse_id = String(ultimaBodega[valor]);
+        return nueva;
+      }),
+    })));
+  };
+
+  const agregarBloque = () => {
+    const barco = barcos[0];
+    const cliente = clientes[0];
+    const marcas = cliente?.brands || [];
+    const key = nuevaClave('b');
+    setBloques((prev) => [...prev, {
+      _key: key, id: null,
+      shipment_id: barco ? String(barco.id) : '',
+      brand_id: marcas.length === 1 ? String(marcas[0].id) : '',
+      customer_id: cliente ? String(cliente.id) : '',
+      cargo_mode: 'BAJO_CUBIERTA',
+      departure_port_id: texto(barco?.departure_port_id),
+      target_boxes: '', notes: '', purchases: [],
+    }]);
+    setAbiertos((prev) => ({ ...prev, [key]: true }));
+  };
+
+  const quitarBloque = (key) => setBloques((prev) => prev.filter((b) => b._key !== key));
+
+  const agregarCompra = (bKey) => {
+    setBloques((prev) => prev.map((b) => (b._key !== bKey ? b : {
+      ...b,
+      purchases: [...b.purchases, compraVacia(b.purchases[b.purchases.length - 1], b.departure_port_id)],
+    })));
+  };
+
+  const quitarCompra = (bKey, cKey) => {
+    setBloques((prev) => prev.map((b) => (b._key !== bKey ? b : { ...b, purchases: b.purchases.filter((c) => c._key !== cKey) })));
+  };
+
+  const hayCambios = () => inicial !== null && inicial !== JSON.stringify(bloques);
+  const volver = () => (hayCambios() ? setMostrarConfirmarSalida(true) : navigate('/comercial/compras'));
+
+  // ---------------- Guardar ----------------
+
+  const handleGuardar = async () => {
+    setErrores([]);
+    const faltan = [];
+    bloques.forEach((b, i) => {
+      if (!b.shipment_id || !b.customer_id || !b.brand_id) faltan.push(`BLOQUE ${i + 1}: ELIGE BARCO, CLIENTE Y MARCA.`);
+      b.purchases.forEach((c, j) => {
+        if (!c.third_party_id) faltan.push(`BLOQUE ${i + 1}, COMPRA ${j + 1}: FALTA A QUIÉN SE LE COMPRA.`);
+        if (!n(c.boxes)) faltan.push(`BLOQUE ${i + 1}, COMPRA ${j + 1}: FALTAN LAS CAJAS.`);
+        if (!c.pickup_warehouse_id) faltan.push(`BLOQUE ${i + 1}, COMPRA ${j + 1}: FALTA LA BODEGA DONDE RETIRA LOS MATERIALES.`);
+      });
+    });
+    if (faltan.length) {
+      setErrores(faltan);
+      return;
+    }
+
+    const num = (v) => (v === '' ? null : Number(v));
+    setGuardando(true);
+    try {
+      const res = await saveOrderPurchases(id, {
+        version,
+        blocks: bloques.map((b) => ({
+          id: b.id,
+          shipment_id: Number(b.shipment_id),
+          brand_id: Number(b.brand_id),
+          customer_id: Number(b.customer_id),
+          cargo_mode: b.cargo_mode,
+          departure_port_id: num(b.departure_port_id),
+          target_boxes: n(b.target_boxes),
+          notes: b.notes || null,
+          purchases: b.purchases.map((c) => ({
+            id: c.id,
+            third_party_id: Number(c.third_party_id),
+            producer_id: num(c.producer_id),
+            farm_name: c.farm_name || null,
+            mag_code: c.mag_code || null,
+            executive: c.executive || null,
+            cut_date: c.cut_date || null,
+            delivery_port_id: num(c.delivery_port_id),
+            boxes: Number(c.boxes),
+            official_price: num(c.official_price),
+            real_price: num(c.real_price),
+            negotiation_type: c.negotiation_type,
+            payment_scheme: c.payment_scheme,
+            transport_deduction: n(c.transport_deduction),
+            notes: c.notes || null,
+            pickup_warehouse_id: Number(c.pickup_warehouse_id),
+          })),
+        })),
+      });
+      aplicarRespuesta(res.data);
+      setToast({ tipo: 'exito', mensaje: 'Compras guardadas correctamente' });
+    } catch (err) {
+      console.error('ERROR AL GUARDAR LAS COMPRAS:', err);
+      const e = err.response?.data?.errors;
+      setErrores(e ? Object.values(e).flat() : [err.response?.data?.message || 'Error al guardar las compras']);
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  // ---------------- Vista ----------------
+
+  const inputClass = 'w-full bg-gray-100 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-primario disabled:opacity-60';
+  const th = 'text-left px-2 py-2 uppercase text-xs whitespace-nowrap';
+  const etiqueta = 'block text-xs font-semibold text-gray-600 uppercase mb-1';
+
+  if (cargando) return <div className="p-6 text-gray-400">Cargando compras...</div>;
+  if (!pedido) {
+    return <div className="p-6">{errores.map((e) => <p key={e} className="text-red-600 text-sm">{e}</p>)}</div>;
+  }
+
+  return (
+    <div className="p-6">
+      <ToastFlotante toast={toast} onCerrar={() => setToast(null)} />
+      <datalist id="ejecutivos">{ejecutivos.map((e) => <option key={e} value={e} />)}</datalist>
+
+      {/* Encabezado */}
+      <div className="flex items-center gap-3 mb-4">
+        <button type="button" onClick={volver} title="Volver" className="p-2 rounded-lg hover:bg-gray-200 text-gray-600">
+          <ArrowLeft size={20} />
+        </button>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">Compra de fruta — Semana {pedido.week} / {pedido.year}</h1>
+          <p className="text-sm text-gray-500">Bloques por barco y marca con su meta; dentro, las compras a comerciales y productores</p>
+        </div>
+      </div>
+
+      {/* Avance */}
+      <div className={`rounded-xl border px-4 py-3 mb-4 ${hayExceso ? 'bg-amber-50 border-amber-300' : avance >= 100 ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
+        <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+          <span className="text-gray-700">
+            Comprado <strong>{formatoCajas(totalComprado)}</strong> de <strong>{formatoCajas(totalPedido)}</strong> cajas · Total real <strong>$ {formatoDinero(totalReal)}</strong>
+            {totalTransporte > 0 && <> · Transporte a descontar <strong>$ {formatoDinero(totalTransporte)}</strong></>}
+          </span>
+          <span className={`font-semibold ${hayExceso ? 'text-amber-800' : avance >= 100 ? 'text-green-700' : 'text-amber-700'}`}>
+            {hayExceso ? '⚠ HAY CLIENTES CON MÁS CAJAS QUE LAS PEDIDAS (SE PERMITE: SE COMPLETA CON SPOT)'
+              : avance >= 100 ? '✔ COMPRA COMPLETA' : `FALTAN ${formatoCajas(totalPedido - totalComprado)} CAJAS POR COMPRAR`}
+          </span>
+        </div>
+        <div className="h-2 bg-white rounded-full mt-2 overflow-hidden">
+          <div className={`h-full rounded-full transition-all ${hayExceso ? 'bg-amber-600' : avance >= 100 ? 'bg-green-600' : 'bg-amber-500'}`} style={{ width: `${avance}%` }} />
+        </div>
+      </div>
+
+      {/* Resumen por cliente */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+        {clientes.map((c) => {
+          const comprado = compradoCliente(c.id);
+          const falta = c.pedido - comprado;
+          return (
+            <div key={c.id} className="bg-white rounded-xl shadow p-4">
+              <p className="font-bold text-gray-800">{c.name}</p>
+              <p className="text-xs text-gray-500 mb-2">Marcas: {c.brands.map((b) => b.name).join(', ') || <span className="text-red-600">SIN MARCAS (asígnalas en Configuración → Clientes)</span>}</p>
+              <div className="grid grid-cols-3 gap-2 text-center text-sm">
+                <div><p className="text-[10px] text-gray-500 uppercase">Pedido</p><p className="font-semibold">{formatoCajas(c.pedido)}</p></div>
+                <div><p className="text-[10px] text-gray-500 uppercase">Comprado</p><p className="font-semibold text-primario">{formatoCajas(comprado)}</p></div>
+                <div>
+                  <p className="text-[10px] text-gray-500 uppercase">{falta < 0 ? 'De más' : 'Falta'}</p>
+                  <p className={`font-semibold ${falta < 0 ? 'text-amber-800' : falta === 0 ? 'text-green-700' : 'text-amber-700'}`}>{falta === 0 ? '✔' : falta < 0 ? `+${formatoCajas(-falta)}` : formatoCajas(falta)}</p>
+                </div>
+              </div>
+              {falta < 0 && <p className="text-[11px] text-amber-800 mt-2">Se compran {formatoCajas(-falta)} cajas más de lo pedido.</p>}
+            </div>
+          );
+        })}
+      </div>
+
+      {barcos.length === 0 && (
+        <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 text-amber-800 text-sm px-4 py-3 mb-4">
+          <AlertTriangle size={16} /> Esta semana aún no tiene barcos. Logística debe armarlos en <strong>Exportaciones → Distribución en barcos</strong>.
+        </div>
+      )}
+
+      {/* Bloques */}
+      <div className="space-y-3 mb-4">
+        {bloques.map((b, i) => {
+          const abierto = abiertos[b._key];
+          const comprado = compradoBloque(b);
+          const meta = n(b.target_boxes);
+          const falta = meta - comprado;
+          const marcas = clientes.find((x) => String(x.id) === b.customer_id)?.brands || [];
+          const marcaNombre = marcas.find((m) => String(m.id) === b.brand_id)?.name || 'SIN MARCA';
+          const clienteNombre = clientes.find((x) => String(x.id) === b.customer_id)?.name || 'SIN CLIENTE';
+          const tieneBloqueadas = b.purchases.some((c) => c.bloqueo);
+          return (
+            <div key={b._key} className="bg-white rounded-xl shadow overflow-hidden">
+              {/* Cabecera del bloque (como la fila de título de la hoja) */}
+              <div className="flex flex-wrap items-center gap-3 px-4 py-3 bg-primario-claro border-b">
+                <button type="button" onClick={() => setAbiertos((p) => ({ ...p, [b._key]: !abierto }))} className="text-primario" title={abierto ? 'Cerrar' : 'Abrir'}>
+                  {abierto ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+                </button>
+                <div className="flex-1 min-w-[260px] cursor-pointer" onClick={() => setAbiertos((p) => ({ ...p, [b._key]: !abierto }))}>
+                  <p className="font-bold text-gray-800">{i + 1}. {marcaNombre} · {nombreBarco(b.shipment_id)}</p>
+                  <p className="text-xs text-gray-600">
+                    {clienteNombre} · {MODALIDADES[b.cargo_mode]} · {puertosSalida.find((p) => String(p.id) === b.departure_port_id)?.name || 'SIN PUERTO'} · {b.purchases.length} compras
+                  </p>
+                </div>
+                <div className="flex gap-4 text-sm text-center">
+                  <div><p className="text-[10px] text-gray-500 uppercase">Meta</p><p className="font-semibold">{formatoCajas(meta)}</p></div>
+                  <div><p className="text-[10px] text-gray-500 uppercase">Comprado</p><p className="font-semibold text-primario">{formatoCajas(comprado)}</p></div>
+                  <div>
+                    <p className="text-[10px] text-gray-500 uppercase">Falta</p>
+                    <p className={`font-semibold ${falta < 0 ? 'text-red-600' : falta === 0 ? 'text-green-700' : 'text-amber-700'}`}>{falta === 0 ? '✔' : formatoCajas(falta)}</p>
+                  </div>
+                </div>
+                <button type="button" onClick={() => quitarBloque(b._key)} disabled={tieneBloqueadas} title={tieneBloqueadas ? 'Tiene compras con materiales, tarjas o liquidadas' : 'Quitar bloque'} className="text-white p-1.5 rounded-lg shadow-sm bg-red-600 hover:bg-red-700 disabled:opacity-40">
+                  <Trash2 size={16} />
+                </button>
+              </div>
+
+              {abierto && (
+                <div className="p-4">
+                  {/* Datos del bloque */}
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-4 text-sm">
+                    <div>
+                      <label className={etiqueta}>Barco *</label>
+                      <select value={b.shipment_id} onChange={(e) => cambiarBloque(b._key, 'shipment_id', e.target.value)} className={inputClass}>
+                        <option value="">SELECCIONAR...</option>
+                        {barcos.map((x) => <option key={x.id} value={String(x.id)}>{nombreBarco(x.id)}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className={etiqueta}>Cliente *</label>
+                      <select value={b.customer_id} onChange={(e) => cambiarBloque(b._key, 'customer_id', e.target.value)} disabled={tieneBloqueadas} className={inputClass}>
+                        <option value="">SELECCIONAR...</option>
+                        {clientes.map((x) => <option key={x.id} value={String(x.id)}>{x.name}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className={etiqueta}>Marca *</label>
+                      <select value={b.brand_id} onChange={(e) => cambiarBloque(b._key, 'brand_id', e.target.value)} disabled={tieneBloqueadas || !b.customer_id} className={inputClass}>
+                        <option value="">{marcas.length ? 'SELECCIONAR...' : 'SIN MARCAS'}</option>
+                        {marcas.map((m) => <option key={m.id} value={String(m.id)}>{m.name}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className={etiqueta}>Modalidad</label>
+                      <select value={b.cargo_mode} onChange={(e) => cambiarBloque(b._key, 'cargo_mode', e.target.value)} className={inputClass}>
+                        {Object.entries(MODALIDADES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className={etiqueta}>Puerto</label>
+                      <select value={b.departure_port_id} onChange={(e) => cambiarBloque(b._key, 'departure_port_id', e.target.value)} className={inputClass}>
+                        <option value="">—</option>
+                        {puertosSalida.map((p) => <option key={p.id} value={String(p.id)}>{p.name}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className={etiqueta}>Meta (cajas)</label>
+                      <input type="number" min="0" value={b.target_boxes} onChange={(e) => cambiarBloque(b._key, 'target_boxes', e.target.value)} placeholder="EJ. 13200" className={`${inputClass} text-right`} />
+                    </div>
+                  </div>
+
+                  {/* Compras del bloque */}
+                  <div className="overflow-x-auto border rounded-lg">
+                    <table className="w-full text-sm min-w-[2050px]">
+                      <thead className="bg-primario text-white">
+                        <tr>
+                          <th className={th}>#</th>
+                          <th className={th}>Se le compra a *</th>
+                          <th className={th}>Productor real</th>
+                          <th className={th}>Finca</th>
+                          <th className={th}>MAG</th>
+                          <th className={th}>Ejecutivo</th>
+                          <th className={th}>Día corte</th>
+                          <th className={th}>Entrega en</th>
+                          <th className={th}>Retira materiales en *</th>
+                          <th className={`${th} text-right`}>Cajas *</th>
+                          <th className={`${th} text-right`}>P. oficial</th>
+                          <th className={`${th} text-right`}>P. real</th>
+                          <th className={th}>Tipo · Pago</th>
+                          <th className={`${th} text-right`}>Transp. $</th>
+                          <th className={`${th} text-right`}>Total real</th>
+                          <th className={th}>Notas</th>
+                          <th className="px-2 py-2 w-10"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {b.purchases.length === 0 ? (
+                          <tr><td colSpan={17} className="text-center py-5 text-gray-400">Agrega la primera compra de este bloque</td></tr>
+                        ) : b.purchases.map((c, j) => {
+                          const fijo = Boolean(c.bloqueo);
+                          const esComercial = tipoDe(c.third_party_id) === 'COMERCIALIZADORA';
+                          const cambiar = (campo) => (e) => cambiarCompra(b._key, c._key, campo, e.target.value);
+                          const mayus = (campo) => (e) => cambiarCompra(b._key, c._key, campo, e.target.value.toUpperCase());
+                          return (
+                            <tr key={c._key} className={j % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                              <td className="px-2 py-1.5 text-gray-400">{j + 1}</td>
+                              <td className="px-2 py-1.5 min-w-[220px]">
+                                <select value={c.third_party_id} onChange={cambiar('third_party_id')} disabled={fijo} className={inputClass}>
+                                  <option value="">SELECCIONAR...</option>
+                                  <optgroup label="COMERCIALES / COMERCIALIZADORAS">
+                                    {comercializadoras.map((v) => <option key={v.id} value={String(v.id)}>{v.name}</option>)}
+                                  </optgroup>
+                                  <optgroup label="PRODUCTORES (COMPRA DIRECTA)">
+                                    {productores.map((v) => <option key={v.id} value={String(v.id)}>{v.name}</option>)}
+                                  </optgroup>
+                                </select>
+                                {fijo && <span className="flex items-center gap-1 text-[10px] text-gray-500 mt-0.5"><Lock size={10} /> {c.bloqueo}</span>}
+                              </td>
+                              <td className="px-2 py-1.5 min-w-[200px]">
+                                <select value={c.producer_id} onChange={cambiar('producer_id')} disabled={!esComercial || c.liquidada} title={esComercial ? 'Productor que realmente cosecha' : 'Compra directa al productor'} className={inputClass}>
+                                  <option value="">{esComercial ? '—' : 'COMPRA DIRECTA'}</option>
+                                  {productores.map((v) => <option key={v.id} value={String(v.id)}>{v.name}</option>)}
+                                </select>
+                              </td>
+                              <td className="px-2 py-1.5 min-w-[130px]"><input value={c.farm_name} maxLength={120} onChange={mayus('farm_name')} disabled={c.liquidada} className={inputClass} /></td>
+                              <td className="px-2 py-1.5 min-w-[80px]"><input value={c.mag_code} maxLength={20} onChange={mayus('mag_code')} disabled={c.liquidada} className={inputClass} /></td>
+                              <td className="px-2 py-1.5 min-w-[130px]"><input list="ejecutivos" value={c.executive} maxLength={60} onChange={mayus('executive')} disabled={c.liquidada} className={inputClass} /></td>
+                              <td className="px-2 py-1.5"><input type="date" value={c.cut_date} onChange={cambiar('cut_date')} disabled={c.liquidada} className={inputClass} /></td>
+                              <td className="px-2 py-1.5 min-w-[130px]">
+                                <select value={c.delivery_port_id} onChange={cambiar('delivery_port_id')} disabled={c.liquidada} className={inputClass}>
+                                  <option value="">—</option>
+                                  {puertosSalida.map((p) => <option key={p.id} value={String(p.id)}>{p.name}</option>)}
+                                </select>
+                              </td>
+                              <td className="px-2 py-1.5 min-w-[150px]">
+                                <select value={c.pickup_warehouse_id} onChange={cambiar('pickup_warehouse_id')} disabled={fijo} title={fijo ? `No se cambia: ${c.bloqueo}` : 'Bodega donde retira cartón y materiales'} className={`${inputClass} ${c.pickup_warehouse_id ? '' : 'ring-1 ring-amber-400'}`}>
+                                  <option value="">SELECCIONAR...</option>
+                                  {bodegas.filter((w) => w.status || String(w.id) === c.pickup_warehouse_id).map((w) => <option key={w.id} value={String(w.id)}>{w.name}</option>)}
+                                </select>
+                              </td>
+                              <td className="px-2 py-1.5 min-w-[90px]"><input type="number" min="1" value={c.boxes} onChange={cambiar('boxes')} disabled={c.liquidada} className={`${inputClass} text-right font-semibold`} /></td>
+                              <td className="px-2 py-1.5 min-w-[80px]"><input type="number" min="0" step="0.01" value={c.official_price} onChange={cambiar('official_price')} disabled={c.liquidada} className={`${inputClass} text-right`} /></td>
+                              <td className="px-2 py-1.5 min-w-[80px]"><input type="number" min="0" step="0.01" value={c.real_price} onChange={cambiar('real_price')} disabled={c.liquidada} className={`${inputClass} text-right font-semibold`} /></td>
+                              <td className="px-2 py-1.5 min-w-[130px]">
+                                <select value={c.negotiation_type} onChange={cambiar('negotiation_type')} disabled={c.liquidada} className={`${inputClass} text-xs mb-1`}>
+                                  <option value="CONTRATO">CONTRATO</option>
+                                  <option value="SPOT">SPOT</option>
+                                </select>
+                                <select value={c.payment_scheme} onChange={cambiar('payment_scheme')} disabled={c.liquidada} className={`${inputClass} text-xs`}>
+                                  <option value="100">PAGO 100 %</option>
+                                  <option value="80_20">PAGO 80 / 20</option>
+                                </select>
+                              </td>
+                              <td className="px-2 py-1.5 min-w-[90px]"><input type="number" min="0" step="0.01" value={c.transport_deduction} onChange={cambiar('transport_deduction')} disabled={c.liquidada} placeholder="0" title="Transporte de contenedor negociado: se descuenta al liquidar" className={`${inputClass} text-right`} /></td>
+                              <td className="px-2 py-1.5 text-right whitespace-nowrap">{c.real_price === '' ? <span className="text-xs text-amber-600 font-semibold">SIN PRECIO</span> : `$ ${formatoDinero(n(c.boxes) * n(c.real_price))}`}</td>
+                              <td className="px-2 py-1.5 min-w-[160px]"><input value={c.notes} maxLength={255} onChange={mayus('notes')} placeholder="EJ. CONSOLIDADO EN PTO" className={inputClass} /></td>
+                              <td className="px-2 py-1.5">
+                                <button type="button" onClick={() => quitarCompra(b._key, c._key)} disabled={fijo} title={fijo ? `No se puede quitar: ${c.bloqueo}` : 'Quitar compra'} className="text-white p-1.5 rounded-lg shadow-sm bg-red-600 hover:bg-red-700 disabled:opacity-40">
+                                  <Trash2 size={16} />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  <button type="button" onClick={() => agregarCompra(b._key)} className="mt-3 flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-primario text-white hover:bg-primario-hover transition">
+                    <Plus size={18} /> Agregar compra
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <button type="button" onClick={agregarBloque} disabled={barcos.length === 0} className="mb-4 flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-primario text-white hover:bg-primario-hover disabled:opacity-50 transition">
+        <Plus size={18} /> Agregar bloque (barco + marca)
+      </button>
+
+      {errores.length > 0 && (
+        <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3 mb-4 max-h-48 overflow-y-auto">
+          {errores.map((e) => <p key={e}>{e}</p>)}
+        </div>
+      )}
+
+      <div className="flex justify-end gap-3">
+        <button type="button" onClick={volver} className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-lg bg-cancelar text-cancelar-texto hover:bg-cancelar-hover transition">
+          <X size={16} /> Cancelar
+        </button>
+        <button type="button" onClick={handleGuardar} disabled={guardando} className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-lg bg-guardar text-guardar-texto hover:bg-guardar-hover disabled:opacity-50 disabled:hover:bg-guardar transition">
+          <Save size={16} /> {guardando ? 'Guardando...' : 'Guardar compras'}
+        </button>
+      </div>
+
+      {mostrarConfirmarSalida && (
+        <DialogoConfirmacion
+          titulo="¿Seguro que deseas salir?"
+          textoAceptar="Salir sin guardar"
+          textoCancelar="Seguir editando"
+          onCancelar={() => setMostrarConfirmarSalida(false)}
+          onAceptar={() => navigate('/comercial/compras')}
+        >
+          Tienes cambios sin guardar que se perderán.
+        </DialogoConfirmacion>
+      )}
+    </div>
+  );
+}

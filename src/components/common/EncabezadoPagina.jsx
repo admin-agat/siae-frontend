@@ -3,8 +3,8 @@
 //
 // Estándar acordado (27/10/2026):
 //   - Título grande SIN ícono + subtítulo gris debajo (como Terceros)
-//   - Botón "+ Nuevo X" a la derecha en AZUL (bg-blue-600 = #2563eb, el mismo
-//     azul del botón Guardar de ModalShell): azul = crear/guardar (acción principal)
+//   - Botón "+ Nuevo X" a la derecha en color PRIMARIO (bg-primario = #3B5BDB, el mismo
+//     del botón Guardar de ModalShell y del Sidebar): primario = crear/guardar
 //
 // Uso en cualquier página:
 //   <EncabezadoPagina
@@ -39,7 +39,7 @@ export default function EncabezadoPagina({ titulo, subtitulo, textoBoton, onNuev
                     <button
                         type="button"
                         onClick={onNuevo}
-                        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-sm transition"
+                        className="flex items-center gap-2 bg-primario hover:bg-primario-hover text-white px-4 py-2 rounded-lg shadow-sm transition"
                     >
                         <Plus size={18} />
                         {textoBoton || 'Nuevo'}

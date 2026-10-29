@@ -69,7 +69,7 @@ export default function InventoryStockPage() {
                 </div>
                 <button
                     onClick={cargarStock}
-                    className="flex items-center gap-2 bg-[#3B5BDB] text-white px-4 py-2 rounded-lg hover:bg-[#2F49B8] transition"
+                    className="flex items-center gap-2 bg-primario text-white px-4 py-2 rounded-lg hover:bg-primario-hover transition"
                 >
                     Actualizar
                 </button>
@@ -103,7 +103,7 @@ export default function InventoryStockPage() {
                                     className="w-full flex items-center justify-between gap-2 px-4 py-3 bg-gray-50 border-b hover:bg-gray-100 transition text-left"
                                 >
                                     <div className="flex items-center gap-2">
-                                        <Warehouse size={16} className="text-[#3B5BDB]" />
+                                        <Warehouse size={16} className="text-primario" />
                                         <h2 className="font-semibold text-gray-800">{bodega}</h2>
                                         <span className="text-xs text-gray-400">
                                             ({filas.length} {filas.length === 1 ? 'insumo' : 'insumos'})
@@ -118,7 +118,7 @@ export default function InventoryStockPage() {
 
                                 {abierta && (
                                     <table className="w-full text-sm">
-                                        <thead className="bg-[#3B5BDB] text-white">
+                                        <thead className="bg-primario text-white">
                                             <tr>
                                                 <th className="text-left px-4 py-3">Insumo</th>
                                                 <th className="text-right px-4 py-3">Existencia</th>
