@@ -158,8 +158,10 @@ export default function SettlementFormPage() {
               <th className={`${thClass} text-right`}>Caídas</th>
               <th className={`${thClass} text-right`}>Rechazadas</th>
               <th className={`${thClass} text-right`}>A pagar</th>
+              <th className={`${thClass} text-right`}>P. oficial</th>
               <th className={`${thClass} text-right`}>Precio real</th>
               <th className={`${thClass} text-right`}>Valor</th>
+              <th className={`${thClass} text-right`} title="A pagar × (oficial − real)">Nota créd.</th>
             </tr>
           </thead>
           <tbody>
@@ -172,8 +174,10 @@ export default function SettlementFormPage() {
                 <td className="px-3 py-2 text-right">{formatoCajas(l.boxes_fallen)}</td>
                 <td className="px-3 py-2 text-right text-red-600">{formatoCajas(l.boxes_rejected)}</td>
                 <td className="px-3 py-2 text-right font-semibold">{formatoCajas(l.boxes_paid)}</td>
+                <td className="px-3 py-2 text-right">{l.official_price === null ? <span className="text-xs font-semibold text-red-600">FALTA</span> : `$ ${formatoDinero(l.official_price)}`}</td>
                 <td className="px-3 py-2 text-right">$ {formatoDinero(l.real_price)}</td>
                 <td className="px-3 py-2 text-right font-semibold">$ {formatoDinero(l.amount)}</td>
+                <td className="px-3 py-2 text-right">$ {formatoDinero(l.credit_note_amount)}</td>
               </tr>
             ))}
           </tbody>
@@ -185,7 +189,9 @@ export default function SettlementFormPage() {
               <td className="px-3 py-2 text-right text-red-600">{formatoCajas(datos.boxes_rejected)}</td>
               <td className="px-3 py-2 text-right">{formatoCajas(datos.boxes_paid)}</td>
               <td></td>
+              <td></td>
               <td className="px-3 py-2 text-right text-green-700">$ {formatoDinero(datos.fruit_amount)}</td>
+              <td className="px-3 py-2 text-right">$ {formatoDinero(datos.credit_note_amount)}</td>
             </tr>
           </tfoot>
         </table>
@@ -286,6 +292,12 @@ export default function SettlementFormPage() {
               <span>NETO A PAGAR</span><span>$ {formatoDinero(neto)}</span>
             </div>
             {neto < 0 && <p className="text-xs text-red-600">Los descuentos superan el valor de la fruta: descuenta menos anticipo.</p>}
+            {/* 30/10/2026: el vendedor factura al precio oficial MAG y devuelve la diferencia con una nota de crédito */}
+            <div className="mt-3 rounded-lg bg-indigo-50 border border-indigo-100 px-3 py-2 space-y-1">
+              <div className="flex justify-between"><span>Factura del vendedor (precio oficial)</span><span className="font-semibold">$ {formatoDinero(datos.invoice_amount)}</span></div>
+              <div className="flex justify-between"><span>Nota de crédito que debe entregar</span><span className="font-semibold text-primario">$ {formatoDinero(datos.credit_note_amount)}</span></div>
+              <p className="text-xs text-gray-500">Factura − nota de crédito = valor de la fruta. Los números se registran en el detalle de la liquidación cuando lleguen.</p>
+            </div>
           </div>
         </div>
         <div className="bg-white rounded-xl shadow p-4 text-sm">

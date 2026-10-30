@@ -8,6 +8,7 @@ import { getSupplyCategories } from '../api/supplyCategories';
 import { getMensajeExito, getMensajeError } from '../utils/toastMessages';
 
 import ModalShell from './common/ModalShell';
+import SelectBuscable from './common/SelectBuscable';
 
 // Unidades de medida disponibles para supplies.unit.
 // La columna en BD es varchar sin CHECK, así que esta lista es la única
@@ -205,7 +206,7 @@ export default function SupplyModal({ supply, onClose, onGuardado }) {
             {/* Categoría (ya no depende de Grupo) */}
             <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Categoría *</label>
-                <select
+                <SelectBuscable
                     name="supply_category_id"
                     value={form.supply_category_id}
                     onChange={handleChange}
@@ -216,7 +217,7 @@ export default function SupplyModal({ supply, onClose, onGuardado }) {
                     {categorias.map(c => (
                         <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
-                </select>
+                </SelectBuscable>
             </div>
 
             {/* Nombre del insumo */}
@@ -270,7 +271,7 @@ export default function SupplyModal({ supply, onClose, onGuardado }) {
                 </div>
                 <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1.5">Unidad de medida *</label>
-                    <select
+                    <SelectBuscable
                         name="unit"
                         value={form.unit}
                         onChange={handleChange}
@@ -281,7 +282,7 @@ export default function SupplyModal({ supply, onClose, onGuardado }) {
                         {UNIDADES.map(u => (
                             <option key={u} value={u}>{u}</option>
                         ))}
-                    </select>
+                    </SelectBuscable>
                 </div>
             </div>
 

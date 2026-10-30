@@ -11,6 +11,7 @@ import { getBrands } from '../api/brands';
 
 import { getMensajeExito, getMensajeError } from '../utils/toastMessages';
 import ModalShell from './common/ModalShell';
+import SelectBuscable from './common/SelectBuscable';
 
 export default function MaterialRecipeModal({ recipe, marcaFiltro, onClose, onGuardado }) {
     const esEdicion = Boolean(recipe?.id);
@@ -174,7 +175,7 @@ export default function MaterialRecipeModal({ recipe, marcaFiltro, onClose, onGu
                 {/* Marca (primero, porque define qué insumos ya están cargados) */}
                 <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1.5">Marca *</label>
-                    <select
+                    <SelectBuscable
                         name="brand"
                         value={form.brand}
                         onChange={handleChange}
@@ -186,14 +187,14 @@ export default function MaterialRecipeModal({ recipe, marcaFiltro, onClose, onGu
                         {marcas.map(m => (
                             <option key={m.id} value={m.code}>{m.name}</option>
                         ))}
-                    </select>
+                    </SelectBuscable>
                     <p className="text-xs text-gray-400 mt-1">Se calcula sobre el CUPO PROPIO de esta marca.</p>
                 </div>
 
                 {/* Insumo: listado completo, separado en disponibles y ya cargados */}
                 <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1.5">Insumo *</label>
-                    <select
+                    <SelectBuscable
                         name="supply_id"
                         value={form.supply_id}
                         onChange={handleChange}
@@ -218,7 +219,7 @@ export default function MaterialRecipeModal({ recipe, marcaFiltro, onClose, onGu
                                 ))}
                             </optgroup>
                         )}
-                    </select>
+                    </SelectBuscable>
                     {esEdicion && (
                         <p className="text-xs text-gray-400 mt-1">El insumo no se puede cambiar una vez creada la receta.</p>
                     )}

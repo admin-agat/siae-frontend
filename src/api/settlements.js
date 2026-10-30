@@ -20,10 +20,12 @@ export const reactivateProducerAdvance = (id) => axios.patch(`/producer-advances
 export const getSettlementQuotas = (params = {}) => axios.get("/settlements/quotas", { params });
 // Cálculo sin guardar de un cupo + anticipos con saldo
 export const getSettlementPreview = (quotaId) => axios.get(`/settlements/preview/${quotaId}`);
-// params opcional: { third_party_id, status, pendientes: 1 }
+// params opcional: { third_party_id, status, pendientes: 1, nc_pendiente: 1 }
 export const getSettlements = (params = {}) => axios.get("/settlements", { params });
 export const getSettlement = (id) => axios.get(`/settlements/${id}`);
 export const createSettlement = (data) => axios.post("/settlements", data);
 export const paySettlement = (id, installment, data) => axios.patch(`/settlements/${id}/payments/${installment}/pay`, data);
 export const unpaySettlement = (id, installment) => axios.patch(`/settlements/${id}/payments/${installment}/unpay`);
 export const annulSettlement = (id, reason) => axios.patch(`/settlements/${id}/annul`, { reason });
+// N° de factura y de nota de crédito del vendedor (30/10/2026)
+export const saveSettlementDocuments = (id, data) => axios.patch(`/settlements/${id}/documents`, data);

@@ -26,6 +26,7 @@ const ENTIDADES = {
   anticipo: { nombre: "Anticipo", genero: "m" }, // anticipos y préstamos al productor (Liquidación)
   "concepto tarifa": { nombre: "Concepto de tarifa", genero: "m" }, // tarifas por puerto (PortTariffItemModal)
   usuario: { nombre: "Usuario", genero: "m" }, // CONFIGURACIÓN → Usuarios (29/10/2026)
+  precioOficial: { nombre: "Precio oficial", genero: "m" }, // COMERCIAL → Precios oficiales MAG (30/10/2026)
 };
 
 // Participios base por acción, en masculino singular.

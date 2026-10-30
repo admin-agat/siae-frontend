@@ -13,6 +13,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Plus, Eye, Ban, Lock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getPurchaseOrders, cancelPurchaseOrder } from '../../api/purchaseOrders';
+import SelectBuscable from '../../components/common/SelectBuscable';
 
 const PAGE_SIZE = 10;
 
@@ -195,7 +196,7 @@ export default function PurchaseOrdersPage() {
                     placeholder="BUSCAR POR CÓDIGO, PROVEEDOR O BODEGA..."
                     className="flex-1 min-w-[240px] bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none uppercase"
                 />
-                <select
+                <SelectBuscable
                     value={filtroEstado}
                     onChange={(e) => setFiltroEstado(e.target.value)}
                     className="bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none"
@@ -206,7 +207,7 @@ export default function PurchaseOrdersPage() {
                     <option value="COMPLETA">Completa</option>
                     <option value="CERRADA">Cerrada</option>
                     <option value="CANCELADA">Cancelada</option>
-                </select>
+                </SelectBuscable>
             </div>
 
             <div className="bg-white rounded-xl shadow overflow-hidden">

@@ -7,6 +7,7 @@ import { getThirdParties } from '../api/thirdParties';
 import { getMensajeExito } from '../utils/toastMessages';
 import ModalShell from './common/ModalShell';
 import DialogoConfirmacion from './common/DialogoConfirmacion';
+import SelectBuscable from './common/SelectBuscable';
 
 const hoy = () => new Date().toISOString().slice(0, 10);
 
@@ -91,17 +92,17 @@ export default function ProducerAdvanceModal({ anticipo, onClose, onGuardado }) 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2">
             <label className={labelClass}>Productor / Comercializadora *</label>
-            <select name="third_party_id" value={form.third_party_id} onChange={handleChange} className={inputClass}>
+            <SelectBuscable name="third_party_id" value={form.third_party_id} onChange={handleChange} className={inputClass}>
               <option value="">SELECCIONAR...</option>
               {vendedores.map((v) => <option key={v.id} value={String(v.id)}>{v.name} ({v.type})</option>)}
-            </select>
+            </SelectBuscable>
           </div>
           <div>
             <label className={labelClass}>Tipo *</label>
-            <select name="type" value={form.type} onChange={handleChange} className={inputClass}>
+            <SelectBuscable name="type" value={form.type} onChange={handleChange} className={inputClass}>
               <option value="ANTICIPO">ANTICIPO</option>
               <option value="PRESTAMO">PRÉSTAMO</option>
-            </select>
+            </SelectBuscable>
           </div>
           <div>
             <label className={labelClass}>Fecha *</label>

@@ -43,9 +43,13 @@ const ShipmentClosingsPage = lazy(PAGINAS.ShipmentClosingsPage);
 const ShipmentClosingPage = lazy(PAGINAS.ShipmentClosingPage);
 // 29/10/2026: usuarios (CONFIGURACIÓN)
 const UsersPage = lazy(PAGINAS.UsersPage);
+// 30/10/2026: bitácora de auditoría (CONFIGURACIÓN, solo ADMIN)
+const AuditLogPage = lazy(PAGINAS.AuditLogPage);
 // Fase 3: compra de fruta a productores (Comercial)
 const PurchasesPage = lazy(PAGINAS.PurchasesPage);
 const PurchaseAllocationPage = lazy(PAGINAS.PurchaseAllocationPage);
+const OfficialPricesPage = lazy(PAGINAS.OfficialPricesPage);
+const CreditNotesPage = lazy(PAGINAS.CreditNotesPage);
 // Liquidación al productor: tarjas, anticipos, liquidar y pagos (solo ADMIN)
 const TalliesPage = lazy(PAGINAS.TalliesPage);
 const TallySheetPage = lazy(PAGINAS.TallySheetPage);
@@ -111,6 +115,7 @@ export default function AppRouter() {
 
           {/* 29/10/2026: usuarios del sistema */}
           <Route path="usuarios" element={<RutaSoloAdmin><UsersPage /></RutaSoloAdmin>} />
+          <Route path="bitacora" element={<RutaSoloAdmin><AuditLogPage /></RutaSoloAdmin>} />
 
           {/* ===== CONFIGURACIÓN — datos maestros, solo ADMIN ===== */}
           <Route path="terceros" element={<RutaSoloAdmin><TercerosPage /></RutaSoloAdmin>} />
@@ -138,12 +143,14 @@ export default function AppRouter() {
           {/* ===== Módulo Comercial ===== */}
           <Route path="/comercial/compras" element={<RutaComercial><PurchasesPage /></RutaComercial>} />
           <Route path="/comercial/compras/:id" element={<RutaComercial><PurchaseAllocationPage /></RutaComercial>} />
+          <Route path="/comercial/precios-oficiales" element={<RutaComercial><OfficialPricesPage /></RutaComercial>} />
 
           {/* ===== Liquidación (dinero al productor) — solo ADMIN ===== */}
           <Route path="/liquidacion" element={<RutaSoloAdmin><SettlementsPage /></RutaSoloAdmin>} />
           <Route path="/liquidacion/tarjas" element={<RutaSoloAdmin><TalliesPage /></RutaSoloAdmin>} />
           <Route path="/liquidacion/tarjas/:id" element={<RutaSoloAdmin><TallySheetPage /></RutaSoloAdmin>} />
           <Route path="/liquidacion/anticipos" element={<RutaSoloAdmin><ProducerAdvancesPage /></RutaSoloAdmin>} />
+          <Route path="/liquidacion/notas-credito" element={<RutaSoloAdmin><CreditNotesPage /></RutaSoloAdmin>} />
           <Route path="/liquidacion/pagos" element={<RutaSoloAdmin><SettlementHistoryPage /></RutaSoloAdmin>} />
           <Route path="/liquidacion/cupo/:quotaId" element={<RutaSoloAdmin><SettlementFormPage /></RutaSoloAdmin>} />
           <Route path="/liquidacion/:id" element={<RutaSoloAdmin><SettlementDetailPage /></RutaSoloAdmin>} />

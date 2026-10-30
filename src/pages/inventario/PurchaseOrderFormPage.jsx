@@ -10,6 +10,7 @@ import { createPurchaseOrder, getNextPurchaseOrderCode } from '../../api/purchas
 import { getWarehouses } from '../../api/warehouses';
 import { getThirdParties } from '../../api/thirdParties';
 import { getSupplies } from '../../api/supplies';
+import SelectBuscable from '../../components/common/SelectBuscable';
 
 // Una línea vacía nueva, para el botón "Agregar insumo".
 // tax_rate arranca en 15 (el IVA más común); discount_percent y retention_rate en 0.
@@ -325,7 +326,7 @@ export default function PurchaseOrderFormPage() {
 
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1.5">Bodega destino *</label>
-                            <select
+                            <SelectBuscable
                                 value={warehouseId}
                                 onChange={(e) => setWarehouseId(e.target.value)}
                                 required
@@ -335,7 +336,7 @@ export default function PurchaseOrderFormPage() {
                                 {bodegas.map((b) => (
                                     <option key={b.id} value={b.id}>{b.name}</option>
                                 ))}
-                            </select>
+                            </SelectBuscable>
                         </div>
 
                         <div>
@@ -352,7 +353,7 @@ export default function PurchaseOrderFormPage() {
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1.5">Proveedor *</label>
-                            <select
+                            <SelectBuscable
                                 value={thirdPartyId}
                                 onChange={(e) => setThirdPartyId(e.target.value)}
                                 required
@@ -362,7 +363,7 @@ export default function PurchaseOrderFormPage() {
                                 {proveedores.map((p) => (
                                     <option key={p.id} value={p.id}>{p.name}</option>
                                 ))}
-                            </select>
+                            </SelectBuscable>
                             {/* RUC del proveedor seleccionado — columna "identification" en third_parties */}
                             {proveedorSeleccionado?.identification && (
                                 <p className="text-xs text-gray-400 mt-1">
@@ -424,7 +425,7 @@ export default function PurchaseOrderFormPage() {
                                     return (
                                         <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
                                             <td className="px-3 py-2">
-                                                <select
+                                                <SelectBuscable
                                                     value={linea.supply_id}
                                                     onChange={(e) => actualizarLinea(index, 'supply_id', e.target.value)}
                                                     disabled={!thirdPartyId || cargandoInsumos}
@@ -436,7 +437,7 @@ export default function PurchaseOrderFormPage() {
                                                     {insumos.map((i) => (
                                                         <option key={i.id} value={i.id}>{i.code} — {i.name}</option>
                                                     ))}
-                                                </select>
+                                                </SelectBuscable>
                                             </td>
                                             <td className="px-3 py-2">
                                                 <input
@@ -463,7 +464,7 @@ export default function PurchaseOrderFormPage() {
                                                 />
                                             </td>
                                             <td className="px-3 py-2">
-                                                <select
+                                                <SelectBuscable
                                                     value={linea.tax_rate}
                                                     onChange={(e) => actualizarLinea(index, 'tax_rate', e.target.value)}
                                                     className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center outline-none focus:ring-2 focus:ring-primario"
@@ -471,7 +472,7 @@ export default function PurchaseOrderFormPage() {
                                                     <option value={15}>15%</option>
                                                     <option value={5}>5%</option>
                                                     <option value={0}>0%</option>
-                                                </select>
+                                                </SelectBuscable>
                                             </td>
                                             <td className="px-3 py-2">
                                                 <input

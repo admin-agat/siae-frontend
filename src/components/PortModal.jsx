@@ -4,6 +4,7 @@ import { createPort, updatePort } from '../api/ports';
 import { getMensajeExito, getMensajeError } from '../utils/toastMessages';
 import ModalShell from './common/ModalShell';
 import DialogoConfirmacion from './common/DialogoConfirmacion';
+import SelectBuscable from './common/SelectBuscable';
 
 export default function PortModal({ puerto, onClose, onGuardado }) {
     const esEdicion = Boolean(puerto?.id);
@@ -142,7 +143,7 @@ export default function PortModal({ puerto, onClose, onGuardado }) {
                     </div>
                     <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-1.5">Tipo *</label>
-                        <select
+                        <SelectBuscable
                             name="port_type"
                             value={form.port_type}
                             onChange={handleChange}
@@ -150,7 +151,7 @@ export default function PortModal({ puerto, onClose, onGuardado }) {
                         >
                             <option value="SALIDA">SALIDA (ECUADOR)</option>
                             <option value="DESTINO">DESTINO</option>
-                        </select>
+                        </SelectBuscable>
                     </div>
                 </div>
             </ModalShell>

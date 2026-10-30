@@ -5,6 +5,7 @@ import { getThirdParties } from '../api/thirdParties';
 import ModalShell from './common/ModalShell';
 import DialogoConfirmacion from './common/DialogoConfirmacion';
 import { getMensajeExito, getMensajeError } from '../utils/toastMessages';
+import SelectBuscable from './common/SelectBuscable';
 
 export default function FarmModal({ farm, onClose, onGuardado }) {
     const esEdicion = Boolean(farm?.id);
@@ -117,7 +118,7 @@ export default function FarmModal({ farm, onClose, onGuardado }) {
                     {/* Productor */}
                     <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-1.5">Productor *</label>
-                        <select
+                        <SelectBuscable
                             name="third_party_id"
                             value={form.third_party_id}
                             onChange={handleChange}
@@ -128,7 +129,7 @@ export default function FarmModal({ farm, onClose, onGuardado }) {
                             {productores.map(p => (
                                 <option key={p.id} value={p.id}>{p.name}</option>
                             ))}
-                        </select>
+                        </SelectBuscable>
                     </div>
 
                     {/* Nombre de la finca */}
@@ -160,7 +161,7 @@ export default function FarmModal({ farm, onClose, onGuardado }) {
                         </div>
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1.5">Zona *</label>
-                            <select
+                            <SelectBuscable
                                 name="zone"
                                 value={form.zone}
                                 onChange={handleChange}
@@ -171,7 +172,7 @@ export default function FarmModal({ farm, onClose, onGuardado }) {
                                 <option value="GUAYAS">GUAYAS</option>
                                 <option value="EL ORO">EL ORO</option>
                                 <option value="LOS RÍOS">LOS RÍOS</option>
-                            </select>
+                            </SelectBuscable>
                         </div>
                     </div>
 

@@ -16,6 +16,7 @@ import DialogoConfirmacion from '../../components/common/DialogoConfirmacion';
 import ToastFlotante from '../../components/common/ToastFlotante';
 import ModalShell from '../../components/common/ModalShell';
 import { getMensajeExito, getMensajeError } from '../../utils/toastMessages';
+import SelectBuscable from '../../components/common/SelectBuscable';
 
 // Rol → qué ve en el sistema (se muestra al elegirlo)
 const ROLES = {
@@ -101,9 +102,9 @@ function UserModal({ usuario, bodegas, onClose, onGuardado }) {
         </div>
         <div>
           <label className={label}>Rol *</label>
-          <select value={form.role} onChange={cambiar('role')} className={input}>
+          <SelectBuscable value={form.role} onChange={cambiar('role')} className={input}>
             {Object.keys(ROLES).map((r) => <option key={r} value={r}>{r.replace('_', ' ')}</option>)}
-          </select>
+          </SelectBuscable>
         </div>
         <div>
           <label className={label}>Teléfono</label>
@@ -112,10 +113,10 @@ function UserModal({ usuario, bodegas, onClose, onGuardado }) {
         {form.role === 'BODEGUERO' && (
           <div className="col-span-2">
             <label className={label}>Bodega *</label>
-            <select value={form.warehouse_id} onChange={cambiar('warehouse_id')} className={input}>
+            <SelectBuscable value={form.warehouse_id} onChange={cambiar('warehouse_id')} className={input}>
               <option value="">SELECCIONAR...</option>
               {bodegas.map((b) => <option key={b.id} value={String(b.id)}>{b.name}</option>)}
-            </select>
+            </SelectBuscable>
           </div>
         )}
         <p className="col-span-2 text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">
@@ -136,19 +137,17 @@ export default function UsersPage() {
   const [confirmacion, setConfirmacion] = useState(null); // { usuario, accion }
   const [toast, setToast] = useState(null);
 
-  const cargar = async () => {
-    try {
-      setCargando(true);
-      const [resUsuarios, resBodegas] = await Promise.all([getUsers(), getWarehouses()]);
+  // El primer "Cargando..." sale del estado inicial; al recargar tras guardar, la tabla queda visible
+  const cargar = () => Promise.all([getUsers(), getWarehouses()])
+    .then(([resUsuarios, resBodegas]) => {
       setUsuarios(Array.isArray(resUsuarios.data) ? resUsuarios.data : []);
       setBodegas((Array.isArray(resBodegas.data) ? resBodegas.data : []).filter((b) => b.status));
-    } catch (err) {
+    })
+    .catch((err) => {
       console.error('ERROR AL CARGAR USUARIOS:', err);
       setUsuarios([]);
-    } finally {
-      setCargando(false);
-    }
-  };
+    })
+    .finally(() => setCargando(false));
 
   useEffect(() => { cargar(); }, []);
 

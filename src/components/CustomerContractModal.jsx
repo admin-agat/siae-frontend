@@ -6,6 +6,7 @@ import { createCustomerContract, updateCustomerContract } from '../api/customerC
 import { getCustomers } from '../api/customers';
 import { getMensajeExito, getMensajeError } from '../utils/toastMessages';
 import ModalShell from './common/ModalShell';
+import SelectBuscable from './common/SelectBuscable';
 
 // Incoterms permitidos (vacío = aplica a cualquiera)
 const INCOTERMS = ['FOB', 'CFR', 'CIF'];
@@ -164,14 +165,14 @@ export default function CustomerContractModal({ contract, onClose, onGuardado })
                     {/* Cliente */}
                     <div className="col-span-2">
                         <label className={labelClass}>Cliente *</label>
-                        <select name="customer_id" value={form.customer_id} onChange={handleChange} required className={inputClass}>
+                        <SelectBuscable name="customer_id" value={form.customer_id} onChange={handleChange} required className={inputClass}>
                             <option value="">SELECCIONAR...</option>
                             {clientes.map((c) => (
                                 <option key={c.id} value={c.id}>
                                     {c.third_party?.name || c.customer_code}
                                 </option>
                             ))}
-                        </select>
+                        </SelectBuscable>
                     </div>
 
                     {/* N° contrato */}
@@ -184,10 +185,10 @@ export default function CustomerContractModal({ contract, onClose, onGuardado })
                     {/* Incoterm (opcional) */}
                     <div>
                         <label className={labelClass}>Incoterm</label>
-                        <select name="incoterm" value={form.incoterm} onChange={handleChange} className={inputClass}>
+                        <SelectBuscable name="incoterm" value={form.incoterm} onChange={handleChange} className={inputClass}>
                             <option value="">TODOS</option>
                             {INCOTERMS.map((i) => <option key={i} value={i}>{i}</option>)}
-                        </select>
+                        </SelectBuscable>
                     </div>
 
                     {/* Vigencia */}

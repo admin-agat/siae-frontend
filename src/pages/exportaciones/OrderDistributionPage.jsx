@@ -18,6 +18,7 @@ import DialogoConfirmacion from '../../components/common/DialogoConfirmacion';
 import ToastFlotante from '../../components/common/ToastFlotante';
 import DistributionPrint from '../../components/DistributionPrint';
 import { useAuth } from '../../context/AuthContext';
+import SelectBuscable from '../../components/common/SelectBuscable';
 
 const TIPOS_CARGA = {
   CAJA_BAJO_CUBIERTA: 'BAJO CUBIERTA',
@@ -283,31 +284,31 @@ export default function OrderDistributionPage() {
                   {b.code && <span className="block text-[10px] text-gray-400 font-mono">{b.code}</span>}
                 </td>
                 <td className="px-3 py-2 min-w-[140px]">
-                  <select value={b.shipping_line_id} onChange={(e) => cambiarBarco(b._key, 'shipping_line_id', e.target.value)} className={inputClass}>
+                  <SelectBuscable value={b.shipping_line_id} onChange={(e) => cambiarBarco(b._key, 'shipping_line_id', e.target.value)} className={inputClass}>
                     <option value="">SELECCIONAR...</option>
                     {navieras.map((n) => <option key={n.id} value={String(n.id)}>{n.name}</option>)}
-                  </select>
+                  </SelectBuscable>
                 </td>
                 <td className="px-3 py-2 min-w-[180px]">
-                  <select value={b.vessel_id} onChange={(e) => cambiarBarco(b._key, 'vessel_id', e.target.value)} disabled={!b.shipping_line_id} className={`${inputClass} disabled:opacity-50`}>
+                  <SelectBuscable value={b.vessel_id} onChange={(e) => cambiarBarco(b._key, 'vessel_id', e.target.value)} disabled={!b.shipping_line_id} className={`${inputClass} disabled:opacity-50`}>
                     <option value="">{b.shipping_line_id ? 'SELECCIONAR...' : 'ELIGE NAVIERA'}</option>
                     {buques.filter((v) => String(v.shipping_line_id) === b.shipping_line_id).map((v) => <option key={v.id} value={String(v.id)}>{v.name}</option>)}
-                  </select>
+                  </SelectBuscable>
                 </td>
                 <td className="px-3 py-2 min-w-[100px]">
                   <input value={b.voyage} maxLength={20} placeholder="UNI1401" onChange={(e) => cambiarBarco(b._key, 'voyage', e.target.value.toUpperCase())} className={inputClass} />
                 </td>
                 <td className="px-3 py-2 min-w-[140px]">
-                  <select value={b.departure_port_id} onChange={(e) => cambiarBarco(b._key, 'departure_port_id', e.target.value)} className={inputClass}>
+                  <SelectBuscable value={b.departure_port_id} onChange={(e) => cambiarBarco(b._key, 'departure_port_id', e.target.value)} className={inputClass}>
                     <option value="">SELECCIONAR...</option>
                     {puertosSalida.map((p) => <option key={p.id} value={String(p.id)}>{p.name}</option>)}
-                  </select>
+                  </SelectBuscable>
                 </td>
                 <td className="px-3 py-2 min-w-[140px]">
-                  <select value={b.destination_port_id} onChange={(e) => cambiarBarco(b._key, 'destination_port_id', e.target.value)} className={inputClass}>
+                  <SelectBuscable value={b.destination_port_id} onChange={(e) => cambiarBarco(b._key, 'destination_port_id', e.target.value)} className={inputClass}>
                     <option value="">—</option>
                     {puertosDestino.map((p) => <option key={p.id} value={String(p.id)}>{p.name}</option>)}
-                  </select>
+                  </SelectBuscable>
                 </td>
                 <td className="px-3 py-2"><input type="date" value={b.departure_date} onChange={(e) => cambiarBarco(b._key, 'departure_date', e.target.value)} className={inputClass} /></td>
                 <td className="px-3 py-2"><input type="date" value={b.eta} min={b.departure_date || undefined} onChange={(e) => cambiarBarco(b._key, 'eta', e.target.value)} className={inputClass} /></td>

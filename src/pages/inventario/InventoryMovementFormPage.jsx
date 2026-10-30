@@ -23,6 +23,7 @@ import { getActiveMovementReasonsByType } from '../../api/movementReasons';
 // se usa axios directo aquí. Si ya existe ese wrapper, reemplazar este import
 // por el mismo patrón que warehouses/thirdParties/supplies.
 import api from '../../api/axios';
+import SelectBuscable from '../../components/common/SelectBuscable';
 
 // Una línea vacía nueva, para el botón "Agregar insumo".
 const lineaVacia = () => ({
@@ -534,7 +535,7 @@ export default function InventoryMovementFormPage() {
 
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1.5">Tipo *</label>
-                                                       <select
+                                                       <SelectBuscable
                                 value={tipo}
                                 onChange={(e) => setTipo(e.target.value)}
                                 className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none"
@@ -542,7 +543,7 @@ export default function InventoryMovementFormPage() {
                                 <option value="INGRESO">INGRESO</option>
                                 <option value="EGRESO">EGRESO</option>
                                 <option value="DEVOLUCION">DEVOLUCIÓN</option>
-                            </select>
+                            </SelectBuscable>
                         </div>
 
                         {/*AQUI VA LA BODEGA */}
@@ -551,7 +552,7 @@ export default function InventoryMovementFormPage() {
                                 {esTransferencia ? 'Bodega origen *' : 'Bodega *'}
                                 {esBodeguero && <Lock size={12} className="inline ml-1 text-gray-400" />}
                             </label>
-                            <select
+                            <SelectBuscable
                                 value={warehouseId}
                                 onChange={(e) => setWarehouseId(e.target.value)}
                                 required
@@ -567,12 +568,12 @@ export default function InventoryMovementFormPage() {
                                 {bodegas.map((b) => (
                                     <option key={b.id} value={b.id}>{b.name}</option>
                                 ))}
-                            </select>
+                            </SelectBuscable>
                         </div>
 
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1.5">Motivo *</label>
-                            <select
+                            <SelectBuscable
                                 value={movementReasonId}
                                 onChange={(e) => setMovementReasonId(e.target.value)}
                                 required
@@ -582,7 +583,7 @@ export default function InventoryMovementFormPage() {
                                 {motivosVisibles.map((m) => (
                                     <option key={m.id} value={m.id}>{m.name}</option>
                                 ))}
-                            </select>
+                            </SelectBuscable>
                         </div>
                     </div>
 
@@ -594,7 +595,7 @@ export default function InventoryMovementFormPage() {
                                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                                     Orden de compra a recibir
                                 </label>
-                                <select
+                                <SelectBuscable
                                     value={purchaseOrderId}
                                     onChange={(e) => handleSeleccionarOC(e.target.value)}
                                     disabled={!warehouseId || cargandoOrdenes}
@@ -614,7 +615,7 @@ export default function InventoryMovementFormPage() {
                                             {o.code} — {o.third_party?.name} ({o.status})
                                         </option>
                                     ))}
-                                </select>
+                                </SelectBuscable>
                                 <p className="text-xs text-gray-400 mt-1">
                                     Al elegir una OC se precargan sus insumos con la cantidad pendiente por recibir.
                                 </p>
@@ -628,7 +629,7 @@ export default function InventoryMovementFormPage() {
                                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                                     Bodega destino *
                                 </label>
-                                <select
+                                <SelectBuscable
                                     value={destinationWarehouseId}
                                     onChange={(e) => setDestinationWarehouseId(e.target.value)}
                                     disabled={!warehouseId}
@@ -641,7 +642,7 @@ export default function InventoryMovementFormPage() {
                                         .map((b) => (
                                             <option key={b.id} value={b.id}>{b.name}</option>
                                         ))}
-                                </select>
+                                </SelectBuscable>
                             </div>
                         )}
 
@@ -664,7 +665,7 @@ export default function InventoryMovementFormPage() {
                                 </label>
                                 {/* Filtrado según el tipo: INGRESO solo muestra PROVEEDOR, EGRESO solo PRODUCTOR/COMERCIALIZADORA.
                                     Si viene de una OC, ya se precargó arriba en handleSeleccionarOC. */}
-                                                                <select
+                                                                <SelectBuscable
                                     value={thirdPartyId}
                                     onChange={(e) => setThirdPartyId(e.target.value)}
                                     className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-primario"
@@ -679,7 +680,7 @@ export default function InventoryMovementFormPage() {
                                         .map((t) => (
                                             <option key={t.id} value={t.id}>{t.name} — {t.type}</option>
                                         ))}
-                                </select>
+                                </SelectBuscable>
                             </div>
                         )}
 
@@ -689,14 +690,14 @@ export default function InventoryMovementFormPage() {
                                 <div className="flex flex-wrap items-end gap-3">
                                     <div>
                                         <label className="block text-sm font-semibold text-gray-700 mb-1.5">Semana a la que devuelve *</label>
-                                        <select
+                                        <SelectBuscable
                                             value={cupoDevolucionId}
                                             onChange={(e) => setCupoDevolucionId(e.target.value)}
                                             className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-primario"
                                         >
                                             <option value="">SELECCIONAR...</option>
                                             {cuposDevolucion.map((c) => <option key={c.id} value={String(c.id)}>SEMANA {c.week} / {c.year}</option>)}
-                                        </select>
+                                        </SelectBuscable>
                                     </div>
                                     {cupoDevolucion && (
                                         <button type="button" onClick={usarPendientes} className="px-3 py-2 text-xs font-semibold rounded-lg bg-primario text-white hover:bg-primario-hover">
@@ -771,7 +772,7 @@ export default function InventoryMovementFormPage() {
             <Fragment key={index}>
             <tr className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
                 <td className="px-4 py-2">
-                    <select
+                    <SelectBuscable
                         value={linea.supply_id}
                         onChange={(e) => actualizarLinea(index, 'supply_id', e.target.value)}
                         disabled={linea.bloqueada}
@@ -783,7 +784,7 @@ export default function InventoryMovementFormPage() {
                         {insumos.map((i) => (
                             <option key={i.id} value={i.id}>{i.code} — {i.name}</option>
                         ))}
-                    </select>
+                    </SelectBuscable>
                     {linea.bloqueada && !esBodeguero && (
                         <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
                             <Lock size={10} />

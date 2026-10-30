@@ -5,6 +5,7 @@ import { createSupplyCategory, updateSupplyCategory } from '../api/supplyCategor
 import { getMensajeExito, getMensajeError } from '../utils/toastMessages';
 
 import ModalShell from './common/ModalShell';
+import SelectBuscable from './common/SelectBuscable';
 
 const GRUPOS = ['CARTON', 'EMPAQUE', 'CONTENEDOR'];
 
@@ -108,7 +109,7 @@ export default function SupplyCategoryModal({ supplyCategory, onClose, onGuardad
                 {/* Grupo (campo simple, sin tabla) */}
                 <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1.5">Grupo *</label>
-                    <select
+                    <SelectBuscable
                         name="group_label"
                         value={form.group_label}
                         onChange={handleChange}
@@ -119,7 +120,7 @@ export default function SupplyCategoryModal({ supplyCategory, onClose, onGuardad
                         {GRUPOS.map(g => (
                             <option key={g} value={g}>{g}</option>
                         ))}
-                    </select>
+                    </SelectBuscable>
                 </div>
 
                 {/* Nombre de la categoría */}

@@ -20,6 +20,7 @@ import { getCustomerContracts } from '../../api/customerContracts';
 import DialogoConfirmacion from '../../components/common/DialogoConfirmacion';
 import ToastFlotante from '../../components/common/ToastFlotante';
 import { getMensajeExito, getMensajeError } from '../../utils/toastMessages';
+import SelectBuscable from '../../components/common/SelectBuscable';
 
 const INCOTERMS = ['FOB', 'CFR', 'CIF'];
 
@@ -429,17 +430,17 @@ export default function CustomerOrderFormPage() {
                 <tr key={l._key} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
                   <td className="px-2 py-2 text-gray-400">{i + 1}</td>
                   <td className="px-2 py-2 min-w-[160px]">
-                    <select value={l.customer_id} onChange={(e) => cambiarLinea(l._key, 'customer_id', e.target.value)} className={inputClass}>
+                    <SelectBuscable value={l.customer_id} onChange={(e) => cambiarLinea(l._key, 'customer_id', e.target.value)} className={inputClass}>
                       <option value="">SELECCIONAR...</option>
                       {clientes.map((c) => (
                         <option key={c.id} value={String(c.id)}>{c.third_party?.name}</option>
                       ))}
-                    </select>
+                    </SelectBuscable>
                   </td>
                   <td className="px-2 py-2 min-w-[170px]">
-                    <select value={l.cargo_type} onChange={(e) => cambiarLinea(l._key, 'cargo_type', e.target.value)} className={inputClass}>
+                    <SelectBuscable value={l.cargo_type} onChange={(e) => cambiarLinea(l._key, 'cargo_type', e.target.value)} className={inputClass}>
                       {TIPOS_CARGA.map((t) => <option key={t.valor} value={t.valor}>{t.etiqueta}</option>)}
-                    </select>
+                    </SelectBuscable>
                   </td>
                   <td className="px-2 py-2 min-w-[150px]">
                     {contenedor ? (
@@ -461,21 +462,21 @@ export default function CustomerOrderFormPage() {
                     />
                   </td>
                   <td className="px-2 py-2 min-w-[80px]">
-                    <select value={l.incoterm} onChange={(e) => cambiarLinea(l._key, 'incoterm', e.target.value)} className={inputClass}>
+                    <SelectBuscable value={l.incoterm} onChange={(e) => cambiarLinea(l._key, 'incoterm', e.target.value)} className={inputClass}>
                       {INCOTERMS.map((x) => <option key={x} value={x}>{x}</option>)}
-                    </select>
+                    </SelectBuscable>
                   </td>
                   <td className="px-2 py-2 min-w-[140px]">
-                    <select value={l.departure_port_id} onChange={(e) => cambiarLinea(l._key, 'departure_port_id', e.target.value)} className={inputClass}>
+                    <SelectBuscable value={l.departure_port_id} onChange={(e) => cambiarLinea(l._key, 'departure_port_id', e.target.value)} className={inputClass}>
                       <option value="">SELECCIONAR...</option>
                       {puertos.map((p) => <option key={p.id} value={String(p.id)}>{p.name}</option>)}
-                    </select>
+                    </SelectBuscable>
                   </td>
                   <td className="px-2 py-2 min-w-[110px]">
-                    <select value={l.negotiation_type} onChange={(e) => cambiarLinea(l._key, 'negotiation_type', e.target.value)} className={inputClass}>
+                    <SelectBuscable value={l.negotiation_type} onChange={(e) => cambiarLinea(l._key, 'negotiation_type', e.target.value)} className={inputClass}>
                       <option value="CONTRATO">CONTRATO</option>
                       <option value="SPOT">SPOT</option>
-                    </select>
+                    </SelectBuscable>
                   </td>
                   <td className="px-2 py-2 min-w-[120px]">
                     {l.negotiation_type === 'SPOT' ? (

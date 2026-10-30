@@ -9,6 +9,7 @@ import { getDestinations } from '../api/destinations';
 import { getCustomers } from '../api/customers';
 import { getMensajeExito, getMensajeError } from '../utils/toastMessages';
 import ModalShell from './common/ModalShell';
+import SelectBuscable from './common/SelectBuscable';
 
 const formVacio = {
     booking_number: '',
@@ -181,17 +182,17 @@ export default function BookingModal({ booking, onClose, onGuardado }) {
                     {/* Fila 1: Naviera, Barco, Booking */}
                     <div>
                         <label className={labelClass}>Naviera *</label>
-                        <select name="shipping_line_id" value={form.shipping_line_id} onChange={handleChange} required className={inputClass}>
+                        <SelectBuscable name="shipping_line_id" value={form.shipping_line_id} onChange={handleChange} required className={inputClass}>
                             <option value="">Seleccionar...</option>
                             {navieras.map((n) => (
                                 <option key={n.id} value={n.id}>{n.name}</option>
                             ))}
-                        </select>
+                        </SelectBuscable>
                     </div>
 
                     <div>
                         <label className={labelClass}>Barco</label>
-                        <select
+                        <SelectBuscable
                             name="vessel_id"
                             value={form.vessel_id}
                             onChange={handleChange}
@@ -202,7 +203,7 @@ export default function BookingModal({ booking, onClose, onGuardado }) {
                             {barcos.map((b) => (
                                 <option key={b.id} value={b.id}>{b.name}</option>
                             ))}
-                        </select>
+                        </SelectBuscable>
                     </div>
 
                     <div>
@@ -219,32 +220,32 @@ export default function BookingModal({ booking, onClose, onGuardado }) {
                     {/* Fila 2: Cliente, Destino, Puerto de Salida */}
                     <div>
                         <label className={labelClass}>Cliente</label>
-                        <select name="client_id" value={form.client_id} onChange={handleChange} className={inputClass}>
+                        <SelectBuscable name="client_id" value={form.client_id} onChange={handleChange} className={inputClass}>
                             <option value="">Seleccionar...</option>
                             {clientes.map((c) => (
                                 <option key={c.id} value={c.id}>{c.customer_code} — {c.third_party?.name}</option>
                             ))}
-                        </select>
+                        </SelectBuscable>
                     </div>
 
                     <div>
                         <label className={labelClass}>Destino</label>
-                        <select name="destination_id" value={form.destination_id} onChange={handleChange} className={inputClass}>
+                        <SelectBuscable name="destination_id" value={form.destination_id} onChange={handleChange} className={inputClass}>
                             <option value="">Seleccionar...</option>
                             {destinos.map((d) => (
                                 <option key={d.id} value={d.id}>{d.name}</option>
                             ))}
-                        </select>
+                        </SelectBuscable>
                     </div>
 
                     <div>
                         <label className={labelClass}>Puerto de Salida</label>
-                        <select name="port_id" value={form.port_id} onChange={handleChange} className={inputClass}>
+                        <SelectBuscable name="port_id" value={form.port_id} onChange={handleChange} className={inputClass}>
                             <option value="">Seleccionar...</option>
                             {puertos.map((p) => (
                                 <option key={p.id} value={p.id}>{p.name}</option>
                             ))}
-                        </select>
+                        </SelectBuscable>
                     </div>
 
                     {/* Fila 3: Cupo semana, # de cajas, Salida estimada */}

@@ -17,6 +17,7 @@ import { calcularDespacho, guardarDespacho, getCuposAsignados } from '../../api/
 import { getWarehouses } from '../../api/warehouses';
 import { getThirdParties } from '../../api/thirdParties';
 import { getBrands } from '../../api/brands';
+import SelectBuscable from '../../components/common/SelectBuscable';
 
 // Semana ISO 8601 (semana bananera) — SOLO para mostrarla.
 // La semana real la asigna el backend al guardar.
@@ -338,22 +339,22 @@ export default function MaterialDispatchPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                         <label className={LABEL}>Bodega *</label>
-                        <select value={warehouseId} onChange={(e) => cambiarBodega(e.target.value)} className={INPUT}>
+                        <SelectBuscable value={warehouseId} onChange={(e) => cambiarBodega(e.target.value)} className={INPUT}>
                             <option value="">Seleccionar bodega...</option>
                             {bodegas.map((b) => (
                                 <option key={b.id} value={b.id}>{b.name}</option>
                             ))}
-                        </select>
+                        </SelectBuscable>
                     </div>
 
                     <div>
                         <label className={LABEL}>Productor / Comercializadora *</label>
-                        <select value={thirdPartyId} onChange={(e) => setThirdPartyId(e.target.value)} className={INPUT}>
+                        <SelectBuscable value={thirdPartyId} onChange={(e) => setThirdPartyId(e.target.value)} className={INPUT}>
                             <option value="">Seleccionar...</option>
                             {terceros.map((t) => (
                                 <option key={t.id} value={t.id}>{t.name} — {t.type}</option>
                             ))}
-                        </select>
+                        </SelectBuscable>
                     </div>
 
                     {/* Motivo FIJO: un despacho siempre es ENTREGA A PRODUCTOR (lo pone el backend) */}
@@ -404,7 +405,7 @@ export default function MaterialDispatchPage() {
                 {cuposComercial.length > 0 && (
                     <div className="mb-4">
                         <label className={LABEL}>Cupo asignado por Comercial *</label>
-                        <select
+                        <SelectBuscable
                             value={cupoSel}
                             onChange={(e) => elegirCupo(cuposComercial.find((c) => claveCupo(c) === e.target.value))}
                             className={INPUT}
@@ -415,7 +416,7 @@ export default function MaterialDispatchPage() {
                                     SEMANA {c.week}/{c.year} — {c.brand_name} — {Number(c.cajas).toLocaleString('es-EC')} CAJAS ({c.status}){c.warehouse_name ? ` — RETIRA EN ${c.warehouse_name}` : ''}
                                 </option>
                             ))}
-                        </select>
+                        </SelectBuscable>
                         {cuposOtraBodega.length > 0 && (
                             <p className="text-xs text-amber-700 font-semibold mt-1">
                                 {sinCupoEnEstaBodega ? 'Este productor no retira en esta bodega. ' : ''}
@@ -429,12 +430,12 @@ export default function MaterialDispatchPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                     <div>
                         <label className={LABEL}>Marca *</label>
-                        <select value={marcaCode} onChange={(e) => setMarcaCode(e.target.value)} disabled={Boolean(cupoElegido)} className={`${INPUT} disabled:opacity-60`}>
+                        <SelectBuscable value={marcaCode} onChange={(e) => setMarcaCode(e.target.value)} disabled={Boolean(cupoElegido)} className={`${INPUT} disabled:opacity-60`}>
                             <option value="">Seleccionar marca...</option>
                             {marcas.map((m) => (
                                 <option key={m.id} value={m.code}>{m.name}</option>
                             ))}
-                        </select>
+                        </SelectBuscable>
                     </div>
 
                     <div>

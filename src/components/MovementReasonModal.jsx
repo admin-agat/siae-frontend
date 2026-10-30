@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from 'react';
 import { createMovementReason, updateMovementReason } from '../api/movementReasons';
 import { getMensajeExito, getMensajeError } from '../utils/toastMessages';
 import ModalShell from './common/ModalShell';
+import SelectBuscable from './common/SelectBuscable';
 
 export default function MovementReasonModal({ reason, onClose, onGuardado }) {
     const esEdicion = Boolean(reason?.id);
@@ -107,7 +108,7 @@ export default function MovementReasonModal({ reason, onClose, onGuardado }) {
 
                 <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1.5">Tipo *</label>
-                    <select
+                    <SelectBuscable
                         value={type}
                         onChange={(e) => setType(e.target.value)}
                         required
@@ -116,7 +117,7 @@ export default function MovementReasonModal({ reason, onClose, onGuardado }) {
                         <option value="INGRESO">INGRESO</option>
                         <option value="EGRESO">EGRESO</option>
                         <option value="DEVOLUCION">DEVOLUCIÓN</option>
-                    </select>
+                    </SelectBuscable>
                 </div>
             </ModalShell>
 

@@ -20,6 +20,7 @@ import { useAuth } from '../../context/AuthContext';
 import DialogoConfirmacion from '../../components/common/DialogoConfirmacion';
 import ToastFlotante from '../../components/common/ToastFlotante';
 import ClosingPrint from '../../components/ClosingPrint';
+import SelectBuscable from '../../components/common/SelectBuscable';
 
 const CAJAS_POR_CONTENEDOR = 1200;
 const formatoCajas = (v) => Number(v || 0).toLocaleString('es-EC');
@@ -518,29 +519,29 @@ export default function ShipmentClosingPage() {
                           <tr key={k._key} className={fondo}>
                             <td className="px-2 py-1.5 text-gray-400">{j + 1}</td>
                             <td className="px-2 py-1.5 min-w-[200px]">
-                              <select value={k.customer_id} onChange={cambiar('customer_id')} className={inputClass}>
+                              <SelectBuscable value={k.customer_id} onChange={cambiar('customer_id')} className={inputClass}>
                                 <option value="">SELECCIONAR...</option>
                                 {clientes.map((c) => <option key={c.id} value={String(c.id)}>{c.name}</option>)}
-                              </select>
+                              </SelectBuscable>
                               {avisos.map((a) => <p key={a} className="text-[10px] text-amber-700 font-semibold mt-0.5">⚠ {a}</p>)}
                             </td>
                             <td className="px-2 py-1.5 min-w-[180px]">
-                              <select value={k.brand_id} onChange={cambiar('brand_id')} disabled={!k.customer_id} className={inputClass}>
+                              <SelectBuscable value={k.brand_id} onChange={cambiar('brand_id')} disabled={!k.customer_id} className={inputClass}>
                                 <option value="">{marcas.length ? '—' : 'SIN MARCAS'}</option>
                                 {marcas.map((m) => <option key={m.id} value={String(m.id)}>{m.name}</option>)}
-                              </select>
+                              </SelectBuscable>
                             </td>
                             <td className="px-2 py-1.5 min-w-[140px]">
-                              <select value={k.negotiation_type} onChange={cambiar('negotiation_type')} className={inputClass}>
+                              <SelectBuscable value={k.negotiation_type} onChange={cambiar('negotiation_type')} className={inputClass}>
                                 <option value="CONTRATO">CONTRATO</option>
                                 <option value="SPOT">SPOT</option>
-                              </select>
+                              </SelectBuscable>
                             </td>
                             <td className="px-2 py-1.5 min-w-[165px]">
-                              <select value={k.cargo_mode} onChange={cambiar('cargo_mode')} className={inputClass}>
+                              <SelectBuscable value={k.cargo_mode} onChange={cambiar('cargo_mode')} className={inputClass}>
                                 <option value="BODEGA">BODEGA (CS)</option>
                                 <option value="CONTENEDOR">CONTENEDOR</option>
-                              </select>
+                              </SelectBuscable>
                             </td>
                             <td className="px-2 py-1.5 min-w-[110px]">
                               {k.cargo_mode === 'CONTENEDOR'

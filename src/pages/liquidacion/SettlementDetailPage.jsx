@@ -5,10 +5,12 @@
 // Cada pago (1er pago 100 % / 80 %, 2do pago 20 %) se registra con fecha y comprobante.
 // Anular solo se puede sin pagos registrados: el cupo vuelve a quedar abierto y los
 // anticipos recuperan su saldo. Las clases print:* solo aplican al imprimir.
+// 30/10/2026: el vendedor factura al precio oficial MAG y entrega una NOTA DE CRÉDITO por la diferencia
+// con el real; aquí se registran el N° de factura y de NC cuando llegan (no bloquea los pagos).
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Printer, Ban, CheckCircle, Undo2 } from 'lucide-react';
-import { getSettlement, paySettlement, unpaySettlement, annulSettlement } from '../../api/settlements';
+import { ArrowLeft, Printer, Ban, CheckCircle, Undo2, Save } from 'lucide-react';
+import { getSettlement, paySettlement, unpaySettlement, annulSettlement, saveSettlementDocuments } from '../../api/settlements';
 import DialogoConfirmacion from '../../components/common/DialogoConfirmacion';
 import ToastFlotante from '../../components/common/ToastFlotante';
 import { useAuth } from '../../context/AuthContext';
@@ -33,10 +35,16 @@ export default function SettlementDetailPage() {
   const [deshacer, setDeshacer] = useState(null); // pago a deshacer
   const [anular, setAnular] = useState(false);
   const [motivo, setMotivo] = useState('');
+  const [documentos, setDocumentos] = useState({ invoice_number: '', credit_note_number: '', credit_note_date: '' });
+
+  const recibir = (data) => {
+    setLiq(data);
+    setDocumentos({ invoice_number: data.invoice_number || '', credit_note_number: data.credit_note_number || '', credit_note_date: data.credit_note_date || '' });
+  };
 
   const cargar = useCallback(() => {
     getSettlement(id)
-      .then((res) => setLiq(res.data))
+      .then((res) => recibir(res.data))
       .catch((err) => console.error('ERROR AL CARGAR LA LIQUIDACIÓN:', err))
       .finally(() => setCargando(false));
   }, [id]);
@@ -72,6 +80,24 @@ export default function SettlementDetailPage() {
     } finally {
       setProcesando(false);
       setDeshacer(null);
+    }
+  };
+
+  const guardarDocumentos = async () => {
+    setProcesando(true);
+    try {
+      const res = await saveSettlementDocuments(liq.id, {
+        invoice_number: documentos.invoice_number || null,
+        credit_note_number: documentos.credit_note_number || null,
+        credit_note_date: documentos.credit_note_number ? (documentos.credit_note_date || hoy()) : null,
+      });
+      recibir(res.data);
+      setToast({ tipo: 'exito', mensaje: 'Factura y nota de crédito guardadas' });
+    } catch (err) {
+      const e = err.response?.data?.errors;
+      setToast({ tipo: 'error', mensaje: e ? Object.values(e).flat().join(' ') : (err.response?.data?.message || 'Error al guardar los documentos') });
+    } finally {
+      setProcesando(false);
     }
   };
 
@@ -173,8 +199,10 @@ export default function SettlementDetailPage() {
                 <th className={`${th} text-right`}>Caídas</th>
                 <th className={`${th} text-right`}>Rechazadas</th>
                 <th className={`${th} text-right`}>Pagadas</th>
-                <th className={`${th} text-right`}>Precio</th>
+                <th className={`${th} text-right`}>P. oficial</th>
+                <th className={`${th} text-right`}>Precio real</th>
                 <th className={`${th} text-right`}>Valor</th>
+                <th className={`${th} text-right`}>Nota créd.</th>
               </tr>
             </thead>
             <tbody>
@@ -187,8 +215,10 @@ export default function SettlementDetailPage() {
                   <td className={`${td} text-right`}>{formatoCajas(l.boxes_fallen)}</td>
                   <td className={`${td} text-right`}>{formatoCajas(l.boxes_rejected)}</td>
                   <td className={`${td} text-right font-semibold`}>{formatoCajas(l.boxes_paid)}</td>
+                  <td className={`${td} text-right`}>{l.official_price === null ? '—' : `$ ${formatoDinero(l.official_price)}`}</td>
                   <td className={`${td} text-right`}>$ {formatoDinero(l.real_price)}</td>
                   <td className={`${td} text-right font-semibold`}>$ {formatoDinero(l.amount)}</td>
+                  <td className={`${td} text-right`}>$ {formatoDinero(l.credit_note_amount)}</td>
                 </tr>
               ))}
             </tbody>
@@ -200,7 +230,9 @@ export default function SettlementDetailPage() {
                 <td className={`${td} text-right`}>{formatoCajas(liq.boxes_rejected)}</td>
                 <td className={`${td} text-right`}>{formatoCajas(liq.boxes_paid)}</td>
                 <td></td>
+                <td></td>
                 <td className={`${td} text-right`}>$ {formatoDinero(liq.fruit_amount)}</td>
+                <td className={`${td} text-right`}>$ {formatoDinero(liq.credit_note_amount)}</td>
               </tr>
             </tfoot>
           </table>
@@ -259,6 +291,46 @@ export default function SettlementDetailPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Factura y nota de crédito del vendedor */}
+      <div className={`${caja} p-4 print:p-2 text-sm print:text-[10px]`}>
+        <h2 className="font-semibold text-gray-800 mb-2 print:text-xs">
+          Factura y nota de crédito del vendedor
+          {liq.status && Number(liq.credit_note_amount) > 0 && !liq.credit_note_number && <span className="ml-2 text-xs font-semibold text-amber-700 print:hidden">NOTA DE CRÉDITO PENDIENTE</span>}
+          {liq.credit_note_number && <span className="ml-2 text-xs font-semibold text-green-700 print:hidden">✔ RECIBIDA</span>}
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 print:grid-cols-3 gap-3 print:gap-1 mb-3 print:mb-1">
+          <div><p className="text-xs text-gray-500 uppercase">Factura (precio oficial)</p><p className="font-semibold">$ {formatoDinero(liq.invoice_amount)}</p></div>
+          <div><p className="text-xs text-gray-500 uppercase">(−) Nota de crédito</p><p className="font-semibold text-primario print:text-black">$ {formatoDinero(liq.credit_note_amount)}</p></div>
+          <div><p className="text-xs text-gray-500 uppercase">= Valor de la fruta (precio real)</p><p className="font-semibold">$ {formatoDinero(liq.fruit_amount)}</p></div>
+        </div>
+        {liq.status && (
+          <div className="flex flex-wrap items-end gap-3 print:hidden">
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">N° de factura</label>
+              <input value={documentos.invoice_number} maxLength={30} onChange={(e) => setDocumentos((d) => ({ ...d, invoice_number: e.target.value.toUpperCase() }))} placeholder="001-001-000000123" className={inputClass} />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">N° de nota de crédito</label>
+              <input value={documentos.credit_note_number} maxLength={30} onChange={(e) => setDocumentos((d) => ({ ...d, credit_note_number: e.target.value.toUpperCase() }))} placeholder="001-001-000000045" className={inputClass} />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Fecha de la NC</label>
+              <input type="date" value={documentos.credit_note_date} onChange={(e) => setDocumentos((d) => ({ ...d, credit_note_date: e.target.value }))} disabled={!documentos.credit_note_number} className={`${inputClass} disabled:opacity-50`} />
+            </div>
+            <button type="button" onClick={guardarDocumentos} disabled={procesando} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-guardar text-guardar-texto hover:bg-guardar-hover disabled:opacity-50 transition">
+              <Save size={16} /> Guardar
+            </button>
+          </div>
+        )}
+        {(liq.invoice_number || liq.credit_note_number) && (
+          <p className="text-xs text-gray-500 mt-2 print:mt-0">
+            Factura: <strong>{liq.invoice_number || '—'}</strong> · Nota de crédito: <strong>{liq.credit_note_number || '—'}</strong>
+            {liq.credit_note_date && ` del ${formatoFecha(liq.credit_note_date)}`}
+            {liq.documents_user?.name && <span className="print:hidden"> · registró {liq.documents_user.name}</span>}
+          </p>
+        )}
       </div>
 
       {/* Pagos */}

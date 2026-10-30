@@ -19,6 +19,7 @@ import { getBrands } from '../api/brands';
 import { getMensajeExito, getMensajeError } from '../utils/toastMessages';
 import ModalShell from './common/ModalShell';
 import DialogoConfirmacion from './common/DialogoConfirmacion';
+import SelectBuscable from './common/SelectBuscable';
 
 const formVacio = {
     third_party_id: '',
@@ -169,7 +170,7 @@ export default function CustomerModal({ customer, onClose, onGuardado }) {
                     {/* Tercero base: no se puede cambiar al editar */}
                     <div>
                         <label className={labelClass}>Tercero *</label>
-                        <select
+                        <SelectBuscable
                             name="third_party_id"
                             value={form.third_party_id}
                             onChange={handleChange}
@@ -181,7 +182,7 @@ export default function CustomerModal({ customer, onClose, onGuardado }) {
                             {terceros.map((t) => (
                                 <option key={t.id} value={t.id}>{t.name}</option>
                             ))}
-                        </select>
+                        </SelectBuscable>
                         {esEdicion ? (
                             <p className="text-xs text-gray-400 mt-1">El tercero base no se puede cambiar al editar.</p>
                         ) : terceros.length === 0 && (

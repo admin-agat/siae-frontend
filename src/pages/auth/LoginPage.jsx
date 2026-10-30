@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../api/axios";
 import { inicioPorRol } from "../../routes/roles";
+import SelectBuscable from '../../components/common/SelectBuscable';
 
 export default function LoginPage() {
     const { login } = useAuth();
@@ -46,7 +47,7 @@ export default function LoginPage() {
 
                 {/* Selector de idioma (visual, en desarrollo) */}
                 <div className="flex justify-end mb-2">
-                    <select
+                    <SelectBuscable
                         value={idioma}
                         onChange={(e) => setIdioma(e.target.value)}
                         title="Selector de idioma (próximamente)"
@@ -54,7 +55,7 @@ export default function LoginPage() {
                     >
                         <option value="ES">🇪🇨 ES</option>
                         <option value="RU">🇷🇺 RU</option>
-                    </select>
+                    </SelectBuscable>
                 </div>
 
 

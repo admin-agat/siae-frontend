@@ -13,6 +13,9 @@
 // la mayor cantidad de fruta): se avisa en ámbar, no se bloquea. Cada compra lleva la BODEGA donde el
 // vendedor retira cartón y materiales (se propone la última que usó). Varios usuarios cargan compras
 // durante la semana: se guarda con la "version" del GET y, si otro guardó antes, el backend responde 409.
+// 30/10/2026: el precio OFICIAL lo fija el MAG por tipo de caja (Comercial → Precios oficiales MAG): la compra
+// nueva lo propone según la caja de la marca y la fecha de corte (o el lunes de la semana). Oficial − real =
+// NOTA DE CRÉDITO que debe entregar el vendedor (se muestra por compra y en el total).
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Plus, Trash2, Save, X, Lock, ChevronDown, ChevronRight, AlertTriangle } from 'lucide-react';
@@ -21,6 +24,7 @@ import { getThirdParties } from '../../api/thirdParties';
 import { getPorts } from '../../api/ports';
 import DialogoConfirmacion from '../../components/common/DialogoConfirmacion';
 import ToastFlotante from '../../components/common/ToastFlotante';
+import SelectBuscable from '../../components/common/SelectBuscable';
 
 const formatoCajas = (n) => Number(n || 0).toLocaleString('es-EC');
 const formatoDinero = (n) => Number(n || 0).toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -32,6 +36,15 @@ const PAGO_POR_TIPO = { CONTRATO: '100', SPOT: '80_20' };
 let contador = 0;
 const nuevaClave = (p) => `${p}-${++contador}`;
 const texto = (v) => (v === null || v === undefined ? '' : String(v));
+
+// Lunes de la semana ISO (fecha con que se busca el precio MAG si la compra no tiene día de corte)
+const lunesSemana = (anio, semana) => {
+  const d = new Date(Date.UTC(anio, 0, 4));
+  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7) + (semana - 1) * 7);
+  return d.toISOString().slice(0, 10);
+};
+// Nota de crédito de una compra: cajas × (oficial − real); null si falta algún precio
+const notaCredito = (c) => (c.official_price === '' || c.real_price === '' ? null : n(c.boxes) * (n(c.official_price) - n(c.real_price)));
 
 const compraDesdeBackend = (c) => ({
   _key: `c-${c.id}`,
@@ -68,13 +81,14 @@ const bloqueDesdeBackend = (b) => ({
   purchases: (b.purchases || []).map(compraDesdeBackend),
 });
 
-// Compra nueva: copia ejecutivo, día de corte, puerto, precio oficial y bodega de retiro de la fila anterior
-const compraVacia = (anterior, puertoBloque) => ({
+// Compra nueva: copia ejecutivo, día de corte, puerto y bodega de retiro de la fila anterior; el precio
+// oficial es el del MAG (si no hay uno registrado, el de la fila anterior)
+const compraVacia = (anterior, puertoBloque, precioMag) => ({
   _key: nuevaClave('c'), id: null,
   third_party_id: '', producer_id: '', farm_name: '', mag_code: '',
   executive: anterior?.executive || '', cut_date: anterior?.cut_date || '',
   delivery_port_id: anterior ? anterior.delivery_port_id : puertoBloque,
-  boxes: '', official_price: anterior?.official_price || '', real_price: '',
+  boxes: '', official_price: precioMag ? texto(precioMag.price) : (anterior?.official_price || ''), real_price: '',
   negotiation_type: 'SPOT', payment_scheme: '80_20', transport_deduction: '', notes: '',
   pickup_warehouse_id: anterior?.pickup_warehouse_id || '',
   bloqueo: null, liquidada: false,
@@ -94,6 +108,7 @@ export default function PurchaseAllocationPage() {
   const [version, setVersion] = useState(null); // huella de lo guardado (control de cambios simultáneos)
   const [bodegas, setBodegas] = useState([]);
   const [ultimaBodega, setUltimaBodega] = useState({}); // { third_party_id: warehouse_id }
+  const [preciosMag, setPreciosMag] = useState([]); // precios oficiales MAG activos
 
   const [vendedores, setVendedores] = useState([]);
   const [puertosSalida, setPuertosSalida] = useState([]);
@@ -111,6 +126,7 @@ export default function PurchaseAllocationPage() {
     setEjecutivos(data.executives || []);
     setBodegas(data.warehouses || []);
     setUltimaBodega(data.last_pickup || {});
+    setPreciosMag(data.official_prices || []);
     setVersion(data.version);
     const lista = data.blocks.map(bloqueDesdeBackend);
     setBloques(lista);
@@ -150,6 +166,7 @@ export default function PurchaseAllocationPage() {
   const totalComprado = todas.reduce((s, c) => s + n(c.boxes), 0);
   const totalReal = todas.reduce((s, c) => s + n(c.boxes) * n(c.real_price), 0);
   const totalTransporte = todas.reduce((s, c) => s + n(c.transport_deduction), 0);
+  const totalNotaCredito = todas.reduce((s, c) => s + (notaCredito(c) || 0), 0);
   const hayExceso = clientes.some((c) => compradoCliente(c.id) > c.pedido);
   const avance = totalPedido ? Math.min(100, (totalComprado / totalPedido) * 100) : 0;
 
@@ -161,6 +178,14 @@ export default function PurchaseAllocationPage() {
     const nombre = b?.vessel?.name || b?.vessel_name || '';
     // El nombre del barco ya puede traer el viaje (DITLEV UNI1402): no se repite
     return b ? `${nombre}${b.voyage && !nombre.includes(b.voyage) ? ` · ${b.voyage}` : ''}` : '—';
+  };
+
+  // Precio MAG vigente para la marca del bloque (según su tipo de caja) en la fecha de corte
+  const precioMagDe = (b, c) => {
+    const marca = clientes.flatMap((x) => x.brands).find((m) => String(m.id) === b.brand_id);
+    if (!marca?.box_type_id || !pedido) return null;
+    const fecha = c?.cut_date || lunesSemana(pedido.year, pedido.week);
+    return preciosMag.find((p) => p.box_type_id === marca.box_type_id && p.valid_from <= fecha && (!p.valid_to || p.valid_to >= fecha)) || null;
   };
 
   // ---------------- Cambios ----------------
@@ -219,7 +244,7 @@ export default function PurchaseAllocationPage() {
   const agregarCompra = (bKey) => {
     setBloques((prev) => prev.map((b) => (b._key !== bKey ? b : {
       ...b,
-      purchases: [...b.purchases, compraVacia(b.purchases[b.purchases.length - 1], b.departure_port_id)],
+      purchases: [...b.purchases, compraVacia(b.purchases[b.purchases.length - 1], b.departure_port_id, precioMagDe(b, b.purchases[b.purchases.length - 1]))],
     })));
   };
 
@@ -326,6 +351,7 @@ export default function PurchaseAllocationPage() {
           <span className="text-gray-700">
             Comprado <strong>{formatoCajas(totalComprado)}</strong> de <strong>{formatoCajas(totalPedido)}</strong> cajas · Total real <strong>$ {formatoDinero(totalReal)}</strong>
             {totalTransporte > 0 && <> · Transporte a descontar <strong>$ {formatoDinero(totalTransporte)}</strong></>}
+            {totalNotaCredito !== 0 && <> · Notas de crédito a recibir <strong>$ {formatoDinero(totalNotaCredito)}</strong></>}
           </span>
           <span className={`font-semibold ${hayExceso ? 'text-amber-800' : avance >= 100 ? 'text-green-700' : 'text-amber-700'}`}>
             {hayExceso ? '⚠ HAY CLIENTES CON MÁS CAJAS QUE LAS PEDIDAS (SE PERMITE: SE COMPLETA CON SPOT)'
@@ -409,37 +435,37 @@ export default function PurchaseAllocationPage() {
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-4 text-sm">
                     <div>
                       <label className={etiqueta}>Barco *</label>
-                      <select value={b.shipment_id} onChange={(e) => cambiarBloque(b._key, 'shipment_id', e.target.value)} className={inputClass}>
+                      <SelectBuscable value={b.shipment_id} onChange={(e) => cambiarBloque(b._key, 'shipment_id', e.target.value)} className={inputClass}>
                         <option value="">SELECCIONAR...</option>
                         {barcos.map((x) => <option key={x.id} value={String(x.id)}>{nombreBarco(x.id)}</option>)}
-                      </select>
+                      </SelectBuscable>
                     </div>
                     <div>
                       <label className={etiqueta}>Cliente *</label>
-                      <select value={b.customer_id} onChange={(e) => cambiarBloque(b._key, 'customer_id', e.target.value)} disabled={tieneBloqueadas} className={inputClass}>
+                      <SelectBuscable value={b.customer_id} onChange={(e) => cambiarBloque(b._key, 'customer_id', e.target.value)} disabled={tieneBloqueadas} className={inputClass}>
                         <option value="">SELECCIONAR...</option>
                         {clientes.map((x) => <option key={x.id} value={String(x.id)}>{x.name}</option>)}
-                      </select>
+                      </SelectBuscable>
                     </div>
                     <div>
                       <label className={etiqueta}>Marca *</label>
-                      <select value={b.brand_id} onChange={(e) => cambiarBloque(b._key, 'brand_id', e.target.value)} disabled={tieneBloqueadas || !b.customer_id} className={inputClass}>
+                      <SelectBuscable value={b.brand_id} onChange={(e) => cambiarBloque(b._key, 'brand_id', e.target.value)} disabled={tieneBloqueadas || !b.customer_id} className={inputClass}>
                         <option value="">{marcas.length ? 'SELECCIONAR...' : 'SIN MARCAS'}</option>
                         {marcas.map((m) => <option key={m.id} value={String(m.id)}>{m.name}</option>)}
-                      </select>
+                      </SelectBuscable>
                     </div>
                     <div>
                       <label className={etiqueta}>Modalidad</label>
-                      <select value={b.cargo_mode} onChange={(e) => cambiarBloque(b._key, 'cargo_mode', e.target.value)} className={inputClass}>
+                      <SelectBuscable value={b.cargo_mode} onChange={(e) => cambiarBloque(b._key, 'cargo_mode', e.target.value)} className={inputClass}>
                         {Object.entries(MODALIDADES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                      </select>
+                      </SelectBuscable>
                     </div>
                     <div>
                       <label className={etiqueta}>Puerto</label>
-                      <select value={b.departure_port_id} onChange={(e) => cambiarBloque(b._key, 'departure_port_id', e.target.value)} className={inputClass}>
+                      <SelectBuscable value={b.departure_port_id} onChange={(e) => cambiarBloque(b._key, 'departure_port_id', e.target.value)} className={inputClass}>
                         <option value="">—</option>
                         {puertosSalida.map((p) => <option key={p.id} value={String(p.id)}>{p.name}</option>)}
-                      </select>
+                      </SelectBuscable>
                     </div>
                     <div>
                       <label className={etiqueta}>Meta (cajas)</label>
@@ -449,7 +475,7 @@ export default function PurchaseAllocationPage() {
 
                   {/* Compras del bloque */}
                   <div className="overflow-x-auto border rounded-lg">
-                    <table className="w-full text-sm min-w-[2050px]">
+                    <table className="w-full text-sm min-w-[2180px]">
                       <thead className="bg-primario text-white">
                         <tr>
                           <th className={th}>#</th>
@@ -467,23 +493,26 @@ export default function PurchaseAllocationPage() {
                           <th className={th}>Tipo · Pago</th>
                           <th className={`${th} text-right`}>Transp. $</th>
                           <th className={`${th} text-right`}>Total real</th>
+                          <th className={`${th} text-right`} title="Cajas × (precio oficial − precio real): la entrega el vendedor">Nota créd. $</th>
                           <th className={th}>Notas</th>
                           <th className="px-2 py-2 w-10"></th>
                         </tr>
                       </thead>
                       <tbody>
                         {b.purchases.length === 0 ? (
-                          <tr><td colSpan={17} className="text-center py-5 text-gray-400">Agrega la primera compra de este bloque</td></tr>
+                          <tr><td colSpan={18} className="text-center py-5 text-gray-400">Agrega la primera compra de este bloque</td></tr>
                         ) : b.purchases.map((c, j) => {
                           const fijo = Boolean(c.bloqueo);
                           const esComercial = tipoDe(c.third_party_id) === 'COMERCIALIZADORA';
                           const cambiar = (campo) => (e) => cambiarCompra(b._key, c._key, campo, e.target.value);
                           const mayus = (campo) => (e) => cambiarCompra(b._key, c._key, campo, e.target.value.toUpperCase());
+                          const mag = precioMagDe(b, c);
+                          const nc = notaCredito(c);
                           return (
                             <tr key={c._key} className={j % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
                               <td className="px-2 py-1.5 text-gray-400">{j + 1}</td>
                               <td className="px-2 py-1.5 min-w-[220px]">
-                                <select value={c.third_party_id} onChange={cambiar('third_party_id')} disabled={fijo} className={inputClass}>
+                                <SelectBuscable value={c.third_party_id} onChange={cambiar('third_party_id')} disabled={fijo} className={inputClass}>
                                   <option value="">SELECCIONAR...</option>
                                   <optgroup label="COMERCIALES / COMERCIALIZADORAS">
                                     {comercializadoras.map((v) => <option key={v.id} value={String(v.id)}>{v.name}</option>)}
@@ -491,46 +520,63 @@ export default function PurchaseAllocationPage() {
                                   <optgroup label="PRODUCTORES (COMPRA DIRECTA)">
                                     {productores.map((v) => <option key={v.id} value={String(v.id)}>{v.name}</option>)}
                                   </optgroup>
-                                </select>
+                                </SelectBuscable>
                                 {fijo && <span className="flex items-center gap-1 text-[10px] text-gray-500 mt-0.5"><Lock size={10} /> {c.bloqueo}</span>}
                               </td>
                               <td className="px-2 py-1.5 min-w-[200px]">
-                                <select value={c.producer_id} onChange={cambiar('producer_id')} disabled={!esComercial || c.liquidada} title={esComercial ? 'Productor que realmente cosecha' : 'Compra directa al productor'} className={inputClass}>
+                                <SelectBuscable value={c.producer_id} onChange={cambiar('producer_id')} disabled={!esComercial || c.liquidada} title={esComercial ? 'Productor que realmente cosecha' : 'Compra directa al productor'} className={inputClass}>
                                   <option value="">{esComercial ? '—' : 'COMPRA DIRECTA'}</option>
                                   {productores.map((v) => <option key={v.id} value={String(v.id)}>{v.name}</option>)}
-                                </select>
+                                </SelectBuscable>
                               </td>
                               <td className="px-2 py-1.5 min-w-[130px]"><input value={c.farm_name} maxLength={120} onChange={mayus('farm_name')} disabled={c.liquidada} className={inputClass} /></td>
                               <td className="px-2 py-1.5 min-w-[80px]"><input value={c.mag_code} maxLength={20} onChange={mayus('mag_code')} disabled={c.liquidada} className={inputClass} /></td>
                               <td className="px-2 py-1.5 min-w-[130px]"><input list="ejecutivos" value={c.executive} maxLength={60} onChange={mayus('executive')} disabled={c.liquidada} className={inputClass} /></td>
                               <td className="px-2 py-1.5"><input type="date" value={c.cut_date} onChange={cambiar('cut_date')} disabled={c.liquidada} className={inputClass} /></td>
                               <td className="px-2 py-1.5 min-w-[130px]">
-                                <select value={c.delivery_port_id} onChange={cambiar('delivery_port_id')} disabled={c.liquidada} className={inputClass}>
+                                <SelectBuscable value={c.delivery_port_id} onChange={cambiar('delivery_port_id')} disabled={c.liquidada} className={inputClass}>
                                   <option value="">—</option>
                                   {puertosSalida.map((p) => <option key={p.id} value={String(p.id)}>{p.name}</option>)}
-                                </select>
+                                </SelectBuscable>
                               </td>
                               <td className="px-2 py-1.5 min-w-[150px]">
-                                <select value={c.pickup_warehouse_id} onChange={cambiar('pickup_warehouse_id')} disabled={fijo} title={fijo ? `No se cambia: ${c.bloqueo}` : 'Bodega donde retira cartón y materiales'} className={`${inputClass} ${c.pickup_warehouse_id ? '' : 'ring-1 ring-amber-400'}`}>
+                                <SelectBuscable value={c.pickup_warehouse_id} onChange={cambiar('pickup_warehouse_id')} disabled={fijo} title={fijo ? `No se cambia: ${c.bloqueo}` : 'Bodega donde retira cartón y materiales'} className={`${inputClass} ${c.pickup_warehouse_id ? '' : 'ring-1 ring-amber-400'}`}>
                                   <option value="">SELECCIONAR...</option>
                                   {bodegas.filter((w) => w.status || String(w.id) === c.pickup_warehouse_id).map((w) => <option key={w.id} value={String(w.id)}>{w.name}</option>)}
-                                </select>
+                                </SelectBuscable>
                               </td>
                               <td className="px-2 py-1.5 min-w-[90px]"><input type="number" min="1" value={c.boxes} onChange={cambiar('boxes')} disabled={c.liquidada} className={`${inputClass} text-right font-semibold`} /></td>
-                              <td className="px-2 py-1.5 min-w-[80px]"><input type="number" min="0" step="0.01" value={c.official_price} onChange={cambiar('official_price')} disabled={c.liquidada} className={`${inputClass} text-right`} /></td>
+                              <td className="px-2 py-1.5 min-w-[90px]">
+                                <input type="number" min="0" step="0.01" value={c.official_price} onChange={cambiar('official_price')} disabled={c.liquidada} title="Precio oficial MAG: el vendedor factura a este precio" className={`${inputClass} text-right`} />
+                                {mag && c.official_price !== '' && n(c.official_price) !== n(mag.price) && !c.liquidada && (
+                                  <button type="button" onClick={() => cambiarCompra(b._key, c._key, 'official_price', texto(mag.price))} title="Usar el precio oficial MAG vigente" className="block w-full text-right text-[10px] font-semibold text-amber-700 hover:underline mt-0.5">
+                                    MAG: {formatoDinero(mag.price)}
+                                  </button>
+                                )}
+                                {mag && c.official_price === '' && !c.liquidada && (
+                                  <button type="button" onClick={() => cambiarCompra(b._key, c._key, 'official_price', texto(mag.price))} className="block w-full text-right text-[10px] font-semibold text-primario hover:underline mt-0.5">
+                                    USAR MAG {formatoDinero(mag.price)}
+                                  </button>
+                                )}
+                              </td>
                               <td className="px-2 py-1.5 min-w-[80px]"><input type="number" min="0" step="0.01" value={c.real_price} onChange={cambiar('real_price')} disabled={c.liquidada} className={`${inputClass} text-right font-semibold`} /></td>
                               <td className="px-2 py-1.5 min-w-[130px]">
-                                <select value={c.negotiation_type} onChange={cambiar('negotiation_type')} disabled={c.liquidada} className={`${inputClass} text-xs mb-1`}>
+                                <SelectBuscable value={c.negotiation_type} onChange={cambiar('negotiation_type')} disabled={c.liquidada} className={`${inputClass} text-xs mb-1`}>
                                   <option value="CONTRATO">CONTRATO</option>
                                   <option value="SPOT">SPOT</option>
-                                </select>
-                                <select value={c.payment_scheme} onChange={cambiar('payment_scheme')} disabled={c.liquidada} className={`${inputClass} text-xs`}>
+                                </SelectBuscable>
+                                <SelectBuscable value={c.payment_scheme} onChange={cambiar('payment_scheme')} disabled={c.liquidada} className={`${inputClass} text-xs`}>
                                   <option value="100">PAGO 100 %</option>
                                   <option value="80_20">PAGO 80 / 20</option>
-                                </select>
+                                </SelectBuscable>
                               </td>
                               <td className="px-2 py-1.5 min-w-[90px]"><input type="number" min="0" step="0.01" value={c.transport_deduction} onChange={cambiar('transport_deduction')} disabled={c.liquidada} placeholder="0" title="Transporte de contenedor negociado: se descuenta al liquidar" className={`${inputClass} text-right`} /></td>
                               <td className="px-2 py-1.5 text-right whitespace-nowrap">{c.real_price === '' ? <span className="text-xs text-amber-600 font-semibold">SIN PRECIO</span> : `$ ${formatoDinero(n(c.boxes) * n(c.real_price))}`}</td>
+                              <td className="px-2 py-1.5 text-right whitespace-nowrap">
+                                {nc === null ? <span className="text-gray-400">—</span>
+                                  : nc < 0 ? <span className="text-xs font-semibold text-red-600" title="El precio real es mayor al oficial">REAL &gt; OFICIAL</span>
+                                    : <span className="font-semibold text-gray-700">$ {formatoDinero(nc)}</span>}
+                              </td>
                               <td className="px-2 py-1.5 min-w-[160px]"><input value={c.notes} maxLength={255} onChange={mayus('notes')} placeholder="EJ. CONSOLIDADO EN PTO" className={inputClass} /></td>
                               <td className="px-2 py-1.5">
                                 <button type="button" onClick={() => quitarCompra(b._key, c._key)} disabled={fijo} title={fijo ? `No se puede quitar: ${c.bloqueo}` : 'Quitar compra'} className="text-white p-1.5 rounded-lg shadow-sm bg-red-600 hover:bg-red-700 disabled:opacity-40">

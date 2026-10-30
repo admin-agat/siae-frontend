@@ -6,7 +6,7 @@ import {
     ArrowLeftRight, ClipboardList, FileText, ShoppingCart,
     FileSignature, Clock, Building2, Tag, Ship, Container,
     CircleDollarSign, History, ClipboardCheck, HandCoins, Calculator,
-    MapPin, Globe, CheckCircle2, Truck, ChevronDown, Anchor, ShoppingBasket, UserCog
+    MapPin, Globe, CheckCircle2, Truck, ChevronDown, Anchor, ShoppingBasket, UserCog, Landmark, Receipt, ScrollText
 } from "lucide-react";
 
 
@@ -43,6 +43,8 @@ const menuItems = [
             // (son datos maestros que solo ingresa el ADMIN, para evitar duplicados)
             // Fase 3: Comercial compra la fruta (productor + marca + cajas + precio oficial y real)
             { label: "Compra de fruta", ruta: "/comercial/compras", icono: ShoppingBasket },
+            // 30/10/2026: precio oficial por caja del MAG (lo propone la compra; oficial − real = nota de crédito)
+            { label: "Precios oficiales MAG", ruta: "/comercial/precios-oficiales", icono: Landmark },
             // "Marcas" (Próximamente) se quitó: las marcas ya se administran en CONFIGURACIÓN
         ],
     },
@@ -75,6 +77,8 @@ const menuItems = [
             { label: "Anticipos y préstamos", ruta: "/liquidacion/anticipos", icono: HandCoins },
             { label: "Liquidar", ruta: "/liquidacion", icono: Calculator },
             { label: "Pagos e historial", ruta: "/liquidacion/pagos", icono: CircleDollarSign },
+            // 30/10/2026: notas de crédito por recibir de productores/comercializadoras
+            { label: "Notas de crédito", ruta: "/liquidacion/notas-credito", icono: Receipt },
         ],
     },
     // CONFIGURACIÓN — datos maestros que SOLO ingresa el ADMIN, para que no se
@@ -88,6 +92,8 @@ const menuItems = [
             // Un solo formulario para productores, comercializadoras, proveedores y clientes
             // 29/10/2026: usuarios del sistema y su rol
             { label: "Usuarios", ruta: "/usuarios", icono: UserCog },
+            // 30/10/2026: quién registró o cambió qué, con fecha y hora
+            { label: "Bitácora", ruta: "/bitacora", icono: ScrollText },
             { label: "Terceros (maestro)", ruta: "/terceros", icono: Users },
             // 29/10/2026: movida desde COMERCIAL ("Próximamente"). Es la misma pantalla de
             // Terceros, filtrada a COMERCIALIZADORA (un solo maestro, sin datos repetidos)

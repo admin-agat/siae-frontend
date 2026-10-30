@@ -244,7 +244,7 @@ export default function BrandsPage() {
                                 >
                                     <div>
                                         <p className="font-medium text-sm text-gray-800">{m.name}</p>
-                                        <p className="text-xs text-gray-500">{m.code}</p>
+                                        <p className="text-xs text-gray-500">{m.code}{m.box_type?.name ? ` · CAJA ${m.box_type.name}` : ""}</p>
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-100 text-blue-700">

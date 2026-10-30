@@ -7,7 +7,7 @@ Cubre los dos repositorios: **siae-frontend** (este) y **siae-backend**.
 > [Historial de cambios](#7-historial-de-cambios) y mover la tarea de [Pendientes](#8-pendientes)
 > a la sección del módulo que corresponda.
 
-Última actualización: **29/10/2026** (Cierre de embarque, roles EXPORTACIONES/COMERCIAL, Usuarios, bodega de retiro)
+Última actualización: **30/10/2026** (listas con búsqueda; precio oficial MAG y nota de crédito; bitácora)
 
 ---
 
@@ -63,7 +63,7 @@ Respaldo del archivo original: `C:\php\php.ini.respaldo-2026-10-28`.
 | **JEFE_BODEGA** | 2 | Inventario (sin ajustes libres) + Exportaciones. No edita movimientos ya registrados. |
 | **BODEGUERO** | 5 | Solo su bodega: Stock, Nuevo movimiento (compra, transferencia, devolución), Despacho de materiales, Historial. |
 | **EXPORTACIONES** | 0 (nuevo 29/10) | Pedido semanal, Distribución en barcos, Cierre de embarque, Navieras, Bookings. No ve Inventario ni Comercial. |
-| **COMERCIAL** | 0 (nuevo 29/10) | Compra de fruta (bloques, compras, precios, bodega de retiro). Lee pedido y barcos por la API, sin editarlos. |
+| **COMERCIAL** | 0 (nuevo 29/10) | Compra de fruta (bloques, compras, precios, bodega de retiro) y Precios oficiales MAG. Lee pedido y barcos por la API, sin editarlos. |
 
 Los usuarios se crean en **CONFIGURACIÓN → Usuarios** (solo ADMIN). Desactivar un usuario le cierra la sesión al instante.
 
@@ -107,6 +107,7 @@ Leyenda: ✅ terminado · 🟡 parcial · ⏳ pendiente
 | Contratos de clientes | ✅ | Precio por caja + vigencia + incoterm. No se permiten dos contratos activos que se crucen. |
 | Marcas | ✅ | Movida desde Exportaciones el 28/10/2026. |
 | **Usuarios** | ✅ | Nuevo 29/10/2026. Crear, editar (contraseña opcional), desactivar/reactivar; BODEGUERO con su bodega. |
+| **Bitácora** | ✅ | Nuevo 30/10/2026. Quién creó/editó/desactivó/borró qué, con fecha y hora, campo por campo; inicios y cierres de sesión. Filtros por usuario, módulo, acción, fechas y texto. Solo ADMIN, solo lectura. |
 
 ### EXPORTACIONES
 | Pantalla | Estado | Notas |
@@ -135,12 +136,14 @@ Leyenda: ✅ terminado · 🟡 parcial · ⏳ pendiente
 ### COMERCIAL y LIQUIDACIÓN
 | Pantalla | Estado | Notas |
 |---|---|---|
-| **Compra de fruta** | ✅ | Nuevo 28/10/2026 (Fase 3). Productor/comercializadora + cliente + marca + cajas + precio oficial + precio real. Desde 29/10: CONTRATO/SPOT, forma de pago (100 % u 80/20), **bodega de retiro** y se permite comprar de más (aviso ámbar). |
+| **Compra de fruta** | ✅ | Nuevo 28/10/2026 (Fase 3). Productor/comercializadora + cliente + marca + cajas + precio oficial + precio real. Desde 29/10: CONTRATO/SPOT, forma de pago (100 % u 80/20), **bodega de retiro** y se permite comprar de más (aviso ámbar). Desde 30/10: propone el **precio oficial MAG** y muestra la **nota de crédito** por compra. |
+| **Precios oficiales MAG** | ✅ | Nuevo 30/10/2026. Precio por caja por tipo de caja y vigencia (N° de acuerdo ministerial); no se permiten dos precios activos en las mismas fechas. ADMIN y COMERCIAL. |
 | Comercializadoras | ⏳ | |
 | **Tarjas** | ✅ | Nuevo 29/10/2026. Por camión: embarcadas, caídas, rechazadas; barco, placa, N° tarja. Solo ADMIN. |
 | **Anticipos y préstamos** | ✅ | Nuevo 29/10/2026. Monto, descontado y saldo; se descuentan en la liquidación. Solo ADMIN. |
 | **Liquidar** | ✅ | Nuevo 29/10/2026. Cupo (productor + semana): fruta − materiales − anticipos; código LIQ-00000001; imprimible; anular sin pagos. Solo ADMIN. |
 | **Pagos e historial** | ✅ | Nuevo 29/10/2026. Registrar 1er pago (100 % / 80 %) y 2do pago (20 %) con fecha y comprobante; bandeja de pendientes. Solo ADMIN. |
+| **Notas de crédito** | ✅ | Nuevo 30/10/2026. Bandeja POR RECIBIR / RECIBIDAS con el total que debe cada vendedor; el N° de factura y de NC se registra en el detalle de la liquidación. Solo ADMIN. |
 | Dashboard | ⏳ | Página vacía. |
 
 ---
@@ -239,7 +242,7 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 | Activo / éxito | green-600 · Inactivo / error: red-600 · Pendiente: amber | |
 
 **Componentes comunes** (`src/components/common/`) — usarlos en toda pantalla nueva:
-`EncabezadoPagina`, `TablaEstandar` (buscador, pestañas ACTIVOS/INACTIVOS/TODOS, paginación), `EstadoBadge`, `AccionesFila` (Editar/Desactivar/Reactivar), `ModalShell`, `DialogoConfirmacion`, `ToastFlotante`. Mensajes de toast en [toastMessages.js](src/utils/toastMessages.js).
+`EncabezadoPagina`, `TablaEstandar` (buscador, pestañas ACTIVOS/INACTIVOS/TODOS, paginación), `EstadoBadge`, `AccionesFila` (Editar/Desactivar/Reactivar), `ModalShell`, `DialogoConfirmacion`, `ToastFlotante`, `SelectBuscable`. Mensajes de toast en [toastMessages.js](src/utils/toastMessages.js).
 
 **Reglas**
 - Nunca se borra físicamente: baja lógica con `PATCH .../deactivate` y `.../reactivate`.
@@ -248,10 +251,43 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 - Las relaciones de Laravel llegan en snake_case (`third_party`, no `thirdParty`).
 - Toda validación del frontend se repite en el backend.
 - Los cambios de base de datos van en migraciones.
+- **Bitácora**: todo modelo nuevo lleva `use \App\Models\Concerns\Auditable;`. Borrar o actualizar varios registros se hace uno por uno (`->get()->each->delete()`), nunca con `where(...)->delete()/update()`.
+- **No usar `<select>` nativo**: usar `SelectBuscable` (mismas props y `<option>`/`<optgroup>`), que permite escribir para buscar.
 
 ---
 
 ## 7. Historial de cambios
+
+### 30/10/2026 — Instalación en producción (siae.datalytica.cloud)
+- Servidor 72.62.97.139 (Ubuntu 24.04, PHP 8.3, PostgreSQL 16, nginx + Certbot). Se entra por SSH con el usuario **`peter`** (root no admite login). Código en `/var/www/siae/backend` y `/var/www/siae/frontend` (clones de GitHub); base `siae_production`. CHAUNE está en el mismo servidor: no se toca.
+- Respaldo previo en `~/respaldos/` del servidor (`siae_db_20261030_2030.dump` + `siae_codigo_20261030_2030.tgz`).
+- Producción tenía datos reales (9 usuarios, 418 terceros, 50 fincas, 85 insumos, OC y movimientos): se **actualizó** con las migraciones, no se reemplazó la base. Antes se probaron las migraciones sobre una copia de esa base.
+- La tabla `brands` existía en producción sin su migración registrada: `2026_09_21_053407_create_brands_table` ahora no la recrea si ya existe.
+- Actualizar: `git pull` en ambas carpetas; backend `composer install --no-dev -o`, `php artisan migrate --force`, `php artisan optimize`; frontend `npm ci && npm run build` (con `VITE_API_URL=https://siae.datalytica.cloud/api`).
+
+### 30/10/2026 — Bitácora de auditoría
+Pedido del usuario: debe quedar registrado lo que cada usuario registra en el sistema, con fecha y hora.
+- Migración `2026_10_30_000002_create_audit_logs_table`: `audit_logs` (usuario y su nombre en ese momento, acción, tabla, id del registro, `changes` jsonb, IP, método + ruta de la API, fecha y hora). Solo se inserta; no se edita ni se borra.
+- Trait [Auditable](../siae-backend/app/Models/Concerns/Auditable.php) en **todos los modelos**: CREAR (valores), EDITAR (`{campo: [antes, después]}`, sin `updated_at`; guardar sin cambios no registra nada), DESACTIVAR / REACTIVAR (cuando solo cambia `status`), BORRAR (valores que tenía). La contraseña se registra como "CAMBIADA", nunca su valor.
+- Si la operación falla y se revierte, su registro en la bitácora también se revierte (va en la misma transacción).
+- Sesión: INICIO_SESION, CIERRE_SESION y LOGIN_FALLIDO (con el usuario intentado, sin la contraseña; también usuario desactivado).
+- **Regla nueva**: no usar escrituras masivas (`Modelo::where(...)->update/delete`, `->lines()->delete()`), porque no disparan eventos y no quedarían en la bitácora. Se cambiaron 12 (pedido, distribución, compras, cierre, tarjas, movimientos, barcos, bodega del usuario, recetas al renombrar marca) a registro por registro. Las marcas del cliente (`sync` de la tabla pivote) se registran a mano como `brand_ids` antes → después.
+- Consulta: `GET /audit-logs` (ADMIN; filtros `user_id`, `table_name`, `action`, `record_id`, `desde`, `hasta`, `q` = texto dentro de los cambios; 50 por página). Pantalla CONFIGURACIÓN → **Bitácora** ([AuditLogPage.jsx](src/pages/configuracion/AuditLogPage.jsx)) con nombres de módulo en lenguaje de negocio.
+- Pruebas: **22 automáticas** (sesión con IP, crear/editar/desactivar/reactivar, contraseña oculta, marcas del cliente, bloque de compra borrado desde la hoja, filtros, permiso) + se repitieron las 36 de nota de crédito (OK) + Chrome sin errores.
+
+### 30/10/2026 — Precio oficial MAG y nota de crédito
+Reglas del usuario: (1) precio oficial − precio real = **nota de crédito** que entrega el productor/comercializadora; (2) un productor de CONTRATO también puede cortar SPOT; (3) el precio oficial es el del **MAG**, y depende del tipo de caja.
+- Migración `2026_10_30_000001_official_prices_credit_notes`: tabla **`official_box_prices`** (tipo de caja, desde, hasta, precio, N° de acuerdo ministerial); **`brands.box_type_id`** (las marcas existentes quedaron en 22XU); en `settlement_lines` `official_price`, `invoice_amount`, `credit_note_amount`; en `settlements` `invoice_amount`, `credit_note_amount`, `invoice_number`, `credit_note_number`, `credit_note_date`, `documents_by`. Las liquidaciones anteriores se completaron con el precio oficial de su compra.
+- **Precios oficiales MAG** (COMERCIAL → *Precios oficiales MAG*, `OfficialBoxPriceController`, `/official-prices`; escriben ADMIN y COMERCIAL). Para un precio nuevo se cierra el anterior con fecha "hasta". `GET /box-types` (nuevo `BoxTypeController`).
+- **Marca**: el tipo de caja es obligatorio (define qué precio MAG se propone).
+- **Compra de fruta**: la compra nueva propone el precio MAG vigente según la caja de la marca y la fecha de corte (o el lunes de la semana). Si el precio escrito es distinto, aparece "MAG: x" para aplicarlo. Columna **Nota créd. $** = cajas × (oficial − real) ("REAL > OFICIAL" en rojo) y total de notas de crédito en el avance. Las compras ya registradas conservan su precio.
+- **Liquidación**: factura = pagadas × oficial; nota de crédito = factura − fruta (el neto se sigue pagando al precio real). Sin precio oficial **no se puede liquidar** (no se sabría la NC). El detalle registra el N° de factura y de NC con su fecha (no bloquea los pagos), y lo imprime. Nueva pantalla **Notas de crédito** y filtro `GET /settlements?nc_pendiente=1`. `PATCH /settlements/{id}/documents`.
+- **CONTRATO y SPOT del mismo productor**: ya funcionaba (el tipo va en cada compra); se probó que se liquidan juntos.
+- Pruebas: **36 automáticas** en transacción revertida (marcas, precios MAG con cruces de fechas y permisos, compra CONTRATO + SPOT, tarjas, liquidación con NC = 367 sobre 970 cajas pagadas, documentos, bandeja) + Chrome sin errores de consola.
+
+### 30/10/2026 — Listas desplegables con búsqueda
+- Nuevo componente [SelectBuscable.jsx](src/components/common/SelectBuscable.jsx): reemplaza a `<select>` y permite **escribir para buscar** (sin importar tildes ni mayúsculas), flechas ↑↓, Enter elige, Esc cierra la lista sin cerrar el modal. Respeta `required`, `disabled`, opciones deshabilitadas y grupos (`<optgroup>`). La lista se dibuja sobre la página para que no la corten los modales ni las tablas con scroll.
+- Se cambiaron los **65 `<select>` de 23 pantallas** (modales, Compra de fruta, Pedido semanal, Distribución, Cierre, Movimientos, Despacho, Órdenes de compra, Tarjas, Usuarios, Login). Probado en Chrome en el modal de Booking.
 
 ### 29/10/2026 — Cierre de embarque, roles EXPORTACIONES/COMERCIAL, Usuarios y bodega de retiro
 Según la hoja real de Logística "libro 2 wk 37" (Asignación de carga) y las decisiones del usuario.
@@ -274,7 +310,7 @@ Según la hoja real de Logística "libro 2 wk 37" (Asignación de carga) y las d
 - Pruebas: 13 nuevas (bloques, viaje, contenedor, transporte) + las 34 de liquidación adaptadas, todas OK en transacción revertida.
 
 ### 29/10/2026 — Liquidación al productor (Fase 4)
-Menú **LIQUIDACIÓN** (solo ADMIN): *Tarjas*, *Anticipos y préstamos*, *Liquidar*, *Pagos e historial*.
+Menú **LIQUIDACIÓN** (solo ADMIN): *Tarjas*, *Anticipos y préstamos*, *Liquidar*, *Pagos e historial*, *Notas de crédito* (30/10).
 - Migración `2026_10_29_000001_create_settlement_tables`: `producer_quota_lines.negotiation_type` (CONTRATO/SPOT) y `payment_scheme` ('100'/'80_20'); tablas `tally_sheets`, `producer_advances`, `settlements` (una activa por cupo, índice único parcial), `settlement_lines`, `settlement_materials`, `settlement_advances`, `settlement_payments`. La categoría CONTENEDORES deja de cobrarse al productor.
 - Backend: `TallySheetController` (`GET/PUT /customer-orders/{id}/tallies`), `ProducerAdvanceController` (`/producer-advances`), `SettlementController` (`/settlements`: quotas, preview, store, show, pay, unpay, annul). Todo bajo middleware `admin`.
 - Devolución de productor: nuevo `producer_quota_id` en el movimiento DEVOLUCIÓN (obligatorio si tiene semanas sin liquidar con material retirado; no más de lo retirado; no a un cupo liquidado). Endpoint `GET /inventory-movements/returnable-quotas/{tercero}`. Una devolución ligada se anula (no se edita).
@@ -367,6 +403,8 @@ Menú **LIQUIDACIÓN** (solo ADMIN): *Tarjas*, *Anticipos y préstamos*, *Liquid
 ## 8. Pendientes
 
 ### Alta prioridad
+- [ ] **Permisos por persona** (después del primer despliegue; decidido el 30/10/2026): los roles pasan a ser PERFILES editables (ej. ASISTENTE COMERCIAL); cada usuario tiene perfil + pantallas extra o quitadas; permisos **por pantalla** (ver y usar todo, o no verla); solo el ADMIN los asigna; campo "asistente de"; el backend valida cada pantalla y el menú se arma con los permisos.
+- [ ] Registrar el **precio oficial MAG vigente** (22XU y otros tipos de caja si los hay) en COMERCIAL → Precios oficiales MAG, antes de comprar.
 - [ ] **Subir a producción** en el VPS (faltan los datos de acceso): ver [Checklist](#9-checklist-para-producción).
 - [ ] Crear los usuarios reales de Exportaciones y Comercial en CONFIGURACIÓN → Usuarios.
 - [ ] Confirmar qué significa el estado "21" de la DAE (el usuario lo va a preguntar).

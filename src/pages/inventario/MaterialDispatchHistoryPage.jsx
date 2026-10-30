@@ -11,6 +11,7 @@ import { useAuth } from '../../context/AuthContext';
 import { getDespachos, anularDespacho } from '../../api/materialDispatch';
 import { getWarehouses } from '../../api/warehouses';
 import { getThirdParties } from '../../api/thirdParties';
+import SelectBuscable from '../../components/common/SelectBuscable';
 
 // Estilo estándar de inputs del sistema
 const INPUT = 'w-full bg-gray-100 rounded-2xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500';
@@ -147,22 +148,22 @@ export default function MaterialDispatchHistoryPage() {
                     {!esBodeguero && (
                         <div>
                             <label className={LABEL}>Bodega</label>
-                            <select value={filtros.warehouse_id} onChange={(e) => handleFiltro('warehouse_id', e.target.value)} className={INPUT}>
+                            <SelectBuscable value={filtros.warehouse_id} onChange={(e) => handleFiltro('warehouse_id', e.target.value)} className={INPUT}>
                                 <option value="">TODAS</option>
                                 {bodegas.map((b) => (
                                     <option key={b.id} value={b.id}>{b.name}</option>
                                 ))}
-                            </select>
+                            </SelectBuscable>
                         </div>
                     )}
                     <div>
                         <label className={LABEL}>Productor</label>
-                        <select value={filtros.third_party_id} onChange={(e) => handleFiltro('third_party_id', e.target.value)} className={INPUT}>
+                        <SelectBuscable value={filtros.third_party_id} onChange={(e) => handleFiltro('third_party_id', e.target.value)} className={INPUT}>
                             <option value="">TODOS</option>
                             {terceros.map((t) => (
                                 <option key={t.id} value={t.id}>{t.name}</option>
                             ))}
-                        </select>
+                        </SelectBuscable>
                     </div>
                     <div>
                         <label className={LABEL}>Semana</label>

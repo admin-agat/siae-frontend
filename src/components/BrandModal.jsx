@@ -2,8 +2,10 @@
 // Mismo patrón que SupplyModal.jsx: ModalShell + confirmación de salida.
 import { useState, useEffect, useRef } from 'react';
 import { createBrand, updateBrand } from '../api/brands';
+import { getBoxTypes } from '../api/officialPrices';
 import { getMensajeExito, getMensajeError } from '../utils/toastMessages';
 import ModalShell from './common/ModalShell';
+import SelectBuscable from './common/SelectBuscable';
 
 // CAMBIO: saca el mensaje real que devuelve Laravel.
 // - 422 de validación → viene en data.errors ({ campo: ['MENSAJE'] })
@@ -38,7 +40,10 @@ export default function BrandModal({ brand, onClose, onGuardado }) {
     const [form, setForm] = useState({
         name: '',
         code: '',
+        box_type_id: '',
     });
+    // Tipo de caja (30/10/2026): define el precio oficial MAG que propone la compra de fruta
+    const [tiposCaja, setTiposCaja] = useState([]);
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -53,20 +58,24 @@ export default function BrandModal({ brand, onClose, onGuardado }) {
             setForm({
                 name: brand.name || '',
                 code: brand.code || '',
+                box_type_id: brand.box_type_id ? String(brand.box_type_id) : '',
             });
         }
 
         formInicialRef.current = {
             name: brand?.name || '',
             code: brand?.code || '',
+            box_type_id: brand?.box_type_id ? String(brand.box_type_id) : '',
         };
+
+        getBoxTypes().then((res) => setTiposCaja(Array.isArray(res?.data) ? res.data : [])).catch(() => setTiposCaja([]));
     }, []);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
         // Nombre: solo mayúsculas (puede llevar espacios).
         // Código: mayúsculas + guion bajo + caracteres permitidos.
-        const valorFinal = name === 'code' ? normalizarCodigo(value) : value.toUpperCase();
+        const valorFinal = name === 'code' ? normalizarCodigo(value) : name === 'box_type_id' ? value : value.toUpperCase();
         setForm(prev => ({ ...prev, [name]: valorFinal }));
         // Si había un error visible, se limpia apenas el usuario corrige
         if (error) setError('');
@@ -91,7 +100,7 @@ export default function BrandModal({ brand, onClose, onGuardado }) {
         setError('');
         const accion = esEdicion ? 'actualizar' : 'crear';
         // Se envía sin espacios sobrantes; el backend vuelve a normalizar igual
-        const datos = { name: form.name.trim(), code: form.code };
+        const datos = { name: form.name.trim(), code: form.code, box_type_id: form.box_type_id || null };
         try {
             if (esEdicion) {
                 await updateBrand(brand.id, datos);
@@ -155,6 +164,25 @@ export default function BrandModal({ brand, onClose, onGuardado }) {
                             Si la marca ya tiene cupos asignados, el código no se puede cambiar.
                         </p>
                     )}
+                </div>
+
+                <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                        Tipo de caja *
+                        <span className="text-gray-400 font-normal ml-1">(define el precio oficial MAG)</span>
+                    </label>
+                    <SelectBuscable
+                        name="box_type_id"
+                        value={form.box_type_id}
+                        onChange={handleChange}
+                        required
+                        className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                        <option value="">Seleccionar...</option>
+                        {tiposCaja.filter((t) => t.status || String(t.id) === form.box_type_id).map((t) => (
+                            <option key={t.id} value={String(t.id)}>{t.name}</option>
+                        ))}
+                    </SelectBuscable>
                 </div>
             </ModalShell>
 

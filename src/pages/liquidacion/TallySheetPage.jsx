@@ -13,6 +13,7 @@ import { ArrowLeft, Plus, Trash2, Save, X, Lock } from 'lucide-react';
 import { getOrderTallies, saveOrderTallies } from '../../api/settlements';
 import DialogoConfirmacion from '../../components/common/DialogoConfirmacion';
 import ToastFlotante from '../../components/common/ToastFlotante';
+import SelectBuscable from '../../components/common/SelectBuscable';
 
 const formatoCajas = (n) => Number(n || 0).toLocaleString('es-EC');
 const hoy = () => new Date().toISOString().slice(0, 10);
@@ -255,19 +256,19 @@ export default function TallySheetPage() {
                 <tr key={t._key} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
                   <td className="px-3 py-2 text-gray-400">{i + 1}</td>
                   <td className="px-3 py-2 min-w-[260px]">
-                    <select value={t.producer_quota_line_id} onChange={(e) => cambiar(t._key, 'producer_quota_line_id', e.target.value)} disabled={bloqueada} className={inputClass}>
+                    <SelectBuscable value={t.producer_quota_line_id} onChange={(e) => cambiar(t._key, 'producer_quota_line_id', e.target.value)} disabled={bloqueada} className={inputClass}>
                       <option value="">SELECCIONAR...</option>
                       {compras.filter((c) => !c.liquidada || String(c.id) === t.producer_quota_line_id).map((c) => (
                         <option key={c.id} value={String(c.id)}>{etiquetaCompra(c)}</option>
                       ))}
-                    </select>
+                    </SelectBuscable>
                     {bloqueada && <span className="flex items-center gap-1 text-[10px] text-gray-500 mt-0.5"><Lock size={10} /> YA LIQUIDADO</span>}
                   </td>
                   <td className="px-3 py-2 min-w-[150px]">
-                    <select value={t.shipment_id} onChange={(e) => cambiar(t._key, 'shipment_id', e.target.value)} disabled={bloqueada} className={inputClass}>
+                    <SelectBuscable value={t.shipment_id} onChange={(e) => cambiar(t._key, 'shipment_id', e.target.value)} disabled={bloqueada} className={inputClass}>
                       <option value="">—</option>
                       {barcos.map((b) => <option key={b.id} value={String(b.id)}>{b.vessel?.name || b.vessel_name || b.code}{b.voyage ? ` · ${b.voyage}` : ''}</option>)}
-                    </select>
+                    </SelectBuscable>
                   </td>
                   <td className="px-3 py-2"><input type="date" value={t.date} onChange={(e) => cambiar(t._key, 'date', e.target.value)} disabled={bloqueada} className={inputClass} /></td>
                   <td className="px-3 py-2 min-w-[90px]"><input value={t.number} maxLength={30} onChange={(e) => cambiar(t._key, 'number', e.target.value.toUpperCase())} disabled={bloqueada} className={inputClass} /></td>

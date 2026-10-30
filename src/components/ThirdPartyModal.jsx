@@ -10,6 +10,7 @@ import { createThirdParty, updateThirdParty } from '../api/thirdParties';
 import ModalShell from './common/ModalShell';
 import DialogoConfirmacion from './common/DialogoConfirmacion';
 import { getMensajeExito, getMensajeError } from '../utils/toastMessages';
+import SelectBuscable from './common/SelectBuscable';
 
 const FORM_VACIO = {
     name: '',
@@ -156,12 +157,12 @@ export default function ThirdPartyModal({ thirdParty, onClose, onGuardado }) {
                         </div>
                         <div>
                             <label className={labelClass}>Tipo *</label>
-                            <select name="type" value={form.type} onChange={handleChange} required className={inputClass}>
+                            <SelectBuscable name="type" value={form.type} onChange={handleChange} required className={inputClass}>
                                 <option value="PRODUCTOR">PRODUCTOR</option>
                                 <option value="COMERCIALIZADORA">COMERCIALIZADORA</option>
                                 <option value="PROVEEDOR">PROVEEDOR</option>
                                 <option value="CLIENTE">CLIENTE (EXTRANJERO)</option>
-                            </select>
+                            </SelectBuscable>
                         </div>
                     </div>
 
