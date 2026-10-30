@@ -2,12 +2,23 @@ import { Suspense, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from "./Sidebar";
 import { precargarPaginas } from '../routes/paginas';
+import { useAuth } from '../context/AuthContext';
+import api from '../api/axios';
 
 // Layout principal — envuelve todas las páginas privadas
 export default function Layout() {
+  const { actualizarUsuario } = useAuth();
+
   // Descarga el resto de pantallas en segundo plano: cambiar de menú queda instantáneo
   useEffect(() => {
     precargarPaginas();
+  }, []);
+
+  // 30/10/2026: al abrir o recargar el sistema se piden las pantallas actuales del usuario
+  // (si el ADMIN le cambió el perfil o las excepciones, se ven sin volver a iniciar sesión)
+  useEffect(() => {
+    api.get('/me').then((res) => actualizarUsuario(res.data)).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

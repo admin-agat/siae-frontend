@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../api/axios";
-import { inicioPorRol } from "../../routes/roles";
+import { inicioDe } from "../../routes/menu";
 import SelectBuscable from '../../components/common/SelectBuscable';
 
 export default function LoginPage() {
@@ -28,7 +28,7 @@ export default function LoginPage() {
         try {
             const res = await api.post("/login", { email, password });
             login(res.data.user, res.data.token);
-            navigate(inicioPorRol(res.data.user?.role));
+            navigate(inicioDe(res.data.user)); // 30/10/2026: primera pantalla que tiene permitida
         } catch (err) {
             // 429 = demasiados intentos (el backend permite 5 por minuto)
             // 29/10/2026: un usuario desactivado ve el motivo (lo manda el backend)

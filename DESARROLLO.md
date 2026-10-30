@@ -7,7 +7,7 @@ Cubre los dos repositorios: **siae-frontend** (este) y **siae-backend**.
 > [Historial de cambios](#7-historial-de-cambios) y mover la tarea de [Pendientes](#8-pendientes)
 > a la sección del módulo que corresponda.
 
-Última actualización: **30/10/2026** (listas con búsqueda; precio oficial MAG y nota de crédito; bitácora)
+Última actualización: **30/10/2026** (listas con búsqueda; precio oficial MAG y nota de crédito; bitácora; instalación en producción; permisos por persona)
 
 ---
 
@@ -106,7 +106,8 @@ Leyenda: ✅ terminado · 🟡 parcial · ⏳ pendiente
 | Destinos | ✅ | |
 | Contratos de clientes | ✅ | Precio por caja + vigencia + incoterm. No se permiten dos contratos activos que se crucen. |
 | Marcas | ✅ | Movida desde Exportaciones el 28/10/2026. |
-| **Usuarios** | ✅ | Nuevo 29/10/2026. Crear, editar (contraseña opcional), desactivar/reactivar; BODEGUERO con su bodega. |
+| **Usuarios** | ✅ | Nuevo 29/10/2026. Crear, editar (contraseña opcional), desactivar/reactivar; BODEGUERO con su bodega. 30/10/2026: perfil, "asistente de" y excepciones por persona (pantallas EXTRA o QUITADAS). |
+| **Perfiles y permisos** | ✅ | Nuevo 30/10/2026. Perfil = nombre + tipo base + pantallas. Los 6 perfiles iniciales reproducen los roles de antes. Solo ADMIN. |
 | **Bitácora** | ✅ | Nuevo 30/10/2026. Quién creó/editó/desactivó/borró qué, con fecha y hora, campo por campo; inicios y cierres de sesión. Filtros por usuario, módulo, acción, fechas y texto. Solo ADMIN, solo lectura. |
 
 ### EXPORTACIONES
@@ -252,11 +253,23 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 - Toda validación del frontend se repite en el backend.
 - Los cambios de base de datos van en migraciones.
 - **Bitácora**: todo modelo nuevo lleva `use \App\Models\Concerns\Auditable;`. Borrar o actualizar varios registros se hace uno por uno (`->get()->each->delete()`), nunca con `where(...)->delete()/update()`.
+- **Pantalla nueva** (permisos por persona): agregar su clave en `siae-backend/config/pantallas.php`, la misma `pantalla` en [menu.js](src/routes/menu.js), la ruta con `P('clave', <Pagina />)` en AppRouter y proteger su API con `->middleware('pantalla:clave')`. No usar `rol:` para dar acceso a una pantalla (solo para acciones internas que dependen del tipo base).
 - **No usar `<select>` nativo**: usar `SelectBuscable` (mismas props y `<option>`/`<optgroup>`), que permite escribir para buscar.
 
 ---
 
 ## 7. Historial de cambios
+
+### 30/10/2026 — Permisos por persona (perfiles + excepciones)
+Pedido del usuario: las jefaturas trabajan con asistentes; dar permisos por persona. Decisiones: solo el ADMIN asigna; permiso **por pantalla** (la ve y hace todo en ella, o no la ve).
+- Catálogo de 30 pantallas en `config/pantallas.php` (clave, sección, nombre y qué tipos base la tienen al inicio). Usuarios, Perfiles y Bitácora no se delegan (solo ADMIN).
+- Migración `2026_10_30_000003_create_profiles_and_user_permissions`: tabla `profiles` (nombre, `base_role`, descripción, `screens` jsonb) y en `users`: `profile_id`, `boss_id` ("asistente de"), `screens_added`, `screens_removed`. Crea un perfil por rol con las pantallas que ese rol veía y se lo asigna a sus usuarios: **nadie gana ni pierde acceso al migrar**.
+- `User::pantallas()` = perfil + agregadas − quitadas (ADMIN: todas; perfil desactivado: ninguna; sin perfil: las iniciales de su tipo base). `User::puede(...)`.
+- **Tipo base** (`users.role`, lo pone el perfil): conserva las reglas internas del rol — BODEGUERO solo su bodega y sus motivos; COORDINADOR/ADMIN corrigen y anulan movimientos y despachos. Un perfil no puede ser de tipo ADMIN (solo ADMINISTRADOR, que no se edita) y no cambia de tipo base si tiene usuarios.
+- API: middleware `pantalla:` reemplaza a `rol:`/`admin` en todas las rutas de pantallas (lectura de exportaciones: cualquier pantalla salvo las 4 del bodeguero, igual que antes). Transferencias pendientes ahora se valida por pantalla. `GET /me` devuelve el usuario con sus pantallas; `GET /screens`, CRUD `/profiles` (ADMIN).
+- Frontend: [menu.js](src/routes/menu.js) (menú + `puede`, `menuDe`, `inicioDe`) usado por Sidebar, AppRouter (`RutaPantalla`) y Login; se borró `routes/roles.js`. Layout pide `/me` al abrir: los cambios de permisos se ven sin volver a iniciar sesión. Pantallas [ProfilesPage](src/pages/configuracion/ProfilesPage.jsx) y [UsersPage](src/pages/configuracion/UsersPage.jsx) con [SelectorPantallas](src/components/common/SelectorPantallas.jsx). Usuario sin pantallas → `/sin-acceso`.
+- Bitácora: los campos JSON (pantallas) se guardan como lista, no como texto.
+- Pruebas: **50 automáticas** (los 6 roles con los mismos accesos de antes, perfil nuevo, excepciones, validaciones) + 22 de bitácora + 36 de nota de crédito, todas OK; Chrome con un asistente de prueba (menú, rutas permitidas y bloqueadas) sin errores.
 
 ### 30/10/2026 — Instalación en producción (siae.datalytica.cloud)
 - Servidor 72.62.97.139 (Ubuntu 24.04, PHP 8.3, PostgreSQL 16, nginx + Certbot). Se entra por SSH con el usuario **`peter`** (root no admite login). Código en `/var/www/siae/backend` y `/var/www/siae/frontend` (clones de GitHub); base `siae_production`. CHAUNE está en el mismo servidor: no se toca.
@@ -403,7 +416,7 @@ Menú **LIQUIDACIÓN** (solo ADMIN): *Tarjas*, *Anticipos y préstamos*, *Liquid
 ## 8. Pendientes
 
 ### Alta prioridad
-- [ ] **Permisos por persona** (después del primer despliegue; decidido el 30/10/2026): los roles pasan a ser PERFILES editables (ej. ASISTENTE COMERCIAL); cada usuario tiene perfil + pantallas extra o quitadas; permisos **por pantalla** (ver y usar todo, o no verla); solo el ADMIN los asigna; campo "asistente de"; el backend valida cada pantalla y el menú se arma con los permisos.
+- [x] **Permisos por persona** — hecho el 30/10/2026 (ver historial).
 - [ ] Registrar el **precio oficial MAG vigente** (22XU y otros tipos de caja si los hay) en COMERCIAL → Precios oficiales MAG, antes de comprar.
 - [ ] **Subir a producción** en el VPS (faltan los datos de acceso): ver [Checklist](#9-checklist-para-producción).
 - [ ] Crear los usuarios reales de Exportaciones y Comercial en CONFIGURACIÓN → Usuarios.

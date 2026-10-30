@@ -31,6 +31,7 @@ export const PAGINAS = {
   ShipmentClosingsPage: () => import("../pages/exportaciones/ShipmentClosingsPage"),
   ShipmentClosingPage: () => import("../pages/exportaciones/ShipmentClosingPage"),
   UsersPage: () => import("../pages/configuracion/UsersPage"),
+  ProfilesPage: () => import("../pages/configuracion/ProfilesPage"),
   AuditLogPage: () => import("../pages/configuracion/AuditLogPage"),
   PurchasesPage: () => import("../pages/comercial/PurchasesPage"),
   PurchaseAllocationPage: () => import("../pages/comercial/PurchaseAllocationPage"),

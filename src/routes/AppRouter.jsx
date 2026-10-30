@@ -6,7 +6,8 @@ import { lazy } from 'react';
 import { PAGINAS } from './paginas';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { ROLES_INVENTARIO, ROLES_EXPORTACIONES, ROLES_COMERCIAL, inicioPorRol } from './roles';
+// 30/10/2026: permisos por persona — cada ruta pide su pantalla (misma clave que el menú y el backend)
+import { puede, esAdmin, inicioDe } from './menu';
 import LoginPage from '../pages/auth/LoginPage';
 import Layout from '../components/Layout';
 const DashboardPage = lazy(PAGINAS.DashboardPage);
@@ -43,6 +44,8 @@ const ShipmentClosingsPage = lazy(PAGINAS.ShipmentClosingsPage);
 const ShipmentClosingPage = lazy(PAGINAS.ShipmentClosingPage);
 // 29/10/2026: usuarios (CONFIGURACIÓN)
 const UsersPage = lazy(PAGINAS.UsersPage);
+// 30/10/2026: perfiles de permisos por pantalla (CONFIGURACIÓN, solo ADMIN)
+const ProfilesPage = lazy(PAGINAS.ProfilesPage);
 // 30/10/2026: bitácora de auditoría (CONFIGURACIÓN, solo ADMIN)
 const AuditLogPage = lazy(PAGINAS.AuditLogPage);
 // Fase 3: compra de fruta a productores (Comercial)
@@ -71,33 +74,40 @@ function RutaPrivada({ children }) {
   const { token } = useAuth();
   return token ? children : <Navigate to="/login" />;
 }
-// Componente que protege rutas exclusivas de ADMIN (sección CONFIGURACIÓN del menú:
-// Terceros, Fincas, Clientes, Destinos, Contratos de clientes y Marcas).
-// Si otro rol intenta entrar por URL directa, lo manda a /bodegas
+// Mientras llegan las pantallas del usuario (/me, ver Layout.jsx) no se decide nada: así una sesión
+// guardada antes de los permisos por persona no rebota a otra pantalla al recargar.
+// Solo ADMIN: Usuarios, Perfiles y Bitácora (no se delegan).
 function RutaSoloAdmin({ children }) {
   const { user } = useAuth();
-  return user?.role === "ADMIN" ? children : <Navigate to={inicioPorRol(user?.role)} />;
+  if (!user?.pantallas) return null;
+  return esAdmin(user) ? children : <Navigate to={inicioDe(user)} replace />;
 }
-// 29/10/2026: deja entrar solo a los roles indicados; el resto va a su pantalla de inicio.
-// (Antes RutaNoBodeguero: con los roles EXPORTACIONES y COMERCIAL ya no basta con excluir al
-// BODEGUERO — cada área ve solo lo suyo.)
-function RutaRoles({ roles, children }) {
+// Deja entrar si el usuario tiene alguna de las pantallas indicadas (perfil + excepciones);
+// si no, lo manda a su pantalla de inicio.
+function RutaPantalla({ p, children }) {
   const { user } = useAuth();
-  return roles.includes(user?.role) ? children : <Navigate to={inicioPorRol(user?.role)} />;
+  if (!user?.pantallas) return null;
+  return puede(user, ...[].concat(p)) ? children : <Navigate to={inicioDe(user)} replace />;
 }
-const RutaInventario = ({ children }) => <RutaRoles roles={ROLES_INVENTARIO}>{children}</RutaRoles>;
-const RutaExportaciones = ({ children }) => <RutaRoles roles={ROLES_EXPORTACIONES}>{children}</RutaRoles>;
-const RutaComercial = ({ children }) => <RutaRoles roles={ROLES_COMERCIAL}>{children}</RutaRoles>;
-// Pantallas de bodega que también usa el BODEGUERO (stock, movimiento, despacho, historial, guía)
-const RutaBodega = ({ children }) => <RutaRoles roles={[...ROLES_INVENTARIO, "BODEGUERO"]}>{children}</RutaRoles>;
-// Protege la confirmación de transferencias — solo COORDINADOR_INVENTARIO y
-// ADMIN (mismo criterio del backend en pendingTransfers()/confirmTransfer()).
-function RutaSoloCoordinador({ children }) {
+// Inicio: la primera pantalla del menú que puede abrir
+function Inicio() {
   const { user } = useAuth();
-  return ["COORDINADOR_INVENTARIO", "ADMIN"].includes(user?.role)
-    ? children
-    : <Navigate to={inicioPorRol(user?.role)} />;
+  if (!user?.pantallas) return null;
+  return <Navigate to={inicioDe(user)} replace />;
 }
+function SinAcceso() {
+  return (
+    <div className="bg-white rounded-xl shadow p-8 text-center text-gray-600">
+      <p className="font-semibold text-gray-800 mb-1">Tu usuario todavía no tiene pantallas asignadas.</p>
+      <p className="text-sm">Pide al administrador que te asigne un perfil en CONFIGURACIÓN → Usuarios.</p>
+    </div>
+  );
+}
+const P = (p, el) => <RutaPantalla p={p}>{el}</RutaPantalla>;
+const A = (el) => <RutaSoloAdmin>{el}</RutaSoloAdmin>;
+// El detalle de una liquidación se abre desde Liquidar, Pagos y Notas de crédito
+const LIQ = ['liquidar', 'pagos', 'notas_credito'];
+
 export default function AppRouter() {
   return (
     <BrowserRouter>
@@ -110,76 +120,78 @@ export default function AppRouter() {
             <Layout />
           </RutaPrivada>
         }>
-          <Route index element={<RutaInventario><DashboardPage /></RutaInventario>} />
-          <Route path="dashboard" element={<RutaInventario><DashboardPage /></RutaInventario>} />
+          <Route index element={<Inicio />} />
+          <Route path="dashboard" element={P('dashboard', <DashboardPage />)} />
 
           {/* 29/10/2026: usuarios del sistema */}
-          <Route path="usuarios" element={<RutaSoloAdmin><UsersPage /></RutaSoloAdmin>} />
-          <Route path="bitacora" element={<RutaSoloAdmin><AuditLogPage /></RutaSoloAdmin>} />
+          <Route path="usuarios" element={A(<UsersPage />)} />
+          <Route path="perfiles" element={A(<ProfilesPage />)} />
+          <Route path="sin-acceso" element={<SinAcceso />} />
+          <Route path="bitacora" element={A(<AuditLogPage />)} />
 
           {/* ===== CONFIGURACIÓN — datos maestros, solo ADMIN ===== */}
-          <Route path="terceros" element={<RutaSoloAdmin><TercerosPage /></RutaSoloAdmin>} />
+          <Route path="terceros" element={P('terceros', <TercerosPage />)} />
           {/* 29/10/2026: misma pantalla de Terceros filtrada a COMERCIALIZADORA */}
-          <Route path="comercializadoras" element={<RutaSoloAdmin><TercerosPage key="comercializadoras" tipoFijo="COMERCIALIZADORA" /></RutaSoloAdmin>} />
-          <Route path="fincas" element={<RutaSoloAdmin><FincasPage /></RutaSoloAdmin>} />
+          <Route path="comercializadoras" element={P('comercializadoras', <TercerosPage key="comercializadoras" tipoFijo="COMERCIALIZADORA" />)} />
+          <Route path="fincas" element={P('fincas', <FincasPage />)} />
           {/* 27/10/2026: Clientes, Destinos y Contratos pasaron a CONFIGURACIÓN → RutaSoloAdmin
               (antes RutaNoBodeguero: un JEFE_BODEGA o COORDINADOR podía entrar por URL).
               La URL /exportaciones/... se mantiene para no romper enlaces. */}
-          <Route path="/exportaciones/clientes" element={<RutaSoloAdmin><CustomersPage /></RutaSoloAdmin>} />
-          <Route path="/exportaciones/destinos" element={<RutaSoloAdmin><DestinationsPage /></RutaSoloAdmin>} />
-          <Route path="/exportaciones/contratos-clientes" element={<RutaSoloAdmin><CustomerContractsPage /></RutaSoloAdmin>} />
+          <Route path="/exportaciones/clientes" element={P('clientes', <CustomersPage />)} />
+          <Route path="/exportaciones/destinos" element={P('destinos', <DestinationsPage />)} />
+          <Route path="/exportaciones/contratos-clientes" element={P('contratos_clientes', <CustomerContractsPage />)} />
           {/* 28/10/2026: Marcas pasó a CONFIGURACIÓN → RutaSoloAdmin (antes RutaNoBodeguero) */}
-          <Route path="/exportaciones/marcas" element={<RutaSoloAdmin><BrandsPage /></RutaSoloAdmin>} />
+          <Route path="/exportaciones/marcas" element={P('marcas', <BrandsPage />)} />
 
           {/* ===== Módulo Exportaciones (operación) ===== */}
-          <Route path="/exportaciones/pedidos" element={<RutaExportaciones><CustomerOrdersPage /></RutaExportaciones>} />
-          <Route path="/exportaciones/pedidos/nuevo" element={<RutaExportaciones><CustomerOrderFormPage /></RutaExportaciones>} />
-          <Route path="/exportaciones/pedidos/:id" element={<RutaExportaciones><CustomerOrderFormPage /></RutaExportaciones>} />
-          <Route path="/exportaciones/embarques" element={<RutaExportaciones><OrderDistributionsPage /></RutaExportaciones>} />
-          <Route path="/exportaciones/embarques/:id" element={<RutaExportaciones><OrderDistributionPage /></RutaExportaciones>} />
-          <Route path="/exportaciones/cierre" element={<RutaExportaciones><ShipmentClosingsPage /></RutaExportaciones>} />
-          <Route path="/exportaciones/cierre/:id" element={<RutaExportaciones><ShipmentClosingPage /></RutaExportaciones>} />
+          <Route path="/exportaciones/pedidos" element={P('pedido_semanal', <CustomerOrdersPage />)} />
+          <Route path="/exportaciones/pedidos/nuevo" element={P('pedido_semanal', <CustomerOrderFormPage />)} />
+          <Route path="/exportaciones/pedidos/:id" element={P('pedido_semanal', <CustomerOrderFormPage />)} />
+          <Route path="/exportaciones/embarques" element={P('distribucion_barcos', <OrderDistributionsPage />)} />
+          <Route path="/exportaciones/embarques/:id" element={P('distribucion_barcos', <OrderDistributionPage />)} />
+          <Route path="/exportaciones/cierre" element={P('cierre_embarque', <ShipmentClosingsPage />)} />
+          <Route path="/exportaciones/cierre/:id" element={P('cierre_embarque', <ShipmentClosingPage />)} />
 
           {/* ===== Módulo Comercial ===== */}
-          <Route path="/comercial/compras" element={<RutaComercial><PurchasesPage /></RutaComercial>} />
-          <Route path="/comercial/compras/:id" element={<RutaComercial><PurchaseAllocationPage /></RutaComercial>} />
-          <Route path="/comercial/precios-oficiales" element={<RutaComercial><OfficialPricesPage /></RutaComercial>} />
+          <Route path="/comercial/compras" element={P('compra_fruta', <PurchasesPage />)} />
+          <Route path="/comercial/compras/:id" element={P('compra_fruta', <PurchaseAllocationPage />)} />
+          <Route path="/comercial/precios-oficiales" element={P('precios_mag', <OfficialPricesPage />)} />
 
           {/* ===== Liquidación (dinero al productor) — solo ADMIN ===== */}
-          <Route path="/liquidacion" element={<RutaSoloAdmin><SettlementsPage /></RutaSoloAdmin>} />
-          <Route path="/liquidacion/tarjas" element={<RutaSoloAdmin><TalliesPage /></RutaSoloAdmin>} />
-          <Route path="/liquidacion/tarjas/:id" element={<RutaSoloAdmin><TallySheetPage /></RutaSoloAdmin>} />
-          <Route path="/liquidacion/anticipos" element={<RutaSoloAdmin><ProducerAdvancesPage /></RutaSoloAdmin>} />
-          <Route path="/liquidacion/notas-credito" element={<RutaSoloAdmin><CreditNotesPage /></RutaSoloAdmin>} />
-          <Route path="/liquidacion/pagos" element={<RutaSoloAdmin><SettlementHistoryPage /></RutaSoloAdmin>} />
-          <Route path="/liquidacion/cupo/:quotaId" element={<RutaSoloAdmin><SettlementFormPage /></RutaSoloAdmin>} />
-          <Route path="/liquidacion/:id" element={<RutaSoloAdmin><SettlementDetailPage /></RutaSoloAdmin>} />
-          <Route path="navieras" element={<RutaExportaciones><ShippingLinesPage /></RutaExportaciones>} />
-          <Route path="bookings" element={<RutaExportaciones><BookingsPage /></RutaExportaciones>} />
+          <Route path="/liquidacion" element={P('liquidar', <SettlementsPage />)} />
+          <Route path="/liquidacion/tarjas" element={P('tarjas', <TalliesPage />)} />
+          <Route path="/liquidacion/tarjas/:id" element={P('tarjas', <TallySheetPage />)} />
+          <Route path="/liquidacion/anticipos" element={P('anticipos', <ProducerAdvancesPage />)} />
+          <Route path="/liquidacion/notas-credito" element={P('notas_credito', <CreditNotesPage />)} />
+          <Route path="/liquidacion/pagos" element={P('pagos', <SettlementHistoryPage />)} />
+          <Route path="/liquidacion/cupo/:quotaId" element={P('liquidar', <SettlementFormPage />)} />
+          <Route path="/liquidacion/:id" element={P(LIQ, <SettlementDetailPage />)} />
+          <Route path="navieras" element={P('navieras', <ShippingLinesPage />)} />
+          <Route path="bookings" element={P('bookings', <BookingsPage />)} />
           {/* 29/10/2026: Puertos pasó a CONFIGURACIÓN → RutaSoloAdmin */}
-          <Route path="/exportaciones/puertos" element={<RutaSoloAdmin><PortsMasterDetailPage /></RutaSoloAdmin>} />
+          <Route path="/exportaciones/puertos" element={P('puertos', <PortsMasterDetailPage />)} />
 
           {/* ===== Módulo Inventario ===== */}
-          <Route path="bodegas" element={<RutaInventario><WarehousesPage /></RutaInventario>} />
+          <Route path="bodegas" element={P('bodegas', <WarehousesPage />)} />
           {/* Insumos: vista maestro-detalle (categorías + insumos combinados) */}
-          <Route path="/insumos-categorias" element={<RutaInventario><SuppliesMasterDetailPage /></RutaInventario>} />
-          <Route path="/motivos-movimiento" element={<RutaInventario><MovementReasonsPage /></RutaInventario>} />
+          <Route path="/insumos-categorias" element={P('insumos', <SuppliesMasterDetailPage />)} />
+          <Route path="/motivos-movimiento" element={P('motivos', <MovementReasonsPage />)} />
 
-          {/* Rutas que SÍ puede ver un BODEGUERO (RutaBodega: inventario + BODEGUERO).
+          {/* Pantallas del BODEGUERO (stock, movimiento, despacho, historial).
               El recibo/guía se abre al guardar, pero también por URL directa para reimprimir. */}
-          <Route path="/stock" element={<RutaBodega><InventoryStockPage /></RutaBodega>} />
-          <Route path="/movimientos/nuevo" element={<RutaBodega><InventoryMovementFormPage /></RutaBodega>} />
-          <Route path="/inventory-movements/:id/recibo" element={<RutaBodega><InventoryMovementReceiptPage /></RutaBodega>} />
-          <Route path="/despacho-materiales" element={<RutaBodega><MaterialDispatchPage /></RutaBodega>} />
+          <Route path="/stock" element={P('stock', <InventoryStockPage />)} />
+          <Route path="/movimientos/nuevo" element={P('nuevo_movimiento', <InventoryMovementFormPage />)} />
+          <Route path="/inventory-movements/:id/recibo" element={P(['nuevo_movimiento', 'despacho', 'historial_despachos', 'stock'], <InventoryMovementReceiptPage />)} />
+          <Route path="/despacho-materiales" element={P('despacho', <MaterialDispatchPage />)} />
           {/* Historial — el backend le filtra al BODEGUERO solo su bodega */}
-          <Route path="/despacho-materiales/historial" element={<RutaBodega><MaterialDispatchHistoryPage /></RutaBodega>} />
+          <Route path="/despacho-materiales/historial" element={P('historial_despachos', <MaterialDispatchHistoryPage />)} />
 
           {/* Bandeja de transferencias pendientes — solo Coordinador de Inventario y Admin */}
-          <Route path="/transferencias-pendientes" element={<RutaSoloCoordinador><PendingTransfersPage /></RutaSoloCoordinador>} />
+          <Route path="/transferencias-pendientes" element={P('transferencias', <PendingTransfersPage />)} />
 
-          <Route path="/ordenes-compra" element={<RutaInventario><PurchaseOrdersPage /></RutaInventario>} />
-          <Route path="/ordenes-compra/nueva" element={<RutaInventario><PurchaseOrderFormPage /></RutaInventario>} />
-          <Route path="/ordenes-compra/:id" element={<RutaInventario><PurchaseOrderDetailPage /></RutaInventario>} />
+          <Route path="/ordenes-compra" element={P('ordenes_compra', <PurchaseOrdersPage />)} />
+          <Route path="/ordenes-compra/nueva" element={P('ordenes_compra', <PurchaseOrderFormPage />)} />
+          <Route path="/ordenes-compra/:id" element={P('ordenes_compra', <PurchaseOrderDetailPage />)} />
 
         </Route>
         {/* Ruta no encontrada */}

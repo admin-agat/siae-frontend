@@ -12,7 +12,7 @@ import SelectBuscable from '../../components/common/SelectBuscable';
 
 // Nombre de cada tabla en el lenguaje del negocio
 const MODULOS = {
-  users: 'Usuarios', third_parties: 'Terceros', farms: 'Fincas', customers: 'Clientes', brands: 'Marcas',
+  users: 'Usuarios', profiles: 'Perfiles y permisos', third_parties: 'Terceros', farms: 'Fincas', customers: 'Clientes', brands: 'Marcas',
   customer_contracts: 'Contratos de clientes', contracts: 'Contratos MAG', warehouses: 'Bodegas',
   supplies: 'Insumos', supply_categories: 'Categorías de insumos', movement_reasons: 'Motivos de movimiento',
   material_recipes: 'Recetas de materiales', inventory_movements: 'Movimientos de inventario',

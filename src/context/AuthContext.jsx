@@ -25,6 +25,11 @@ export function AuthProvider({ children }) {
     localStorage.setItem("token", tokenData);
     localStorage.setItem("user", JSON.stringify(userData)); // Persistimos el usuario completo (incluye role)
   };
+  // 30/10/2026: refresca los datos del usuario (pantallas que el ADMIN le dio o quitó) sin volver a entrar
+  const actualizarUsuario = (userData) => {
+    setUser(userData);
+    localStorage.setItem("user", JSON.stringify(userData));
+  };
   const logout = () => {
     // 28/10/2026: se avisa al backend para que BORRE el token. Antes solo se borraba en el
     // navegador y el token seguía siendo válido en el servidor (había 21 tokens vivos).
@@ -36,7 +41,7 @@ export function AuthProvider({ children }) {
     localStorage.removeItem("user");
   };
   return (
-    <AuthContext.Provider value={{ user, token, login, logout }}>
+    <AuthContext.Provider value={{ user, token, login, logout, actualizarUsuario }}>
       {children}
     </AuthContext.Provider>
   );
