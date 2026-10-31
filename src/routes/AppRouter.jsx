@@ -21,6 +21,7 @@ const WarehousesPage = lazy(PAGINAS.WarehousesPage);
 const MovementReasonsPage = lazy(PAGINAS.MovementReasonsPage);
 const InventoryStockPage = lazy(PAGINAS.InventoryStockPage);
 const InventoryMovementFormPage = lazy(PAGINAS.InventoryMovementFormPage);
+const InventoryMovementsPage = lazy(PAGINAS.InventoryMovementsPage);
 const InventoryMovementReceiptPage = lazy(PAGINAS.InventoryMovementReceiptPage);
 const SuppliesMasterDetailPage = lazy(PAGINAS.SuppliesMasterDetailPage);
 const PurchaseOrderFormPage = lazy(PAGINAS.PurchaseOrderFormPage);
@@ -182,7 +183,8 @@ export default function AppRouter() {
               El recibo/guía se abre al guardar, pero también por URL directa para reimprimir. */}
           <Route path="/stock" element={P('stock', <InventoryStockPage />)} />
           <Route path="/movimientos/nuevo" element={P('nuevo_movimiento', <InventoryMovementFormPage />)} />
-          <Route path="/inventory-movements/:id/recibo" element={P(['nuevo_movimiento', 'despacho', 'historial_despachos', 'stock'], <InventoryMovementReceiptPage />)} />
+          <Route path="/movimientos" element={P('movimientos', <InventoryMovementsPage />)} />
+          <Route path="/inventory-movements/:id/recibo" element={P(['nuevo_movimiento', 'despacho', 'historial_despachos', 'stock', 'movimientos'], <InventoryMovementReceiptPage />)} />
           <Route path="/despacho-materiales" element={P('despacho', <MaterialDispatchPage />)} />
           {/* Historial — el backend le filtra al BODEGUERO solo su bodega */}
           <Route path="/despacho-materiales/historial" element={P('historial_despachos', <MaterialDispatchHistoryPage />)} />

@@ -13,6 +13,7 @@ export const PAGINAS = {
   MovementReasonsPage: () => import("../pages/inventario/MovementReasonsPage"),
   InventoryStockPage: () => import("../pages/inventario/InventoryStockPage"),
   InventoryMovementFormPage: () => import("../pages/inventario/InventoryMovementFormPage"),
+  InventoryMovementsPage: () => import("../pages/inventario/InventoryMovementsPage"),
   InventoryMovementReceiptPage: () => import("../pages/inventario/InventoryMovementReceiptPage"),
   SuppliesMasterDetailPage: () => import("../pages/inventario/SuppliesMasterDetailPage"),
   PurchaseOrderFormPage: () => import("../pages/inventario/PurchaseOrderFormPage"),

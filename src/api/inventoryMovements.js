@@ -60,3 +60,6 @@ export const confirmTransfer = (id, data) => {
 export const getReturnableQuotas = (thirdPartyId) => axios.get(`/inventory-movements/returnable-quotas/${thirdPartyId}`);
 
 export const cancelTransfer = (id) => axios.patch(`/inventory-movements/${id}/cancel-transfer`);
+
+// 31/10/2026 — Kárdex de un insumo en una bodega (warehouse_id, supply_id, date_from?, date_to?)
+export const getKardex = (params) => axios.get('/inventory/kardex', { params });

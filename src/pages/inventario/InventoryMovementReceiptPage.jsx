@@ -49,8 +49,10 @@ export default function InventoryMovementReceiptPage() {
 
     // NUEVO: a dónde vuelve el botón — un despacho regresa a su pantalla
     const esDespacho = Boolean(movement?.producer_quota_id);
-    const rutaVolver = esDespacho ? '/despacho-materiales' : '/stock';
-    const textoVolver = esDespacho ? 'Volver a Despacho de Materiales' : 'Volver a Stock';
+    // 31/10/2026: desde Movimientos y kárdex se vuelve allá (location.state.volver)
+    const desdeMovimientos = location.state?.volver === '/movimientos';
+    const rutaVolver = desdeMovimientos ? '/movimientos' : esDespacho ? '/despacho-materiales' : '/stock';
+    const textoVolver = desdeMovimientos ? 'Volver a Movimientos' : esDespacho ? 'Volver a Despacho de Materiales' : 'Volver a Stock';
 
     if (error || !movement) {
         return (

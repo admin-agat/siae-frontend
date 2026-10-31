@@ -84,7 +84,8 @@ Los usuarios se crean en **CONFIGURACIÓN → Usuarios** (solo ADMIN). Desactiva
 | Movimientos, Stock, Despacho, Órdenes de compra | solo roles de INVENTARIO (+ BODEGUERO) | según la fila de cada uno |
 | Bodegas, Insumos, Categorías, Motivos, Recetas | todos | todos menos BODEGUERO |
 | Movimientos: crear / transferir | todos (BODEGUERO solo en su bodega) | — |
-| Movimientos: editar / anular | — | ADMIN, COORDINADOR_INVENTARIO |
+| Movimientos: ver historial y kárdex | JEFE_BODEGA, COORDINADOR_INVENTARIO, ADMIN (todas) · BODEGUERO (solo su bodega) | — |
+| Movimientos: editar / anular | — | ADMIN, COORDINADOR_INVENTARIO (pantalla "Movimientos y kárdex") |
 | Transferencias: confirmar / cancelar | ADMIN, COORDINADOR_INVENTARIO (todas) · BODEGUERO de la bodega destino (pantalla "Recibir transferencias", solo confirmar) | ADMIN, COORDINADOR_INVENTARIO |
 | Órdenes de compra: crear / cancelar | todos | todos menos BODEGUERO |
 | Despacho de materiales: cupos de Comercial del productor | todos | — |
@@ -133,6 +134,7 @@ Leyenda: ✅ terminado · 🟡 parcial · ⏳ pendiente
 | Historial de despachos | ✅ | Reimprimir guía, anular. |
 | Transferencias pendientes | ✅ | Confirmar (con ajuste por pérdida/daño) o cancelar. El faltante se registra como MERMA/DAÑO en la bodega destino. |
 | Recibir transferencias | ✅ | (31/10/2026) El bodeguero de la bodega destino confirma lo que le llega; no cancela. |
+| Movimientos y kárdex | ✅ | (31/10/2026) Historial con filtros (bodega, tipo, insumo, fechas, texto), activos/anulados, recibo; kárdex por insumo y bodega con saldo inicial y acumulado. El Coordinador corrige (fecha, motivo, tercero, guía, referencia, líneas) o anula; transferencias, despachos y devoluciones de cupo siguen en su propia pantalla. |
 | Órdenes de compra | ✅ | Código OC-AAAA-NNNN, IVA 15/5/0, retenciones, cancelar/cerrar con motivo. "Ver todos los insumos"; al guardar, los insumos quedan vinculados al proveedor. |
 
 ### COMERCIAL y LIQUIDACIÓN
@@ -260,6 +262,14 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 ---
 
 ## 7. Historial de cambios
+
+### 31/10/2026 — Movimientos y kárdex
+- **Pantalla nueva `movimientos`** ("Movimientos y Kárdex" en el menú de Inventario, agregada a los perfiles COORDINADOR_INVENTARIO, JEFE_BODEGA y BODEGUERO por la migración `2026_10_31_000002`).
+- **Movimientos**: `GET /inventory-movements` ahora filtra por `estado` (activos/anulados/todos), `supply_id`, `movement_reason_id` y `q` (número, referencia, guía, tercero u OC); trae el total, la bodega destino y `bloqueo_edicion`/`bloqueo_anulacion` (por qué no se puede tocar aquí). Máximo 1000 filas.
+- **Corregir**: fecha, motivo (mismo tipo), tercero, guía, referencia y líneas. Tipo, bodega y OC no se cambian (anular y registrar de nuevo); si viene de una OC, los insumos quedan fijos. Usa el mismo `PUT` (no deja stock negativo). **Anular**: con diálogo; lo recibido vuelve a quedar pendiente en la OC.
+- **Kárdex**: `GET /inventory/kardex?warehouse_id&supply_id&date_from&date_to` → saldo inicial, entradas/salidas activas en orden, saldo acumulado y totales. El BODEGUERO siempre recibe su bodega.
+- El recibo abierto desde esta pantalla vuelve a ella ("Volver a Movimientos").
+- Pruebas: movimientos y kárdex 33 OK (API) + 13 OK (Chrome con COORDINADOR, JEFE y BODEGUERO); regresión inventario 111, permisos 50, exportaciones 69, bitácora 22, nota de crédito 36 = **321 OK**.
 
 ### 31/10/2026 — Prueba completa del inventario (local) y correcciones
 - **Prueba de punta a punta por la API (111 OK)** con los usuarios reales de bodega (Coordinador, Jefe de bodega, Bodeguero MACHALA y TRIUNFO), transacción revertida: insumos → OC (correlativo, IVA, permisos) → recepción parcial y total (OC PARCIAL/COMPLETA, no más de lo pendiente, costo actualizado) → cancelar/cerrar OC → transferencia MACHALA→TRIUNFO (en tránsito, recepción con faltante, cancelación) → despacho a productor por receta → devolución al cupo → mermas, saldo inicial → editar/anular → stock por bodega y permisos. **Recorrido en Chrome**: 31 pantallas con COORDINADOR, JEFE y BODEGUERO, sin errores.
@@ -449,7 +459,6 @@ Menú **LIQUIDACIÓN** (solo ADMIN): *Tarjas*, *Anticipos y préstamos*, *Liquid
 - [ ] Antiguos `ShipmentController`/`ShipmentLineController` (basados en SKU) en el backend: sin uso; el SKU aún no existe (la pantalla `ShipmentFormPage` ya se borró).
 - [ ] Confirmar si **GT** y **GRAND TRADE - JSC** son el mismo cliente (hoy son dos fichas distintas).
 
-- [ ] **Historial de movimientos (kárdex)**: no hay pantalla para ver, corregir o anular un movimiento de inventario (la API existe). Por decidir.
 - [ ] Órdenes de compra y Contífico: decidir si las OC se crean en el SIAE o se traen de Contífico (depende de si Compras trabaja allá y de lo que permita su API).
 
 ### Media

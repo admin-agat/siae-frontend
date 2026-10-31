@@ -8,7 +8,7 @@ import {
     ArrowLeftRight, ClipboardList, FileText, ShoppingCart,
     FileSignature, Clock, Building2, Tag, Ship, Container,
     CircleDollarSign, History, ClipboardCheck, HandCoins, Calculator,
-    MapPin, Globe, CheckCircle2, Truck, Anchor, ShoppingBasket, UserCog, Landmark, Receipt, ScrollText, ShieldCheck, PackageCheck
+    MapPin, Globe, CheckCircle2, Truck, Anchor, ShoppingBasket, UserCog, Landmark, Receipt, ScrollText, ShieldCheck, PackageCheck, ListOrdered
 } from "lucide-react";
 
 export const menuItems = [
@@ -51,6 +51,8 @@ export const menuItems = [
             { label: "Motivos de Movimiento", ruta: "/motivos-movimiento", icono: ArrowLeftRight, pantalla: "motivos" },
             { label: "Stock General", ruta: "/stock", icono: ClipboardList, pantalla: "stock" },
             { label: "Nuevo Movimiento", ruta: "/movimientos/nuevo", icono: FileText, pantalla: "nuevo_movimiento" },
+            // 31/10/2026: historial de movimientos y kárdex (corregir/anular: Coordinador)
+            { label: "Movimientos y Kárdex", ruta: "/movimientos", icono: ListOrdered, pantalla: "movimientos" },
             // Despacho a productor (receta/BOM por marca, cupo asignado)
             { label: "Despacho de Materiales", ruta: "/despacho-materiales", icono: Truck, pantalla: "despacho" },
             // Historial de despachos (quién retiró, valor, reimprimir guía, anular)
