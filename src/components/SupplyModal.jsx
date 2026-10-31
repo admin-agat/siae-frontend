@@ -19,6 +19,9 @@ const UNIDADES = ['CAJAS', 'FRASCOS', 'LIBRAS', 'ROLLOS', 'SACOS', 'UNIDAD'];
 
 export default function SupplyModal({ supply, onClose, onGuardado }) {
     const esEdicion = Boolean(supply?.id);
+    // El backend deja last_purchase_cost en null mientras el insumo no tenga compras
+    const costoPorCompras = esEdicion && supply?.last_purchase_cost != null;
+    const costoTexto = (c) => (c ? String(Number(c)) : ''); // "0.045600" → "0.0456"
 
     const [form, setForm] = useState({
         supply_category_id: '',
@@ -55,7 +58,7 @@ export default function SupplyModal({ supply, onClose, onGuardado }) {
             name: supply?.name || '',
             description: supply?.description || '',
             unit: supply?.unit || 'UNIDAD',
-            cost: supply?.cost || '',
+            cost: costoTexto(supply?.cost),
         };
     }, []);
 
@@ -102,7 +105,7 @@ export default function SupplyModal({ supply, onClose, onGuardado }) {
                 name: supply.name || '',
                 description: supply.description || '',
                 unit: supply.unit || 'UNIDAD',
-                cost: supply.cost || '',
+                cost: costoTexto(supply.cost),
             });
         }
     }, [supply]);
@@ -288,16 +291,29 @@ export default function SupplyModal({ supply, onClose, onGuardado }) {
 
             {/* Costo */}
             <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Costo unitario de referencia</label>
+                {/* 31/10/2026: con compras, el costo es el PROMEDIO ponderado de ellas (lo calcula el backend)
+                    y no se cambia a mano. Sin compras es un costo de referencia editable. */}
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                    {costoPorCompras ? 'Costo promedio' : 'Costo unitario de referencia'}
+                </label>
                 <input
                     name="cost"
                     type="text"
                     inputMode="decimal"
                     value={form.cost}
                     onChange={handleChange}
+                    readOnly={costoPorCompras}
                     placeholder="0.00"
-                    className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-blue-500"
+                    className={`w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 ${
+                        costoPorCompras ? 'bg-gray-200 text-gray-600 cursor-not-allowed' : 'bg-gray-100 text-gray-800'
+                    }`}
                 />
+                {costoPorCompras && (
+                    <p className="text-xs text-gray-500 mt-1">
+                        Promedio ponderado de las compras (última compra: ${Number(supply.last_purchase_cost)}).
+                        Si una compra tiene mal el precio, corrígela en Movimientos y kárdex.
+                    </p>
+                )}
             </div>
             </ModalShell>
 

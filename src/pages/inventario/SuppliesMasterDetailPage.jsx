@@ -383,7 +383,7 @@ export default function SuppliesMasterDetailPage() {
                                     <th className="text-left px-4 py-3">Código</th>
                                     <th className="text-left px-4 py-3">Insumo</th>
                                     <th className="text-left px-4 py-3">Unidad</th>
-                                    <th className="text-left px-4 py-3">Costo</th>
+                                    <th className="text-left px-4 py-3">Costo promedio</th>
                                     <th className="text-left px-4 py-3">Estado</th>
                                     <th className="text-left px-4 py-3">Acciones</th>
                                 </tr>
@@ -421,7 +421,7 @@ export default function SuppliesMasterDetailPage() {
                                             <td className="px-4 py-3 text-gray-600">{i.code}</td>
                                             <td className="px-4 py-3 font-medium">{i.name}</td>
                                             <td className="px-4 py-3">{i.unit}</td>
-                                            <td className="px-4 py-3">${Number(i.cost).toFixed(2)}</td>
+                                            <td className="px-4 py-3" title={i.last_purchase_cost != null ? `Última compra: $${Number(i.last_purchase_cost)}` : "Sin compras: costo de referencia"}>${Number(i.cost).toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</td>
                                             <td className="px-4 py-3">
                                                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                                                     i.status ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'

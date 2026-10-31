@@ -39,6 +39,8 @@ const CAMPO = 'w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 te
 const ETIQUETA = 'block text-xs font-semibold text-gray-600 mb-1';
 
 const num = (v, dec = 2) => Number(v || 0).toLocaleString('es-EC', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+// null = sin costo conocido (el insumo aún no tiene compras)
+const dinero = (v, dec = 2) => (v == null ? '—' : '$' + num(v, dec));
 const fechaCorta = (f) => (f ? String(f).slice(0, 10) : '');
 
 // Semana ISO (lunes-domingo), la misma "semana bananera" del formulario de movimientos
@@ -337,6 +339,12 @@ export default function InventoryMovementsPage() {
                                 <strong>{insumoKardex?.name}</strong>
                                 {insumoKardex?.unit && <span className="text-gray-400"> ({insumoKardex.unit})</span>}
                                 {' · '}{bodegas.find((b) => String(b.id) === String(kFiltros.warehouse_id))?.name}
+                                {!esBodeguero && kardex.costo_promedio_actual != null && (
+                                    <span className="float-right text-gray-500">
+                                        Costo promedio actual: <strong className="text-gray-800">{dinero(kardex.costo_promedio_actual, 4)}</strong>
+                                        {kardex.ultima_compra != null && <> · Última compra: {dinero(kardex.ultima_compra, 4)}</>}
+                                    </span>
+                                )}
                             </div>
                             <table className="w-full text-sm">
                                 <thead className="bg-primario text-white text-xs uppercase">
@@ -348,21 +356,33 @@ export default function InventoryMovementsPage() {
                                         <th className="text-right px-4 py-2">Entrada</th>
                                         <th className="text-right px-4 py-2">Salida</th>
                                         <th className="text-right px-4 py-2">Saldo</th>
-                                        {!esBodeguero && <th className="text-right px-4 py-2">Costo unit.</th>}
+                                        {!esBodeguero && (
+                                            <>
+                                                <th className="text-right px-4 py-2">Costo mov.</th>
+                                                <th className="text-right px-4 py-2" title="Costo promedio de la empresa después de este movimiento">Costo prom.</th>
+                                                <th className="text-right px-4 py-2">Valor saldo</th>
+                                            </>
+                                        )}
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr className="bg-gray-100 font-semibold">
                                         <td className="px-4 py-2" colSpan={6}>SALDO INICIAL{kFiltros.date_from ? ` al ${kFiltros.date_from}` : ''}</td>
                                         <td className="px-4 py-2 text-right">{num(kardex.saldo_inicial)}</td>
-                                        {!esBodeguero && <td />}
+                                        {!esBodeguero && (
+                                            <>
+                                                <td />
+                                                <td className="px-4 py-2 text-right">{dinero(kardex.costo_inicial, 4)}</td>
+                                                <td className="px-4 py-2 text-right">{dinero(kardex.valor_inicial)}</td>
+                                            </>
+                                        )}
                                     </tr>
                                     {kardex.filas.length === 0 && (
-                                        <tr><td colSpan={8} className="px-4 py-6 text-center text-gray-400">Sin movimientos en ese período</td></tr>
+                                        <tr><td colSpan={10} className="px-4 py-6 text-center text-gray-400">Sin movimientos en ese período</td></tr>
                                     )}
                                     {kardex.filas.map((f, i) => (
                                         <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                                            <td className="px-4 py-2">{fechaCorta(f.date)}</td>
+                                            <td className="px-4 py-2 whitespace-nowrap">{fechaCorta(f.date)}</td>
                                             <td className="px-4 py-2">
                                                 <button type="button" onClick={() => navigate(`/inventory-movements/${f.movement_id}/recibo`, { state: { volver: '/movimientos' } })} className="font-mono text-primario hover:underline">
                                                     {f.movement_id}
@@ -376,7 +396,13 @@ export default function InventoryMovementsPage() {
                                             <td className="px-4 py-2 text-right text-green-700">{f.entrada ? num(f.entrada) : ''}</td>
                                             <td className="px-4 py-2 text-right text-red-700">{f.salida ? num(f.salida) : ''}</td>
                                             <td className={`px-4 py-2 text-right font-semibold ${f.saldo < 0 ? 'text-red-600' : ''}`}>{num(f.saldo)}</td>
-                                            {!esBodeguero && <td className="px-4 py-2 text-right text-gray-500">${num(f.unit_cost, 4)}</td>}
+                                            {!esBodeguero && (
+                                                <>
+                                                    <td className="px-4 py-2 text-right text-gray-500">{dinero(f.unit_cost, 4)}</td>
+                                                    <td className="px-4 py-2 text-right">{dinero(f.costo_promedio, 4)}</td>
+                                                    <td className="px-4 py-2 text-right">{dinero(f.valor_saldo)}</td>
+                                                </>
+                                            )}
                                         </tr>
                                     ))}
                                 </tbody>
@@ -386,7 +412,13 @@ export default function InventoryMovementsPage() {
                                         <td className="px-4 py-2 text-right text-green-700">{num(kardex.total_entradas)}</td>
                                         <td className="px-4 py-2 text-right text-red-700">{num(kardex.total_salidas)}</td>
                                         <td className="px-4 py-2 text-right text-primario">{num(kardex.saldo_final)}</td>
-                                        {!esBodeguero && <td />}
+                                        {!esBodeguero && (
+                                            <>
+                                                <td />
+                                                <td />
+                                                <td className="px-4 py-2 text-right text-primario">{dinero(kardex.valor_final)}</td>
+                                            </>
+                                        )}
                                     </tr>
                                 </tfoot>
                             </table>

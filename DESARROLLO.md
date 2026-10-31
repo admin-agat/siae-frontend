@@ -263,6 +263,15 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 31/10/2026 — Costo promedio ponderado de los insumos
+- **Decidido**: costo **promedio ponderado por insumo, uno solo para toda la empresa**; al productor se le cobra el material **al costo**. Antes el costo era el último precio de compra (si quedaban 50 cartones a $1.10 y entraban 50 a $1.20, los 100 salían a $1.20).
+- **Cálculo** (`app/Services/CostoPromedio.php`), desde cero en orden de fecha cada vez que algo cambia: INGRESO con costo → promedio = (saldo × promedio + cantidad × costo neto de descuento) ÷ (saldo + cantidad); INGRESO sin costo y DEVOLUCIÓN entran al promedio vigente; EGRESO baja el saldo; transferencias (motivos 5 y 9) no cuentan. Así corregir o anular una compra vieja corrige el promedio. Se recalcula al crear/corregir/anular movimientos, confirmar transferencias (merma) y crear/anular despachos.
+- **Cada despacho guarda el costo del día** (no se recalcula después): el costo de materiales de cada nave/semana es el de cuando se despachó.
+- `supplies.last_purchase_cost`: último precio de compra, solo referencia (null = sin compras). Con compras, el costo del insumo **no se edita a mano** (422: se corrige la compra); sin compras sigue siendo un costo de referencia editable.
+- **Corregido — costos con fracción de centavo**: `inventory_movement_lines.unit_cost` guardaba 2 decimales y el modelo `Supply` leía el costo con 2 (el SACHET de $0.0456 se despachaba a $0.05 y las etiquetas de $0.0005 a $0.00). Ahora 6 decimales en costos (migración `2026_10_31_000003`, que además calcula el promedio de los insumos con compras).
+- **Kárdex valorizado**: costo del movimiento, costo promedio después de cada movimiento, valor del saldo (saldo de la bodega × promedio de la empresa), saldo inicial valorizado, promedio actual y última compra. Insumos: columna "Costo promedio" (la última compra en el tooltip).
+- Pruebas: costo promedio 23 OK (el ejemplo 1000 a $1.10 → salen 950 → 1000 a $1.20 = $1.195238; descuentos, transferencias con faltante, corregir/anular compras, edición manual, fracciones de centavo, kárdex). Regresión: inventario 111, movimientos 33, permisos 50, exportaciones 69, bitácora 22, nota de crédito 36 = **344 OK**; Chrome 14 OK.
+
 ### 31/10/2026 — Movimientos y kárdex
 - **Pantalla nueva `movimientos`** ("Movimientos y Kárdex" en el menú de Inventario, agregada a los perfiles COORDINADOR_INVENTARIO, JEFE_BODEGA y BODEGUERO por la migración `2026_10_31_000002`).
 - **Movimientos**: `GET /inventory-movements` ahora filtra por `estado` (activos/anulados/todos), `supply_id`, `movement_reason_id` y `q` (número, referencia, guía, tercero u OC); trae el total, la bodega destino y `bloqueo_edicion`/`bloqueo_anulacion` (por qué no se puede tocar aquí). Máximo 1000 filas.
