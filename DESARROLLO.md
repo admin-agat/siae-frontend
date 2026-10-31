@@ -85,7 +85,7 @@ Los usuarios se crean en **CONFIGURACIÓN → Usuarios** (solo ADMIN). Desactiva
 | Bodegas, Insumos, Categorías, Motivos, Recetas | todos | todos menos BODEGUERO |
 | Movimientos: crear / transferir | todos (BODEGUERO solo en su bodega) | — |
 | Movimientos: editar / anular | — | ADMIN, COORDINADOR_INVENTARIO |
-| Transferencias: confirmar / cancelar | ADMIN, COORDINADOR_INVENTARIO | ADMIN, COORDINADOR_INVENTARIO |
+| Transferencias: confirmar / cancelar | ADMIN, COORDINADOR_INVENTARIO (todas) · BODEGUERO de la bodega destino (pantalla "Recibir transferencias", solo confirmar) | ADMIN, COORDINADOR_INVENTARIO |
 | Órdenes de compra: crear / cancelar | todos | todos menos BODEGUERO |
 | Despacho de materiales: cupos de Comercial del productor | todos | — |
 
@@ -131,8 +131,9 @@ Leyenda: ✅ terminado · 🟡 parcial · ⏳ pendiente
 | Nuevo movimiento | ✅ | Ingreso por OC (recepción parcial), egreso, devolución, transferencia. |
 | Despacho de materiales | ✅ | Receta (BOM) por marca y cajas; guía de remisión. Desde el 28/10/2026 se despacha contra el **cupo de Comercial** (marca y cajas fijas). |
 | Historial de despachos | ✅ | Reimprimir guía, anular. |
-| Transferencias pendientes | ✅ | Confirmar (con ajuste por pérdida/daño) o cancelar. |
-| Órdenes de compra | ✅ | Código OC-AAAA-NNNN, IVA 15/5/0, retenciones, cancelar/cerrar con motivo. |
+| Transferencias pendientes | ✅ | Confirmar (con ajuste por pérdida/daño) o cancelar. El faltante se registra como MERMA/DAÑO en la bodega destino. |
+| Recibir transferencias | ✅ | (31/10/2026) El bodeguero de la bodega destino confirma lo que le llega; no cancela. |
+| Órdenes de compra | ✅ | Código OC-AAAA-NNNN, IVA 15/5/0, retenciones, cancelar/cerrar con motivo. "Ver todos los insumos"; al guardar, los insumos quedan vinculados al proveedor. |
 
 ### COMERCIAL y LIQUIDACIÓN
 | Pantalla | Estado | Notas |
@@ -259,6 +260,23 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 ---
 
 ## 7. Historial de cambios
+
+### 31/10/2026 — Prueba completa del inventario (local) y correcciones
+- **Prueba de punta a punta por la API (111 OK)** con los usuarios reales de bodega (Coordinador, Jefe de bodega, Bodeguero MACHALA y TRIUNFO), transacción revertida: insumos → OC (correlativo, IVA, permisos) → recepción parcial y total (OC PARCIAL/COMPLETA, no más de lo pendiente, costo actualizado) → cancelar/cerrar OC → transferencia MACHALA→TRIUNFO (en tránsito, recepción con faltante, cancelación) → despacho a productor por receta → devolución al cupo → mermas, saldo inicial → editar/anular → stock por bodega y permisos. **Recorrido en Chrome**: 31 pantallas con COORDINADOR, JEFE y BODEGUERO, sin errores.
+- **Corregido — editar un movimiento podía dejar stock negativo** (p. ej. bajar un ingreso cuyo material ya salió): ahora se rechaza si la edición deja negativa alguna bodega + insumo (antes solo lo impedía anular).
+- **Corregido — anular un despacho dejaba activa la devolución** del productor de esa semana (stock fantasma): ahora se anulan juntas las devoluciones que quedarían por encima de lo retirado, y se avisa. Si ese material devuelto ya volvió a salir, no se deja anular.
+- **Corregido — proveedor nuevo sin insumos en la OC** (la tabla `third_party_supplies` no la llenaba ninguna pantalla): el formulario de OC tiene "Ver todos los insumos" (automático si el proveedor no tiene ninguno) y al guardar la OC sus insumos quedan vinculados al proveedor.
+- **Corregido (API)**: una OC solo se recibe en SU bodega y con SU proveedor (si el ingreso no trae tercero, se toma el de la OC); un bodeguero solo abre el detalle de OC de su bodega; el motivo debe ser del mismo tipo que el movimiento; movimientos, transferencias y OC solo en bodegas activas (las pantallas ya no listan bodegas desactivadas).
+- **Decidido y hecho — recepción de transferencias por el bodeguero de destino**: pantalla nueva `recibir_transferencias` ("Recibir transferencias", agregada al perfil BODEGUERO por la migración `2026_10_31_000001`); solo ve y confirma lo que llega a su bodega; cancelar sigue siendo del Coordinador.
+- **Decidido y hecho — faltante de transferencia = MERMA**: al confirmar, el INGRESO entra con todo lo enviado y lo que no llegó sale como MERMA/DAÑO en la bodega destino (con la nota de recepción y valorizado al costo). Se puede confirmar 0 de un insumo.
+- Decidido: el Jefe de bodega sigue pudiendo registrar movimientos en cualquier bodega.
+- Total de pruebas automáticas: inventario 111 + exportaciones 69 + permisos 50 + bitácora 22 + nota de crédito 36 = **288 OK**.
+
+### 30/10/2026 — Prueba completa del módulo de exportaciones (local)
+- **Prueba de punta a punta por la API (69 OK)**: arma una semana completa desde cero (semana 50/2026, datos propios, transacción revertida) con los perfiles ADMIN, EXPORTACIONES y COMERCIAL: cliente + marca + contrato + puertos + destino + vendedores + precio MAG → navieras, barcos y bookings → pedido semanal (precio de contrato, línea sin contrato rechazada, semana repetida, edición) → distribución en 2 barcos (repartir de más se rechaza, versión 409) → compra de fruta (proveedor y marca ajena rechazados, CONTRATO + SPOT del mismo productor, 100 cajas de más permitidas) → cierre (booking repetido, contenedor sin cantidad, mayúsculas) → tarjas → liquidación con nota de crédito → pago (sin fecha / repetido rechazados) → factura y NC → anulación → bitácora → pedido anulado. En cada paso se verifica que los otros perfiles reciban 403.
+- **Recorrido en Chrome (41 pantallas)**: todas las de exportaciones, comercial, liquidación y configuración con ADMIN, EXPORTACIONES y COMERCIAL, formularios "Nuevo" abiertos y rutas de otros módulos bloqueadas. Sin errores de consola ni llamadas fallidas. (Recargando una pantalla tras otra se llega al límite de 120 peticiones/minuto por usuario → 429; con uso normal no ocurre.)
+- Corregido: contratos de clientes registraban un error de Carbon en el log por `after_or_equal:start_date` (ahora se compara a mano); Navieras usaba `$request->get()` (obsoleto en Symfony 7.4) → `input()`; mientras llegan los permisos (`/me`) las rutas muestran "Cargando..." en vez de quedar en blanco.
+- Total de pruebas automáticas: exportaciones 69 + permisos 50 + bitácora 22 + nota de crédito 36 = **177 OK**.
 
 ### 30/10/2026 — Permisos por persona (perfiles + excepciones)
 Pedido del usuario: las jefaturas trabajan con asistentes; dar permisos por persona. Decisiones: solo el ADMIN asigna; permiso **por pantalla** (la ve y hace todo en ella, o no la ve).
@@ -430,6 +448,9 @@ Menú **LIQUIDACIÓN** (solo ADMIN): *Tarjas*, *Anticipos y préstamos*, *Liquid
 - [ ] Decidir si se elimina el **cupo manual** del despacho (productores sin compra de Comercial) cuando todo el flujo esté en uso.
 - [ ] Antiguos `ShipmentController`/`ShipmentLineController` (basados en SKU) en el backend: sin uso; el SKU aún no existe (la pantalla `ShipmentFormPage` ya se borró).
 - [ ] Confirmar si **GT** y **GRAND TRADE - JSC** son el mismo cliente (hoy son dos fichas distintas).
+
+- [ ] **Historial de movimientos (kárdex)**: no hay pantalla para ver, corregir o anular un movimiento de inventario (la API existe). Por decidir.
+- [ ] Órdenes de compra y Contífico: decidir si las OC se crean en el SIAE o se traen de Contífico (depende de si Compras trabaja allá y de lo que permita su API).
 
 ### Media
 - [ ] Migrar a componentes comunes: Bookings, Navieras, Puertos, Bodegas, Motivos, Insumos, Órdenes de compra, Historial de despachos, ShippingLineModal.

@@ -134,6 +134,21 @@ export default function PurchaseOrderFormPage() {
     // muestra lo que ESE proveedor realmente vende (tabla third_party_supplies).
     // Si no hay proveedor elegido, la lista queda vacía (no tiene sentido
     // mostrar insumos de nadie todavía).
+    // 31/10/2026: "Ver todos los insumos" — para comprarle al proveedor algo que nunca le compramos
+    // (o a un proveedor nuevo, que aún no tiene insumos). Al guardar la OC, el backend deja esos
+    // insumos vinculados al proveedor y la próxima vez ya salen en su lista.
+    const [verTodos, setVerTodos] = useState(false);
+    const [proveedorSinInsumos, setProveedorSinInsumos] = useState(false);
+
+    // Al cambiar de proveedor, reiniciamos las líneas: un insumo ya
+    // seleccionado podría no pertenecer al proveedor nuevo.
+    const cambiarProveedor = (id) => {
+        setThirdPartyId(id);
+        setLineas([lineaVacia()]);
+        setVerTodos(false);
+        setProveedorSinInsumos(false);
+    };
+
     useEffect(() => {
         if (!thirdPartyId) {
             setInsumos([]);
@@ -141,18 +156,22 @@ export default function PurchaseOrderFormPage() {
         }
 
         setCargandoInsumos(true);
-        getSupplies('', null, thirdPartyId)
-            .then((res) => setInsumos(res.data))
+        getSupplies('', null, verTodos ? null : thirdPartyId)
+            .then((res) => {
+                // Proveedor sin insumos vinculados → se muestran todos directamente
+                if (!verTodos && res.data.length === 0) {
+                    setProveedorSinInsumos(true);
+                    setVerTodos(true);
+                    return;
+                }
+                setInsumos(res.data);
+            })
             .catch((err) => {
                 console.error('ERROR AL CARGAR INSUMOS DEL PROVEEDOR:', err);
                 setError('NO SE PUDIERON CARGAR LOS INSUMOS DE ESTE PROVEEDOR');
             })
             .finally(() => setCargandoInsumos(false));
-
-        // Al cambiar de proveedor, reiniciamos las líneas: un insumo ya
-        // seleccionado podría no pertenecer al proveedor nuevo.
-        setLineas([lineaVacia()]);
-    }, [thirdPartyId]);
+    }, [thirdPartyId, verTodos]);
 
     const cargarCatalogos = async () => {
         try {
@@ -160,7 +179,7 @@ export default function PurchaseOrderFormPage() {
                 getWarehouses(),
                 getThirdParties(),
             ]);
-            setBodegas(resBodegas.data);
+            setBodegas(resBodegas.data.filter((b) => b.status)); // 31/10/2026: solo bodegas activas
             // Solo proveedores — una OC siempre se le hace a un proveedor, nunca a un productor
             setProveedores(resTerceros.data.filter((t) => t.type === 'PROVEEDOR'));
         } catch (err) {
@@ -355,7 +374,7 @@ export default function PurchaseOrderFormPage() {
                             <label className="block text-sm font-semibold text-gray-700 mb-1.5">Proveedor *</label>
                             <SelectBuscable
                                 value={thirdPartyId}
-                                onChange={(e) => setThirdPartyId(e.target.value)}
+                                onChange={(e) => cambiarProveedor(e.target.value)}
                                 required
                                 className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none"
                             >
@@ -402,6 +421,25 @@ export default function PurchaseOrderFormPage() {
                     {!thirdPartyId && (
                         <div className="px-4 py-3 text-sm text-gray-500 bg-yellow-50 border-b border-yellow-100">
                             Elegí un proveedor arriba para ver los insumos que vende.
+                        </div>
+                    )}
+
+                    {thirdPartyId && (
+                        <div className="px-4 py-2 text-xs text-gray-600 border-b flex flex-wrap items-center gap-x-4 gap-y-1">
+                            <label className="flex items-center gap-1.5 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={verTodos}
+                                    disabled={proveedorSinInsumos}
+                                    onChange={(e) => setVerTodos(e.target.checked)}
+                                />
+                                Ver todos los insumos (no solo los de este proveedor)
+                            </label>
+                            {proveedorSinInsumos && (
+                                <span className="text-amber-700">
+                                    Este proveedor aún no tiene insumos: al guardar la orden, los que elijas quedarán como suyos.
+                                </span>
+                            )}
                         </div>
                     )}
 

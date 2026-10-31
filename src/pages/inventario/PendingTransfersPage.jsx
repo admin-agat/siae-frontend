@@ -9,7 +9,9 @@ import { useState, useEffect, Fragment } from 'react';
 import { CheckCircle2, ArrowRight, AlertTriangle, Eye, XCircle } from 'lucide-react';
 import { getPendingTransfers, confirmTransfer, cancelTransfer } from '../../api/inventoryMovements';
 
-export default function PendingTransfersPage() {
+// 31/10/2026: soloRecibir = vista del bodeguero de destino ("Recibir transferencias"):
+// solo confirma lo que llega a su bodega; cancelar sigue siendo del Coordinador.
+export default function PendingTransfersPage({ soloRecibir = false }) {
     const [transferencias, setTransferencias] = useState([]);
     const [cargando, setCargando] = useState(true);
     const [error, setError] = useState('');
@@ -194,9 +196,13 @@ export default function PendingTransfersPage() {
     return (
         <div className="max-w-full mx-auto p-6 space-y-6">
             <div className="mb-2">
-                <h1 className="text-2xl font-bold text-gray-800">Transferencias Pendientes</h1>
+                <h1 className="text-2xl font-bold text-gray-800">
+                    {soloRecibir ? 'Recibir transferencias' : 'Transferencias Pendientes'}
+                </h1>
                 <p className="text-gray-500 text-sm">
-                    Transferencias entre bodegas esperando confirmación de recepción
+                    {soloRecibir
+                        ? 'Material enviado a tu bodega: confirma lo que realmente llegó'
+                        : 'Transferencias entre bodegas esperando confirmación de recepción'}
                 </p>
             </div>
 
@@ -267,13 +273,15 @@ export default function PendingTransfersPage() {
                                                 Confirmar
                                             </button>
                                             {/* Cancelar transferencia — acción de peligro → rojo (red-600) de la paleta */}
-                                            <button
-                                                onClick={() => abrirCancelacionDirecta(t)}
-                                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition"
-                                            >
-                                                <XCircle size={14} />
-                                                Cancelar
-                                            </button>
+                                            {!soloRecibir && (
+                                                <button
+                                                    onClick={() => abrirCancelacionDirecta(t)}
+                                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition"
+                                                >
+                                                    <XCircle size={14} />
+                                                    Cancelar
+                                                </button>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>
@@ -377,14 +385,16 @@ export default function PendingTransfersPage() {
                                 </div>
                             </div>
                         ) : (
-                            <div className="flex justify-between items-center mt-5">
-                                <button
-                                    onClick={() => setConfirmandoCancelacion(true)}
-                                    className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-lg border border-red-600 text-red-600 hover:bg-red-50"
-                                >
-                                    <XCircle size={14} />
-                                    Cancelar transferencia
-                                </button>
+                            <div className={`flex items-center mt-5 ${soloRecibir ? 'justify-end' : 'justify-between'}`}>
+                                {!soloRecibir && (
+                                    <button
+                                        onClick={() => setConfirmandoCancelacion(true)}
+                                        className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-lg border border-red-600 text-red-600 hover:bg-red-50"
+                                    >
+                                        <XCircle size={14} />
+                                        Cancelar transferencia
+                                    </button>
+                                )}
                                 <button
                                     onClick={cerrarModalVer}
                                     className="px-4 py-2 text-sm font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
@@ -458,6 +468,14 @@ export default function PendingTransfersPage() {
                                 ))}
                             </tbody>
                         </table>
+
+                        {/* 31/10/2026: el faltante se registra solo como MERMA en la bodega destino */}
+                        {lineasModal.some(necesitaMotivo) && (
+                            <p className="text-amber-700 text-xs mt-2">
+                                Lo que no llegó se registrará como MERMA/DAÑO en{' '}
+                                {transferenciaAConfirmar.destination_warehouse?.name}, con el motivo que indiques.
+                            </p>
+                        )}
 
                         {errorModal && (
                             <p className="text-red-600 text-xs mt-2">{errorModal}</p>

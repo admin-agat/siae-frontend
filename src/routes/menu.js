@@ -8,7 +8,7 @@ import {
     ArrowLeftRight, ClipboardList, FileText, ShoppingCart,
     FileSignature, Clock, Building2, Tag, Ship, Container,
     CircleDollarSign, History, ClipboardCheck, HandCoins, Calculator,
-    MapPin, Globe, CheckCircle2, Truck, Anchor, ShoppingBasket, UserCog, Landmark, Receipt, ScrollText, ShieldCheck
+    MapPin, Globe, CheckCircle2, Truck, Anchor, ShoppingBasket, UserCog, Landmark, Receipt, ScrollText, ShieldCheck, PackageCheck
 } from "lucide-react";
 
 export const menuItems = [
@@ -56,6 +56,8 @@ export const menuItems = [
             // Historial de despachos (quién retiró, valor, reimprimir guía, anular)
             { label: "Historial de Despachos", ruta: "/despacho-materiales/historial", icono: History, pantalla: "historial_despachos" },
             { label: "Transferencias Pendientes", ruta: "/transferencias-pendientes", icono: CheckCircle2, pantalla: "transferencias" },
+            // 31/10/2026: el bodeguero confirma lo que llega a su bodega (misma pantalla, solo las suyas)
+            { label: "Recibir transferencias", ruta: "/recibir-transferencias", icono: PackageCheck, pantalla: "recibir_transferencias" },
             { label: "Órdenes de Compra", ruta: "/ordenes-compra", icono: ShoppingCart, pantalla: "ordenes_compra" },
         ],
     },

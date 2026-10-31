@@ -222,7 +222,7 @@ export default function InventoryMovementFormPage() {
                 getThirdParties(),
                 getSupplies(),
             ]);
-            setBodegas(resBodegas.data);
+            setBodegas(resBodegas.data.filter((b) => b.status)); // 31/10/2026: solo bodegas activas
             setTerceros(resTerceros.data);
             setInsumos(resInsumos.data);
         } catch (err) {

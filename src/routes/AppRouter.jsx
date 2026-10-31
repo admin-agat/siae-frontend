@@ -17,7 +17,7 @@ const TercerosPage = lazy(PAGINAS.TercerosPage);
 // 27/10/2026: CORREGIDO — antes importaba '../pages/fincas/fincasPage' (f minúscula).
 // En Windows funcionaba, pero en Linux (producción) rompe la pantalla si no coincide exacto.
 const FincasPage = lazy(PAGINAS.FincasPage);
-const WarehousesPage = lazy(PAGINAS.WarehousesPage);
+const WarehousesPage = lazy(PAGINAS.WarehousesPage); 
 const MovementReasonsPage = lazy(PAGINAS.MovementReasonsPage);
 const InventoryStockPage = lazy(PAGINAS.InventoryStockPage);
 const InventoryMovementFormPage = lazy(PAGINAS.InventoryMovementFormPage);
@@ -76,23 +76,24 @@ function RutaPrivada({ children }) {
 }
 // Mientras llegan las pantallas del usuario (/me, ver Layout.jsx) no se decide nada: así una sesión
 // guardada antes de los permisos por persona no rebota a otra pantalla al recargar.
+const ESPERANDO_PERMISOS = <div className="p-6 text-gray-400">Cargando...</div>;
 // Solo ADMIN: Usuarios, Perfiles y Bitácora (no se delegan).
 function RutaSoloAdmin({ children }) {
   const { user } = useAuth();
-  if (!user?.pantallas) return null;
+  if (!user?.pantallas) return ESPERANDO_PERMISOS;
   return esAdmin(user) ? children : <Navigate to={inicioDe(user)} replace />;
 }
 // Deja entrar si el usuario tiene alguna de las pantallas indicadas (perfil + excepciones);
 // si no, lo manda a su pantalla de inicio.
 function RutaPantalla({ p, children }) {
   const { user } = useAuth();
-  if (!user?.pantallas) return null;
+  if (!user?.pantallas) return ESPERANDO_PERMISOS;
   return puede(user, ...[].concat(p)) ? children : <Navigate to={inicioDe(user)} replace />;
 }
 // Inicio: la primera pantalla del menú que puede abrir
 function Inicio() {
   const { user } = useAuth();
-  if (!user?.pantallas) return null;
+  if (!user?.pantallas) return ESPERANDO_PERMISOS;
   return <Navigate to={inicioDe(user)} replace />;
 }
 function SinAcceso() {
@@ -188,6 +189,8 @@ export default function AppRouter() {
 
           {/* Bandeja de transferencias pendientes — solo Coordinador de Inventario y Admin */}
           <Route path="/transferencias-pendientes" element={P('transferencias', <PendingTransfersPage />)} />
+          {/* 31/10/2026: el bodeguero de destino confirma lo que le llega (el backend le muestra solo las de su bodega) */}
+          <Route path="/recibir-transferencias" element={P('recibir_transferencias', <PendingTransfersPage soloRecibir />)} />
 
           <Route path="/ordenes-compra" element={P('ordenes_compra', <PurchaseOrdersPage />)} />
           <Route path="/ordenes-compra/nueva" element={P('ordenes_compra', <PurchaseOrderFormPage />)} />
