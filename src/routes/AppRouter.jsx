@@ -33,6 +33,8 @@ const PortsMasterDetailPage = lazy(PAGINAS.PortsMasterDetailPage);
 const DestinationsPage = lazy(PAGINAS.DestinationsPage);
 // Contratos de CLIENTES — vigencia y precio por caja (no confundir con contratos MAGAP de productores)
 const CustomerContractsPage = lazy(PAGINAS.CustomerContractsPage);
+const VoyageCostsPage = lazy(PAGINAS.VoyageCostsPage);
+const VoyageProfitPage = lazy(PAGINAS.VoyageProfitPage);
 // Pedido semanal de Rusia (listado + formulario de líneas)
 const CustomerOrdersPage = lazy(PAGINAS.CustomerOrdersPage);
 const CustomerOrderFormPage = lazy(PAGINAS.CustomerOrderFormPage);
@@ -156,6 +158,9 @@ export default function AppRouter() {
 
           {/* ===== Módulo Comercial ===== */}
           <Route path="/comercial/compras" element={P('compra_fruta', <PurchasesPage />)} />
+          {/* 02/11/2026: Finanzas — gastos de cada viaje y ganancia por viaje */}
+          <Route path="/finanzas/gastos-viaje" element={P('gastos_viaje', <VoyageCostsPage />)} />
+          <Route path="/finanzas/ganancia-viaje" element={P('ganancia_viaje', <VoyageProfitPage />)} />
           <Route path="/comercial/compras/:id" element={P('compra_fruta', <PurchaseAllocationPage />)} />
           <Route path="/comercial/precios-oficiales" element={P('precios_mag', <OfficialPricesPage />)} />
 

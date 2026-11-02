@@ -27,6 +27,7 @@ const TIPOS_BASE = {
   JEFE_BODEGA: 'Inventario: no corrige movimientos ya registrados.',
   BODEGUERO: 'Opera solo SU bodega (se le asigna en Usuarios) y solo los motivos permitidos al bodeguero.',
   GERENCIA: 'Gerencia: el único tipo que puede ver el Dashboard.',
+  FINANZAS: 'Finanzas / Contabilidad: gastos de cada viaje y ganancia.',
 };
 
 const formularioVacio = { name: '', base_role: 'COMERCIAL', description: '', screens: [] };

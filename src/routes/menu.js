@@ -8,7 +8,7 @@ import {
     ArrowLeftRight, ClipboardList, FileText, ShoppingCart,
     FileSignature, Clock, Building2, Tag, Ship, Container,
     CircleDollarSign, History, ClipboardCheck, HandCoins, Calculator,
-    MapPin, CheckCircle2, Truck, Anchor, ShoppingBasket, UserCog, Landmark, Receipt, ScrollText, ShieldCheck, PackageCheck, ListOrdered
+    MapPin, CheckCircle2, Truck, Anchor, ShoppingBasket, UserCog, Landmark, Receipt, ScrollText, ShieldCheck, PackageCheck, ListOrdered, Wallet, TrendingUp
 } from "lucide-react";
 
 export const menuItems = [
@@ -73,6 +73,14 @@ export const menuItems = [
             { label: "Pagos e historial", ruta: "/liquidacion/pagos", icono: CircleDollarSign, pantalla: "pagos" },
             // 30/10/2026: notas de crédito por recibir de productores/comercializadoras
             { label: "Notas de crédito", ruta: "/liquidacion/notas-credito", icono: Receipt, pantalla: "notas_credito" },
+        ],
+    },
+    {
+        seccion: "FINANZAS",
+        // 02/11/2026: lo que cobra cada nave y los gastos de la exportación → ganancia por viaje
+        items: [
+            { label: "Gastos del viaje", ruta: "/finanzas/gastos-viaje", icono: Wallet, pantalla: "gastos_viaje" },
+            { label: "Ganancia por viaje", ruta: "/finanzas/ganancia-viaje", icono: TrendingUp, pantalla: "ganancia_viaje" },
         ],
     },
     // CONFIGURACIÓN — datos maestros. Usuarios, Perfiles y Bitácora son solo del ADMIN.
