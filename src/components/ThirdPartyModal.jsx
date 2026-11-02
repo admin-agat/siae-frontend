@@ -5,8 +5,11 @@
 //      (CUST-0000X) en el mismo guardado. Ya no se registra el cliente dos veces.
 //   2. Muestra el error REAL del backend (ej. "YA EXISTE UN CLIENTE CON EL NOMBRE GT").
 //   3. Nombre, identificación, zona, país y contacto en MAYÚSCULAS mientras se escribe.
+//   4. (02/11/2026) Se quitó la pantalla Clientes: las MARCAS del cliente se eligen aquí
+//      (GT → GLOBAL VILLAGE y DOÑA ELENA; una marca puede ser de varios clientes).
 import { useState, useEffect, useRef } from 'react';
 import { createThirdParty, updateThirdParty } from '../api/thirdParties';
+import { getBrands } from '../api/brands';
 import ModalShell from './common/ModalShell';
 import DialogoConfirmacion from './common/DialogoConfirmacion';
 import { getMensajeExito, getMensajeError } from '../utils/toastMessages';
@@ -24,6 +27,7 @@ const FORM_VACIO = {
     // Solo para CLIENTE (se guardan en la tabla customers)
     country: '',
     contact_name: '',
+    brand_ids: [],
 };
 
 // Campos que se guardan siempre en mayúsculas (email y teléfono NO)
@@ -54,9 +58,21 @@ export default function ThirdPartyModal({ thirdParty, onClose, onGuardado }) {
     const [error, setError] = useState('');
     const [mostrarExito, setMostrarExito] = useState(false);
     const [mostrarConfirmarSalida, setMostrarConfirmarSalida] = useState(false);
+    const [marcas, setMarcas] = useState([]);
 
-    // ¿El tipo elegido es CLIENTE? → muestra País y Contacto
+    // ¿El tipo elegido es CLIENTE? → muestra País, Contacto y Marcas
     const esCliente = form.type === 'CLIENTE';
+
+    // Marcas activas + las que el cliente ya tenga aunque estén inactivas (para poder quitarlas)
+    useEffect(() => {
+        const idsCliente = (thirdParty?.customer?.brands || []).map((b) => b.id);
+        getBrands()
+            .then((res) => {
+                const lista = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+                setMarcas(lista.filter((b) => b.status || idsCliente.includes(b.id)));
+            })
+            .catch(() => setMarcas([]));
+    }, [thirdParty]);
 
     useEffect(() => {
         // Se arma el estado campo por campo (no se copia el objeto entero,
@@ -73,6 +89,7 @@ export default function ThirdPartyModal({ thirdParty, onClose, onGuardado }) {
                 status: thirdParty.status ?? true,
                 country: thirdParty.customer?.country || '',
                 contact_name: thirdParty.customer?.contact_name || '',
+                brand_ids: (thirdParty.customer?.brands || []).map((b) => b.id).sort((a, b) => a - b),
             }
             : FORM_VACIO;
         setForm(datosIniciales);
@@ -85,6 +102,14 @@ export default function ThirdPartyModal({ thirdParty, onClose, onGuardado }) {
         if (CAMPOS_MAYUSCULAS.includes(name)) nuevoValor = nuevoValor.toUpperCase();
         setForm(prev => ({ ...prev, [name]: nuevoValor }));
     };
+
+    // Marca/desmarca una marca (ordenado, para comparar cambios sin guardar)
+    const toggleMarca = (id) => setForm((prev) => ({
+        ...prev,
+        brand_ids: prev.brand_ids.includes(id)
+            ? prev.brand_ids.filter((x) => x !== id)
+            : [...prev.brand_ids, id].sort((a, b) => a - b),
+    }));
 
     const hayCambiosSinGuardar = () => {
         if (!formInicialRef.current) return false;
@@ -115,6 +140,7 @@ export default function ThirdPartyModal({ thirdParty, onClose, onGuardado }) {
             delete payload.country;
             delete payload.contact_name;
             delete payload.address;
+            delete payload.brand_ids;
         }
 
         try {
@@ -199,6 +225,23 @@ export default function ThirdPartyModal({ thirdParty, onClose, onGuardado }) {
                                 <label className={labelClass}>Dirección</label>
                                 <input name="address" value={form.address} onChange={handleChange} maxLength={255}
                                     placeholder="Ej: MOSCÚ, CALLE TVERSKAYA 10" className={inputClass} />
+                            </div>
+                            <div className="col-span-2">
+                                <label className={labelClass}>Marcas del cliente</label>
+                                {marcas.length === 0 ? (
+                                    <p className="text-xs text-gray-500">No hay marcas registradas. Créalas en Configuración → Marcas y recetas.</p>
+                                ) : (
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {marcas.map((m) => (
+                                            <label key={m.id} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                                                <input type="checkbox" checked={form.brand_ids.includes(m.id)} onChange={() => toggleMarca(m.id)}
+                                                    className="w-4 h-4 accent-primario" />
+                                                {m.name}{!m.status && <span className="text-xs text-gray-400">(inactiva)</span>}
+                                            </label>
+                                        ))}
+                                    </div>
+                                )}
+                                <p className="text-xs text-gray-500 mt-1">Comercial elige entre estas marcas al comprar la fruta para este cliente.</p>
                             </div>
                             <p className="col-span-2 text-xs text-indigo-700">
                                 Al guardar se crea automáticamente su ficha de cliente (código CUST-0000X).

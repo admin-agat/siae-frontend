@@ -8,7 +8,7 @@ import {
     ArrowLeftRight, ClipboardList, FileText, ShoppingCart,
     FileSignature, Clock, Building2, Tag, Ship, Container,
     CircleDollarSign, History, ClipboardCheck, HandCoins, Calculator,
-    MapPin, Globe, CheckCircle2, Truck, Anchor, ShoppingBasket, UserCog, Landmark, Receipt, ScrollText, ShieldCheck, PackageCheck, ListOrdered
+    MapPin, CheckCircle2, Truck, Anchor, ShoppingBasket, UserCog, Landmark, Receipt, ScrollText, ShieldCheck, PackageCheck, ListOrdered
 } from "lucide-react";
 
 export const menuItems = [
@@ -89,7 +89,6 @@ export const menuItems = [
             { label: "Comercializadoras", ruta: "/comercializadoras", icono: Building2, pantalla: "comercializadoras" },
             { label: "Fincas", ruta: "/fincas", icono: Sprout, pantalla: "fincas" },
             // 27/10/2026: movidos desde EXPORTACIONES (las rutas /exportaciones/... no cambian)
-            { label: "Clientes", ruta: "/exportaciones/clientes", icono: Globe, pantalla: "clientes" },
             { label: "Destinos", ruta: "/exportaciones/destinos", icono: MapPin, pantalla: "destinos" },
             { label: "Contratos de clientes", ruta: "/exportaciones/contratos-clientes", icono: FileSignature, pantalla: "contratos_clientes" },
             // Marcas y su receta de materiales (BOM)

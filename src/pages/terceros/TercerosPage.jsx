@@ -113,6 +113,17 @@ export default function TercerosPage({ tipoFijo = null }) {
         { titulo: 'Tipo', render: (t) => t.type },
         { titulo: 'RUC / ID', render: (t) => t.identification },
         { titulo: 'Zona / País', render: (t) => zonaOPais(t) },
+        // 02/11/2026: marcas del cliente (antes en la pantalla Clientes, que se quitó)
+        {
+            titulo: 'Marcas',
+            render: (t) => (t.customer?.brands?.length ? (
+                <div className="flex flex-wrap gap-1">
+                    {t.customer.brands.map((b) => (
+                        <span key={b.id} className="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-700">{b.name}</span>
+                    ))}
+                </div>
+            ) : null),
+        },
         { titulo: 'Estado', render: (t) => <EstadoBadge activo={t.status} /> },
         {
             titulo: 'Acciones',
@@ -146,7 +157,7 @@ export default function TercerosPage({ tipoFijo = null }) {
                 cargando={loading}
                 nombreRegistros={textos?.registros || 'terceros'}
                 placeholderBusqueda="Buscar por nombre, RUC, zona o país..."
-                textosBusqueda={(t) => [t.name, t.identification, t.zone, paisDe(t)]}
+                textosBusqueda={(t) => [t.name, t.identification, t.zone, paisDe(t), ...(t.customer?.brands || []).map((b) => b.name)]}
             />
 
             {/* Modal crear/editar */}

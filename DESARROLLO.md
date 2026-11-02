@@ -76,7 +76,7 @@ Los usuarios se crean en **CONFIGURACIÓN → Usuarios** (solo ADMIN). Desactiva
 | Terceros | todos | ADMIN |
 | Fincas | ADMIN | ADMIN |
 | Marcas | todos (Despacho las necesita) | ADMIN |
-| Clientes, Destinos, Contratos de clientes | todos menos BODEGUERO | ADMIN |
+| Destinos, Contratos de clientes | todos menos BODEGUERO | ADMIN |
 | Pedido semanal, Distribución en barcos, Cierre de embarque, Navieras, Barcos, Bookings | todos menos BODEGUERO | ADMIN, JEFE_BODEGA, COORDINADOR_INVENTARIO, EXPORTACIONES |
 | Compra de fruta | todos menos BODEGUERO | ADMIN, COMERCIAL |
 | Puertos, Tarifas | todos menos BODEGUERO | ADMIN |
@@ -103,7 +103,7 @@ Leyenda: ✅ terminado · 🟡 parcial · ⏳ pendiente
 |---|---|---|
 | Terceros (maestro) | ✅ | Un solo formulario para productores, comercializadoras, proveedores y clientes. Baja lógica. |
 | Fincas | ✅ | Ligadas a un productor. |
-| Clientes | ✅ | Ficha del cliente del exterior (GT, RVI…). **Marcas del cliente** (varias). Columna "Contrato vigente". |
+| Clientes | — | **Quitada 02/11/2026**: repetía Terceros. La ficha del cliente (país, contacto, dirección, **marcas**, activo) se edita en Terceros. |
 | Destinos | ✅ | |
 | Contratos de clientes | ✅ | Precio por caja + vigencia + incoterm. No se permiten dos contratos activos que se crucen. |
 | Marcas | ✅ | Movida desde Exportaciones el 28/10/2026. |
@@ -262,6 +262,13 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 ---
 
 ## 7. Historial de cambios
+
+### 02/11/2026 — Se quitó la pantalla Clientes (todo en Terceros)
+- Clientes repetía Terceros. Lo único que tenía de más, las **marcas del cliente** (las usan Compra de fruta y Cierre de embarque), pasó al formulario de Terceros cuando el tipo es CLIENTE, y la lista de Terceros tiene columna Marcas (y se busca por marca).
+- `ThirdPartyController`: acepta `brand_ids` (solo se tocan si vienen; quedan en la bitácora con `Customer::sincronizarMarcas()`); desactivar/reactivar el tercero, o desmarcar "Tercero activo", también desactiva/reactiva su ficha de cliente (antes la ficha tenía su propio estado y solo se cambiaba en Clientes).
+- `/customers` queda solo de lectura (selectores); se quitaron sus rutas de crear/editar/desactivar, la pantalla `clientes` de `config/pantallas.php` y del menú, CustomersPage y CustomerModal. `/exportaciones/clientes` redirige a Terceros. Migración `2026_11_02_000003`: quien tenía Clientes pasa a tener Terceros.
+- La columna "Contrato vigente" que tenía Clientes se ve en Contratos de clientes.
+- Pruebas: clientes en Terceros 18 OK; exportaciones 69, bitácora 22, permisos 50, dashboard 14 (las de exportaciones y bitácora ahora asignan marcas desde Terceros).
 
 ### 02/11/2026 — Corregido: no se podían crear clientes en producción
 - Error `null value in column negotiation_type of relation customers`. Dos cambios hechos a mano en la base local nunca tuvieron migración: `customers.negotiation_type` opcional (desde 28/10 la modalidad va en cada línea) y la columna `third_parties.address`. Migración `2026_11_02_000002_corregir_clientes_produccion` (no hace nada donde ya están bien).

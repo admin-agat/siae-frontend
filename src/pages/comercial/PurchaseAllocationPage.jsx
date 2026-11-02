@@ -371,7 +371,7 @@ export default function PurchaseAllocationPage() {
           return (
             <div key={c.id} className="bg-white rounded-xl shadow p-4">
               <p className="font-bold text-gray-800">{c.name}</p>
-              <p className="text-xs text-gray-500 mb-2">Marcas: {c.brands.map((b) => b.name).join(', ') || <span className="text-red-600">SIN MARCAS (asígnalas en Configuración → Clientes)</span>}</p>
+              <p className="text-xs text-gray-500 mb-2">Marcas: {c.brands.map((b) => b.name).join(', ') || <span className="text-red-600">SIN MARCAS (asígnalas en Configuración → Terceros)</span>}</p>
               <div className="grid grid-cols-3 gap-2 text-center text-sm">
                 <div><p className="text-[10px] text-gray-500 uppercase">Pedido</p><p className="font-semibold">{formatoCajas(c.pedido)}</p></div>
                 <div><p className="text-[10px] text-gray-500 uppercase">Comprado</p><p className="font-semibold text-primario">{formatoCajas(comprado)}</p></div>

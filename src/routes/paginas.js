@@ -23,7 +23,6 @@ export const PAGINAS = {
   BookingsPage: () => import("../pages/exportaciones/BookingsPage"),
   PortsMasterDetailPage: () => import("../pages/exportaciones/PortsMasterDetailPage"),
   DestinationsPage: () => import("../pages/exportaciones/DestinationsPage"),
-  CustomersPage: () => import("../pages/exportaciones/CustomersPage"),
   CustomerContractsPage: () => import("../pages/exportaciones/CustomerContractsPage"),
   CustomerOrdersPage: () => import("../pages/exportaciones/CustomerOrdersPage"),
   CustomerOrderFormPage: () => import("../pages/exportaciones/CustomerOrderFormPage"),

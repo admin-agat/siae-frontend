@@ -31,7 +31,6 @@ const ShippingLinesPage = lazy(PAGINAS.ShippingLinesPage);
 const BookingsPage = lazy(PAGINAS.BookingsPage);
 const PortsMasterDetailPage = lazy(PAGINAS.PortsMasterDetailPage);
 const DestinationsPage = lazy(PAGINAS.DestinationsPage);
-const CustomersPage = lazy(PAGINAS.CustomersPage);
 // Contratos de CLIENTES — vigencia y precio por caja (no confundir con contratos MAGAP de productores)
 const CustomerContractsPage = lazy(PAGINAS.CustomerContractsPage);
 // Pedido semanal de Rusia (listado + formulario de líneas)
@@ -139,7 +138,8 @@ export default function AppRouter() {
           {/* 27/10/2026: Clientes, Destinos y Contratos pasaron a CONFIGURACIÓN → RutaSoloAdmin
               (antes RutaNoBodeguero: un JEFE_BODEGA o COORDINADOR podía entrar por URL).
               La URL /exportaciones/... se mantiene para no romper enlaces. */}
-          <Route path="/exportaciones/clientes" element={P('clientes', <CustomersPage />)} />
+          {/* 02/11/2026: la pantalla Clientes se quitó; los clientes se manejan en Terceros */}
+          <Route path="/exportaciones/clientes" element={<Navigate to="/terceros" replace />} />
           <Route path="/exportaciones/destinos" element={P('destinos', <DestinationsPage />)} />
           <Route path="/exportaciones/contratos-clientes" element={P('contratos_clientes', <CustomerContractsPage />)} />
           {/* 28/10/2026: Marcas pasó a CONFIGURACIÓN → RutaSoloAdmin (antes RutaNoBodeguero) */}
