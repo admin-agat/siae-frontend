@@ -263,6 +263,10 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 02/11/2026 — Corregido: no se podían crear clientes en producción
+- Error `null value in column negotiation_type of relation customers`. Dos cambios hechos a mano en la base local nunca tuvieron migración: `customers.negotiation_type` opcional (desde 28/10 la modalidad va en cada línea) y la columna `third_parties.address`. Migración `2026_11_02_000002_corregir_clientes_produccion` (no hace nada donde ya están bien).
+- Se comparó la estructura completa (columnas, tipos, nulos, defaults) local vs producción: esas dos eran las únicas diferencias.
+
 ### 02/11/2026 — Dashboard solo para gerencia
 - Tipo base nuevo **GERENCIA** (`Profile::TIPOS_BASE`, `users_role_check`) y perfil inicial **GERENCIA** con solo el Dashboard. Migración `2026_11_02_000001_dashboard_solo_gerencia`: quita el Dashboard de todos los demás perfiles y de las excepciones de cada persona.
 - `config/pantallas.php`: clave opcional `'solo' => [tipos base]` = únicos tipos que pueden tener esa pantalla. Se aplica en tres lugares: `User::pantallas()` la descarta para otros tipos (aunque esté en la base), Perfiles y Usuarios responden 422 si se intenta dar a otro tipo, y el catálogo `/screens` la devuelve para que el selector de pantallas no la ofrezca (`pantallasDelTipo` en menu.js). El ADMIN la ve igual.
