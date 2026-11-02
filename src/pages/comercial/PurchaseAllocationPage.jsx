@@ -196,6 +196,11 @@ export default function PurchaseAllocationPage() {
     setBloques((prev) => prev.map((b) => {
       if (b._key !== key) return b;
       const nuevo = { ...b, [campo]: valor };
+      // PACKED: todas sus compras pasan a SPOT (las liquidadas no se tocan; el backend avisa)
+      if (campo === 'presentation' && valor === 'PACKED') {
+        nuevo.purchases = b.purchases.map((c) => (c.liquidada || c.negotiation_type === 'SPOT' ? c
+          : { ...c, negotiation_type: 'SPOT', payment_scheme: PAGO_POR_TIPO.SPOT }));
+      }
       if (campo === 'customer_id') {
         const marcas = clientes.find((x) => String(x.id) === valor)?.brands || [];
         nuevo.brand_id = marcas.length === 1 ? String(marcas[0].id) : '';
@@ -586,7 +591,9 @@ export default function PurchaseAllocationPage() {
                               </td>
                               <td className="px-2 py-1.5 min-w-[80px]"><input type="number" min="0" step="0.01" value={c.real_price} onChange={cambiar('real_price')} disabled={c.liquidada} className={`${inputClass} text-right font-semibold`} /></td>
                               <td className="px-2 py-1.5 min-w-[130px]">
-                                <SelectBuscable value={c.negotiation_type} onChange={cambiar('negotiation_type')} disabled={c.liquidada} className={`${inputClass} text-xs mb-1`}>
+                                {/* 02/11/2026: la fruta PACKED se compra siempre SPOT (precio negociado con cada productor) */}
+                                <SelectBuscable value={c.negotiation_type} onChange={cambiar('negotiation_type')} disabled={c.liquidada || b.presentation === 'PACKED'}
+                                  title={b.presentation === 'PACKED' ? 'La fruta packed se compra siempre SPOT' : ''} className={`${inputClass} text-xs mb-1`}>
                                   <option value="CONTRATO">CONTRATO</option>
                                   <option value="SPOT">SPOT</option>
                                 </SelectBuscable>

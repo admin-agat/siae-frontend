@@ -263,6 +263,10 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 02/11/2026 — Fruta PACKED: compra siempre SPOT
+- Decidido: al productor la fruta packed (banda) se le compra **siempre SPOT**, sin contrato, aunque la venta a Rusia sea por contrato; el precio real se negocia con cada productor al comprar (unos $6.80, otros $7.00: no hay recargo fijo). Compra sin precio ya se permitía ("SIN PRECIO"); la liquidación exige el precio.
+- Compra de fruta: en un bloque PACKED el tipo queda fijo en SPOT (pago 80/20) y al pasar un bloque a PACKED sus compras pasan a SPOT; el backend rechaza CONTRATO en un bloque PACKED (422 "LA FRUTA PACKED SE COMPRA SIEMPRE SPOT"). Prueba en exportaciones (70 OK).
+
 ### 02/11/2026 — Cerrar sesión arriba a la derecha
 - Usuario, perfil y botón "Cerrar sesión" pasaron a la barra superior (Layout.jsx); se quitó el bloque del pie del menú (Sidebar.jsx), que además deja más espacio al menú.
 
