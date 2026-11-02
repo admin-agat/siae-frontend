@@ -9,6 +9,7 @@ import { X, Pencil, Printer } from 'lucide-react';
 import { getCustomerOrder } from '../api/customerOrders';
 import { useAuth } from '../context/AuthContext';
 import EstadoBadge from './common/EstadoBadge';
+import { marcaConPresentacion } from '../utils/presentaciones';
 
 const TIPOS_CARGA = {
     CAJA_BAJO_CUBIERTA: 'BAJO CUBIERTA',
@@ -105,7 +106,7 @@ export default function CustomerOrderViewModal({ pedidoId, onClose, onEditar, im
                         {lineas.map((l, i) => (
                             <tr key={l.id}>
                                 <td className={td}>{i + 1}</td>
-                                <td className={td}>{l.customer?.third_party?.name}</td>
+                                <td className={td}>{l.customer?.third_party?.name}{l.brand && ` · ${marcaConPresentacion(l.brand.name, l.presentation)}`}</td>
                                 <td className={td}>{TIPOS_CARGA[l.cargo_type] || l.cargo_type}{l.containers_qty ? ` (${l.containers_qty} × ${formatoCajas(l.boxes_per_container)})` : ''}</td>
                                 <td className={`${td} text-right font-semibold`}>{formatoCajas(l.boxes)}</td>
                                 <td className={td}>{l.incoterm}</td>
@@ -216,7 +217,10 @@ export default function CustomerOrderViewModal({ pedidoId, onClose, onEditar, im
                                         {lineas.map((l, i) => (
                                             <tr key={l.id} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
                                                 <td className="px-3 py-2 text-gray-400">{i + 1}</td>
-                                                <td className="px-3 py-2 font-medium">{l.customer?.third_party?.name}</td>
+                                                <td className="px-3 py-2 font-medium">
+                                                    {l.customer?.third_party?.name}
+                                                    {l.brand && <span className="block text-xs font-normal text-gray-500">{marcaConPresentacion(l.brand.name, l.presentation)}</span>}
+                                                </td>
                                                 <td className="px-3 py-2">
                                                     {TIPOS_CARGA[l.cargo_type] || l.cargo_type}
                                                     {l.containers_qty && (

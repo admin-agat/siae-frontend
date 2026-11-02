@@ -263,6 +263,18 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 02/11/2026 — Cerrar sesión arriba a la derecha
+- Usuario, perfil y botón "Cerrar sesión" pasaron a la barra superior (Layout.jsx); se quitó el bloque del pie del menú (Sidebar.jsx), que además deja más espacio al menú.
+
+### 02/11/2026 — Precio de venta por marca + presentación (convencional / packed)
+- **Decidido con el usuario**: el precio del contrato depende de la **marca y la presentación**; **PACKED** es una presentación de la misma marca (cinta/banda), no otra marca; el correo de Rusia trae marca y presentación en cada línea; un cliente puede tener contratos FOB y CFR/CIF a la vez (ya se podía: un contrato por incoterm).
+- Tabla nueva `customer_contract_prices` (contrato + marca + presentación + precio, única por las tres); se quitó `customer_contracts.box_price`. El contrato exige al menos un precio; las marcas deben ser del cliente; no se repite marca + presentación. Pantalla: tabla de precios con "Poner todas las marcas del cliente" (marca × presentación) y aviso de que lo SPOT no usa contrato.
+- `customer_order_lines.brand_id` y `presentation` (obligatorios en la API). Precio CONTRATO = el de esa marca + presentación en el contrato vigente; si el contrato no lo tiene, 422 "EL CONTRATO FOB DE X NO TIENE PRECIO PARA PALMS BANANAS PACKED". El precio congelado también se recalcula si cambia la marca o la presentación.
+- `purchase_blocks.presentation` (default CONVENCIONAL). Compra de fruta: selector de presentación en el bloque y, por cliente, lo pedido por marca + presentación contra lo comprado (`pedido_detalle`).
+- **PALMS CON BANDA** desactivada (es Palms PACKED). `Brand::PRESENTACIONES`, `src/utils/presentaciones.js`.
+- Migración `2026_11_02_000004`: contratos existentes copian su precio a cada marca del cliente en las dos presentaciones; líneas existentes toman la primera marca del cliente, convencional (producción no tenía contratos ni pedidos).
+- Pruebas: presentación 21 OK; exportaciones 69, notas de crédito 36, bitácora 22, permisos 50, clientes 18, inventario 111, movimientos 33, costo promedio 23; Chrome 9 OK. `prueba_cierre` ya no corre: depende de datos locales viejos (quiere quitar un barco que tiene compras); el cierre lo cubre exportaciones.
+
 ### 02/11/2026 — Se quitó la pantalla Clientes (todo en Terceros)
 - Clientes repetía Terceros. Lo único que tenía de más, las **marcas del cliente** (las usan Compra de fruta y Cierre de embarque), pasó al formulario de Terceros cuando el tipo es CLIENTE, y la lista de Terceros tiene columna Marcas (y se busca por marca).
 - `ThirdPartyController`: acepta `brand_ids` (solo se tocan si vienen; quedan en la bitácora con `Customer::sincronizarMarcas()`); desactivar/reactivar el tercero, o desmarcar "Tercero activo", también desactiva/reactiva su ficha de cliente (antes la ficha tenía su propio estado y solo se cambiaba en Clientes).

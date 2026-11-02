@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate, useLocation } from "react-router-dom";
-import { LogOut, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 // 30/10/2026: el menú y los permisos por pantalla están en routes/menu.js (los usa también AppRouter)
 import { menuDe } from "../routes/menu";
 
@@ -42,13 +42,9 @@ const obtenerRutaActiva = (pathname, grupos) => {
 };
 
 export default function Sidebar() {
-    const { user, logout } = useAuth();
+    const { user } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
-    const handleLogout = () => {
-        logout();
-        navigate("/login");
-    };
 
     // 30/10/2026: cada persona ve las pantallas de su perfil + sus excepciones (antes: filtro fijo por rol)
     const menuVisible = menuDe(user);
@@ -171,18 +167,7 @@ export default function Sidebar() {
                     );
                 })}
             </nav>
-            {/* Usuario y logout */}
-            <div className="px-4 py-4" style={{ borderTop: "1px solid #e5e7eb" }}>
-                <p className="text-sm font-semibold text-gray-700">{user?.name || "Usuario"}</p>
-                <p className="text-xs text-gray-400">{user?.email}</p>
-                {/* 30/10/2026: perfil de permisos */}
-                <p className="text-[11px] font-semibold text-primario mb-3">{user?.profile_name || user?.role?.replace("_", " ")}</p>
-                <button onClick={handleLogout} className="w-full text-sm py-2 rounded-lg text-red-500 hover:bg-red-50 transition flex items-center justify-center gap-2"
-                >
-                    <LogOut size={14} />
-                    Cerrar sesión
-                </button>
-            </div>
+            {/* 02/11/2026: usuario y "Cerrar sesión" pasaron a la barra superior (Layout.jsx) */}
         </div>
     );
 }

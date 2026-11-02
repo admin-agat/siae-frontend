@@ -1,15 +1,20 @@
 // Modal para crear/editar un Contrato de CLIENTE — src/components/CustomerContractModal.jsx
-// Un contrato = cliente + incoterm (opcional) + vigencia (inicio/fin) + precio por caja.
-// Usa ModalShell (mismas props que CustomerModal.jsx).
+// Un contrato = cliente + incoterm (opcional) + vigencia (inicio/fin) + precios por caja.
+// 02/11/2026: los precios van por MARCA + PRESENTACIÓN (CONVENCIONAL / PACKED). Todo lo que se
+// registra aquí es CONTRATO; lo SPOT no tiene contrato: se marca y se le pone precio en cada línea del pedido.
 import { useState, useEffect, useRef } from 'react';
+import { Plus, Trash2 } from 'lucide-react';
 import { createCustomerContract, updateCustomerContract } from '../api/customerContracts';
 import { getCustomers } from '../api/customers';
 import { getMensajeExito, getMensajeError } from '../utils/toastMessages';
 import ModalShell from './common/ModalShell';
 import SelectBuscable from './common/SelectBuscable';
+import { PRESENTACIONES } from '../utils/presentaciones';
 
 // Incoterms permitidos (vacío = aplica a cualquiera)
 const INCOTERMS = ['FOB', 'CFR', 'CIF'];
+
+const precioVacio = () => ({ brand_id: '', presentation: 'CONVENCIONAL', box_price: '' });
 
 const formVacio = {
     contract_number: '',
@@ -17,7 +22,7 @@ const formVacio = {
     incoterm: '',
     start_date: '',
     end_date: '',
-    box_price: '',
+    prices: [precioVacio()],
     weekly_boxes: '',
     comment: '',
 };
@@ -59,7 +64,9 @@ export default function CustomerContractModal({ contract, onClose, onGuardado })
             incoterm: contract?.incoterm || '',
             start_date: contract?.start_date || '',
             end_date: contract?.end_date || '',
-            box_price: contract?.box_price ?? '',
+            prices: contract?.prices?.length
+                ? contract.prices.map((p) => ({ brand_id: String(p.brand_id), presentation: p.presentation, box_price: String(p.box_price) }))
+                : [precioVacio()],
             weekly_boxes: contract?.weekly_boxes ?? '',
             comment: contract?.comment || '',
         };
@@ -86,14 +93,26 @@ export default function CustomerContractModal({ contract, onClose, onGuardado })
     };
 
     // Numérico: type="text" + regex (type="number" descarta caracteres antes del onChange)
-    const handleDecimalChange = (e) => {
-        const { name, value } = e.target;
-        if (/^\d*\.?\d{0,2}$/.test(value)) setForm((prev) => ({ ...prev, [name]: value }));
-    };
     const handleEnteroChange = (e) => {
         const { name, value } = e.target;
         if (/^\d*$/.test(value)) setForm((prev) => ({ ...prev, [name]: value }));
     };
+
+    // Precios por marca + presentación
+    const marcasCliente = clientes.find((c) => String(c.id) === String(form.customer_id))?.brands || [];
+    const cambiarPrecio = (i, campo, valor) => {
+        if (campo === 'box_price' && !/^\d*\.?\d{0,2}$/.test(valor)) return;
+        setForm((prev) => ({ ...prev, prices: prev.prices.map((p, j) => (j === i ? { ...p, [campo]: valor } : p)) }));
+    };
+    const agregarPrecio = () => setForm((prev) => ({ ...prev, prices: [...prev.prices, precioVacio()] }));
+    const quitarPrecio = (i) => setForm((prev) => ({ ...prev, prices: prev.prices.filter((_, j) => j !== i) }));
+    // Una fila por cada marca del cliente en las dos presentaciones (las que falten)
+    const completarPrecios = () => setForm((prev) => {
+        const llenas = prev.prices.filter((p) => p.brand_id);
+        const nuevas = marcasCliente.flatMap((m) => PRESENTACIONES.map((pr) => ({ brand_id: String(m.id), presentation: pr, box_price: '' })))
+            .filter((n) => !llenas.some((p) => p.brand_id === n.brand_id && p.presentation === n.presentation));
+        return { ...prev, prices: [...llenas, ...nuevas] };
+    });
 
     const handleCancelar = () => {
         if (hayCambiosSinGuardar()) {
@@ -111,7 +130,11 @@ export default function CustomerContractModal({ contract, onClose, onGuardado })
         if (!form.customer_id) return setError('DEBES SELECCIONAR UN CLIENTE');
         if (!form.start_date || !form.end_date) return setError('INGRESA LA FECHA DE INICIO Y DE FIN');
         if (form.end_date < form.start_date) return setError('LA FECHA DE FIN NO PUEDE SER ANTERIOR A LA DE INICIO');
-        if (form.box_price === '') return setError('INGRESA EL PRECIO POR CAJA');
+        if (form.prices.length === 0) return setError('AGREGA AL MENOS UN PRECIO (MARCA, PRESENTACIÓN Y PRECIO POR CAJA)');
+        const incompleto = form.prices.findIndex((p) => !p.brand_id || p.box_price === '');
+        if (incompleto >= 0) return setError(`PRECIO ${incompleto + 1}: FALTA LA MARCA O EL PRECIO POR CAJA`);
+        const claves = form.prices.map((p) => `${p.brand_id}|${p.presentation}`);
+        if (new Set(claves).size !== claves.length) return setError('HAY UNA MARCA CON LA MISMA PRESENTACIÓN REPETIDA EN LOS PRECIOS');
 
         setGuardando(true);
         const accion = esEdicion ? 'actualizar' : 'crear';
@@ -123,7 +146,7 @@ export default function CustomerContractModal({ contract, onClose, onGuardado })
                 incoterm: form.incoterm || null,
                 start_date: form.start_date,
                 end_date: form.end_date,
-                box_price: form.box_price,
+                prices: form.prices.map((p) => ({ brand_id: Number(p.brand_id), presentation: p.presentation, box_price: Number(p.box_price) })),
                 weekly_boxes: form.weekly_boxes === '' ? null : form.weekly_boxes,
                 comment: form.comment.trim() || null,
             };
@@ -154,6 +177,7 @@ export default function CustomerContractModal({ contract, onClose, onGuardado })
         <>
             <ModalShell
                 title={esEdicion ? 'Editar contrato' : 'Nuevo contrato'}
+                size="lg"
                 onClose={handleCancelar}
                 onSubmit={handleSubmit}
                 esEdicion={esEdicion}
@@ -201,11 +225,47 @@ export default function CustomerContractModal({ contract, onClose, onGuardado })
                         <input type="date" name="end_date" value={form.end_date} onChange={handleChange} required className={inputClass} />
                     </div>
 
-                    {/* Precio y volumen */}
-                    <div>
-                        <label className={labelClass}>Precio por caja (USD) *</label>
-                        <input type="text" inputMode="decimal" name="box_price" value={form.box_price}
-                            onChange={handleDecimalChange} placeholder="Ej: 7.50" className={inputClass} />
+                    {/* Precios por marca + presentación */}
+                    <div className="col-span-2">
+                        <div className="flex items-center justify-between mb-1.5">
+                            <label className="text-sm font-semibold text-gray-700">Precios por caja (USD) *</label>
+                            {marcasCliente.length > 0 && (
+                                <button type="button" onClick={completarPrecios} className="text-xs font-semibold text-primario hover:underline">
+                                    Poner todas las marcas del cliente
+                                </button>
+                            )}
+                        </div>
+                        {!form.customer_id ? (
+                            <p className="text-xs text-gray-500">Elige primero el cliente: los precios son por sus marcas.</p>
+                        ) : marcasCliente.length === 0 ? (
+                            <p className="text-xs text-red-600">Este cliente no tiene marcas. Asígnalas en Configuración → Terceros.</p>
+                        ) : (
+                            <div className="space-y-2">
+                                {form.prices.map((p, i) => (
+                                    <div key={i} className="grid grid-cols-[1fr_11.5rem_7rem_auto] gap-2 items-center">
+                                        <SelectBuscable value={p.brand_id} onChange={(e) => cambiarPrecio(i, 'brand_id', e.target.value)} className={inputClass}>
+                                            <option value="">MARCA...</option>
+                                            {marcasCliente.map((m) => <option key={m.id} value={String(m.id)}>{m.name}</option>)}
+                                        </SelectBuscable>
+                                        <SelectBuscable value={p.presentation} onChange={(e) => cambiarPrecio(i, 'presentation', e.target.value)} className={inputClass}>
+                                            {PRESENTACIONES.map((pr) => <option key={pr} value={pr}>{pr}</option>)}
+                                        </SelectBuscable>
+                                        <input type="text" inputMode="decimal" value={p.box_price} onChange={(e) => cambiarPrecio(i, 'box_price', e.target.value)}
+                                            placeholder="7.50" className={inputClass} />
+                                        <button type="button" onClick={() => quitarPrecio(i)} title="Quitar precio"
+                                            className="text-white p-1.5 rounded-lg bg-red-600 hover:bg-red-700">
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
+                                ))}
+                                <button type="button" onClick={agregarPrecio} className="flex items-center gap-1 text-sm font-semibold text-primario hover:underline">
+                                    <Plus size={16} /> Agregar precio
+                                </button>
+                            </div>
+                        )}
+                        <p className="text-xs text-gray-500 mt-1">
+                            Este precio se usa en las líneas del pedido marcadas como CONTRATO. Las SPOT no usan contrato: su precio se escribe en el pedido.
+                        </p>
                     </div>
                     <div>
                         <label className={labelClass}>Cajas por semana</label>

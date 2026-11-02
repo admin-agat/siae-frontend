@@ -3,13 +3,14 @@
 // Rutas: /exportaciones/pedidos/nuevo  y  /exportaciones/pedidos/:id
 //
 // Cada línea es un renglón del correo, ej.:
-//   "GT 10.800 FOB contenedor 9*1200 cinta packed Bolívar SPOT"
+//   "GT 10.800 PALMS FOB contenedor 9*1200 cinta packed Bolívar SPOT"
 // Reglas (el backend las vuelve a validar):
 //   - CONTRATO: el precio sale del contrato vigente del cliente el lunes de esa semana
 //     (mismo incoterm, o contrato sin incoterm). Aquí solo se MUESTRA; el backend lo copia y congela.
 //   - SPOT: el precio se escribe a mano y puede quedar vacío hasta que llegue.
 //   - Contenedor: las cajas se calculan solas = contenedores × cajas por contenedor.
-//   - La marca NO va aquí: la elige Comercial entre las marcas del cliente al comprar la fruta.
+//   - 02/11/2026: cada línea lleva MARCA (del cliente) y PRESENTACIÓN (CONVENCIONAL / PACKED), como
+//     vienen en el correo. El precio de CONTRATO es el de esa marca + presentación.
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Plus, Trash2, ArrowLeft, Save, X } from 'lucide-react';
@@ -21,6 +22,7 @@ import DialogoConfirmacion from '../../components/common/DialogoConfirmacion';
 import ToastFlotante from '../../components/common/ToastFlotante';
 import { getMensajeExito, getMensajeError } from '../../utils/toastMessages';
 import SelectBuscable from '../../components/common/SelectBuscable';
+import { PRESENTACIONES } from '../../utils/presentaciones';
 
 const INCOTERMS = ['FOB', 'CFR', 'CIF'];
 
@@ -62,6 +64,8 @@ const lineaVacia = () => ({
   _key: nuevaClave(),
   id: null,
   customer_id: '',
+  brand_id: '',
+  presentation: 'CONVENCIONAL',
   boxes: '',
   incoterm: 'FOB',
   cargo_type: 'CAJA_BAJO_CUBIERTA',
@@ -80,6 +84,8 @@ const lineaDesdeBackend = (l) => ({
   _key: `id-${l.id}`,
   id: l.id,
   customer_id: String(l.customer_id),
+  brand_id: l.brand_id ? String(l.brand_id) : '',
+  presentation: l.presentation || 'CONVENCIONAL',
   boxes: String(l.boxes),
   incoterm: l.incoterm,
   cargo_type: l.cargo_type,
@@ -92,6 +98,8 @@ const lineaDesdeBackend = (l) => ({
   notes: l.notes || '',
   _guardada: {
     customer_id: String(l.customer_id),
+    brand_id: l.brand_id ? String(l.brand_id) : '',
+    presentation: l.presentation,
     incoterm: l.incoterm,
     negotiation_type: l.negotiation_type,
     customer_contract_id: l.customer_contract_id,
@@ -179,6 +187,7 @@ export default function CustomerOrderFormPage() {
 
   const nombreCliente = (clienteId) =>
     clientes.find((c) => String(c.id) === String(clienteId))?.third_party?.name || '';
+  const marcasDe = (clienteId) => clientes.find((c) => String(c.id) === String(clienteId))?.brands || [];
 
   // Contrato vigente el lunes de la semana: primero el del mismo incoterm, luego uno sin incoterm
   const contratoVigente = (clienteId, incoterm) => {
@@ -198,12 +207,13 @@ export default function CustomerOrderFormPage() {
     const contrato = contratoVigente(l.customer_id, l.incoterm);
     const g = l._guardada;
     if (g && g.negotiation_type === 'CONTRATO' && g.customer_id === l.customer_id
+      && g.brand_id === l.brand_id && g.presentation === l.presentation
       && g.incoterm === l.incoterm && contrato && g.customer_contract_id === contrato.id) {
       return { precio: Number(g.box_price), origen: 'CONGELADO' };
     }
-    return contrato
-      ? { precio: Number(contrato.box_price), origen: 'CONTRATO' }
-      : { precio: null, origen: 'SIN_CONTRATO' };
+    if (!contrato) return { precio: null, origen: 'SIN_CONTRATO' };
+    const p = (contrato.prices || []).find((x) => String(x.brand_id) === String(l.brand_id) && x.presentation === l.presentation);
+    return p ? { precio: Number(p.box_price), origen: 'CONTRATO' } : { precio: null, origen: 'SIN_PRECIO' };
   };
 
   // Totales por cliente (en el orden en que aparecen en el pedido)
@@ -243,6 +253,11 @@ export default function CustomerOrderFormPage() {
     setLineas((prev) => prev.map((l) => {
       if (l._key !== key) return l;
       const nueva = { ...l, [campo]: valor };
+      // Al cambiar de cliente: si la marca no es suya se limpia; si tiene una sola, se pone sola
+      if (campo === 'customer_id') {
+        const marcas = marcasDe(valor);
+        if (!marcas.some((m) => String(m.id) === nueva.brand_id)) nueva.brand_id = marcas.length === 1 ? String(marcas[0].id) : '';
+      }
       // Contenedor: cajas = contenedores × cajas por contenedor
       if (esContenedor(nueva.cargo_type)) {
         const total = (Number(nueva.containers_qty) || 0) * (Number(nueva.boxes_per_container) || 0);
@@ -258,6 +273,8 @@ export default function CustomerOrderFormPage() {
     setLineas((prev) => [...prev, {
       ...lineaVacia(),
       customer_id: ultima?.customer_id || '',
+      brand_id: ultima?.brand_id || '',
+      presentation: ultima?.presentation || 'CONVENCIONAL',
       departure_port_id: ultima?.departure_port_id || '',
     }]);
   };
@@ -291,6 +308,7 @@ export default function CustomerOrderFormPage() {
     if (lineas.length === 0) faltan.push('EL PEDIDO DEBE TENER AL MENOS UNA LÍNEA.');
     lineas.forEach((l, i) => {
       if (!l.customer_id) faltan.push(`LÍNEA ${i + 1}: FALTA EL CLIENTE.`);
+      else if (!l.brand_id) faltan.push(`LÍNEA ${i + 1}: FALTA LA MARCA.`);
       if (!Number(l.boxes)) faltan.push(`LÍNEA ${i + 1}: FALTAN LAS CAJAS.`);
       if (!l.departure_port_id) faltan.push(`LÍNEA ${i + 1}: FALTA EL PUERTO DE SALIDA.`);
     });
@@ -308,6 +326,8 @@ export default function CustomerOrderFormPage() {
       lines: lineas.map((l) => ({
         id: l.id,
         customer_id: Number(l.customer_id),
+        brand_id: Number(l.brand_id),
+        presentation: l.presentation,
         boxes: Number(l.boxes),
         incoterm: l.incoterm,
         cargo_type: l.cargo_type,
@@ -398,18 +418,20 @@ export default function CustomerOrderFormPage() {
         </div>
         {lunes && (
           <p className="md:col-span-5 text-xs text-gray-500">
-            El precio de CONTRATO se toma del contrato vigente al lunes {lunes.split('-').reverse().join('/')} (inicio de la semana {cabecera.week}).
+            El precio de CONTRATO se toma del contrato vigente al lunes {lunes.split('-').reverse().join('/')} (inicio de la semana {cabecera.week}), según la marca y la presentación de cada línea.
           </p>
         )}
       </div>
 
       {/* Líneas del pedido */}
       <div className="bg-white rounded-xl shadow overflow-x-auto mb-4">
-        <table className="w-full text-sm min-w-[1250px]">
+        <table className="w-full text-sm min-w-[1550px]">
           <thead className="bg-primario text-white">
             <tr>
               <th className="text-left px-2 py-3 uppercase w-8">#</th>
               <th className="text-left px-2 py-3 uppercase">Cliente</th>
+              <th className="text-left px-2 py-3 uppercase">Marca</th>
+              <th className="text-left px-2 py-3 uppercase">Presentación</th>
               <th className="text-left px-2 py-3 uppercase">Modalidad</th>
               <th className="text-left px-2 py-3 uppercase">Cont. × cajas</th>
               <th className="text-left px-2 py-3 uppercase">Cajas</th>
@@ -435,6 +457,17 @@ export default function CustomerOrderFormPage() {
                       {clientes.map((c) => (
                         <option key={c.id} value={String(c.id)}>{c.third_party?.name}</option>
                       ))}
+                    </SelectBuscable>
+                  </td>
+                  <td className="px-2 py-2 min-w-[160px]">
+                    <SelectBuscable value={l.brand_id} onChange={(e) => cambiarLinea(l._key, 'brand_id', e.target.value)} className={inputClass} disabled={!l.customer_id}>
+                      <option value="">{l.customer_id && marcasDe(l.customer_id).length === 0 ? 'SIN MARCAS' : 'SELECCIONAR...'}</option>
+                      {marcasDe(l.customer_id).map((m) => <option key={m.id} value={String(m.id)}>{m.name}</option>)}
+                    </SelectBuscable>
+                  </td>
+                  <td className="px-2 py-2 min-w-[175px]">
+                    <SelectBuscable value={l.presentation} onChange={(e) => cambiarLinea(l._key, 'presentation', e.target.value)} className={inputClass}>
+                      {PRESENTACIONES.map((p) => <option key={p} value={p}>{p}</option>)}
                     </SelectBuscable>
                   </td>
                   <td className="px-2 py-2 min-w-[170px]">
@@ -483,6 +516,8 @@ export default function CustomerOrderFormPage() {
                       <input type="number" min="0" step="0.01" value={l.box_price} onChange={(e) => cambiarLinea(l._key, 'box_price', e.target.value)} placeholder="Pendiente" className={inputClass} />
                     ) : origen === 'SIN_CONTRATO' ? (
                       <span className="text-xs font-semibold text-red-600">{l.customer_id ? 'SIN CONTRATO VIGENTE' : '—'}</span>
+                    ) : origen === 'SIN_PRECIO' ? (
+                      <span className="text-xs font-semibold text-red-600">{l.brand_id ? 'EL CONTRATO NO TIENE PRECIO PARA ESTA MARCA Y PRESENTACIÓN' : 'ELIGE LA MARCA'}</span>
                     ) : (
                       <span className="text-sm font-semibold text-primario" title={origen === 'CONGELADO' ? 'Precio guardado en el pedido' : 'Precio del contrato vigente'}>
                         $ {formatoDinero(precio)}
@@ -494,7 +529,7 @@ export default function CustomerOrderFormPage() {
                     <input value={l.order_number} onChange={(e) => cambiarLinea(l._key, 'order_number', e.target.value.toUpperCase())} placeholder="Después" className={inputClass} />
                   </td>
                   <td className="px-2 py-2 min-w-[160px]">
-                    <input value={l.notes} onChange={(e) => cambiarLinea(l._key, 'notes', e.target.value.toUpperCase())} placeholder="Ej: CINTA PACKED" className={inputClass} />
+                    <input value={l.notes} onChange={(e) => cambiarLinea(l._key, 'notes', e.target.value.toUpperCase())} placeholder="Ej: CINTA AZUL" className={inputClass} />
                   </td>
                   <td className="px-2 py-2">
                     <button type="button" onClick={() => quitarLinea(l._key)} title="Quitar línea" className="text-white p-1.5 rounded-lg shadow-sm transition bg-red-600 hover:bg-red-700">

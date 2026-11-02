@@ -13,6 +13,7 @@ import EstadoBadge from '../../components/common/EstadoBadge';
 import AccionesFila from '../../components/common/AccionesFila';
 import DialogoConfirmacion from '../../components/common/DialogoConfirmacion';
 import ToastFlotante from '../../components/common/ToastFlotante';
+import { marcaConPresentacion } from '../../utils/presentaciones';
 
 // Calcula si el contrato está VIGENTE, VENCIDO o FUTURO según la fecha de hoy
 const estadoVigencia = (c) => {
@@ -74,7 +75,19 @@ export default function CustomerContractsPage() {
         { titulo: 'Incoterm', render: (c) => c.incoterm || 'TODOS' },
         { titulo: 'Inicio', render: (c) => formatoFecha(c.start_date) },
         { titulo: 'Fin', render: (c) => formatoFecha(c.end_date) },
-        { titulo: 'Precio caja', render: (c) => `$${Number(c.box_price).toFixed(2)}`, className: 'text-right' },
+        // 02/11/2026: precios por marca + presentación
+        {
+            titulo: 'Precios por caja',
+            render: (c) => (
+                <div className="space-y-0.5 text-xs whitespace-nowrap">
+                    {(c.prices || []).map((p) => (
+                        <div key={p.id}>
+                            {marcaConPresentacion(p.brand?.name, p.presentation)}: <span className="font-semibold">${Number(p.box_price).toFixed(2)}</span>
+                        </div>
+                    ))}
+                </div>
+            ),
+        },
         { titulo: 'Cajas/sem', render: (c) => (c.weekly_boxes ? Number(c.weekly_boxes).toLocaleString('es-EC') : null), className: 'text-right' },
         {
             titulo: 'Vigencia',

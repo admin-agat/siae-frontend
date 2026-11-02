@@ -1,5 +1,6 @@
 import { Suspense, useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
+import { LogOut } from 'lucide-react';
 import Sidebar from "./Sidebar";
 import { precargarPaginas } from '../routes/paginas';
 import { useAuth } from '../context/AuthContext';
@@ -7,7 +8,12 @@ import api from '../api/axios';
 
 // Layout principal — envuelve todas las páginas privadas
 export default function Layout() {
-  const { actualizarUsuario } = useAuth();
+  const { user, logout, actualizarUsuario } = useAuth();
+  const navigate = useNavigate();
+  const cerrarSesion = () => {
+    logout();
+    navigate('/login');
+  };
 
   // Descarga el resto de pantallas en segundo plano: cambiar de menú queda instantáneo
   useEffect(() => {
@@ -31,10 +37,26 @@ export default function Layout() {
           estira toda la página y corta botones/campos; con esto la tabla hace scroll en su caja */}
       <div className="flex-1 flex flex-col min-w-0">
 
-        {/* Navbar superior */}
-        <header className="px-6 py-4 flex items-center justify-between shadow-sm bg-primario">
-          <span className="text-white font-semibold text-sm">Sistema Integral AGAT-ECUAGREEN</span>
-          <span className="text-white text-sm opacity-80">v1.0</span>
+        {/* Navbar superior. 02/11/2026: usuario, perfil y "Cerrar sesión" arriba a la derecha (antes al pie del menú) */}
+        <header className="px-6 py-3 flex items-center justify-between gap-4 shadow-sm bg-primario">
+          <span className="text-white font-semibold text-sm">
+            Sistema Integral AGAT-ECUAGREEN <span className="font-normal opacity-70">v1.0</span>
+          </span>
+          <div className="flex items-center gap-4">
+            <div className="text-right leading-tight">
+              <p className="text-white text-sm font-semibold">{user?.name || 'Usuario'}</p>
+              <p className="text-white text-[11px] opacity-80">{user?.profile_name || user?.role?.replace('_', ' ')}</p>
+            </div>
+            <button
+              type="button"
+              onClick={cerrarSesion}
+              title={user?.email ? `Salir de ${user.email}` : 'Cerrar sesión'}
+              className="flex items-center gap-2 text-sm font-semibold text-white border border-white/50 rounded-lg px-3 py-1.5 hover:bg-white hover:text-primario transition"
+            >
+              <LogOut size={15} />
+              Cerrar sesión
+            </button>
+          </div>
         </header>
 
         {/* Página activa — Outlet renderiza la ruta hija */}

@@ -25,6 +25,7 @@ import { getPorts } from '../../api/ports';
 import DialogoConfirmacion from '../../components/common/DialogoConfirmacion';
 import ToastFlotante from '../../components/common/ToastFlotante';
 import SelectBuscable from '../../components/common/SelectBuscable';
+import { PRESENTACIONES, marcaConPresentacion } from '../../utils/presentaciones';
 
 const formatoCajas = (n) => Number(n || 0).toLocaleString('es-EC');
 const formatoDinero = (n) => Number(n || 0).toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -73,6 +74,7 @@ const bloqueDesdeBackend = (b) => ({
   id: b.id,
   shipment_id: texto(b.shipment_id),
   brand_id: texto(b.brand_id),
+  presentation: b.presentation || 'CONVENCIONAL',
   customer_id: texto(b.customer_id),
   cargo_mode: b.cargo_mode || 'BAJO_CUBIERTA',
   departure_port_id: texto(b.departure_port_id),
@@ -231,6 +233,7 @@ export default function PurchaseAllocationPage() {
       _key: key, id: null,
       shipment_id: barco ? String(barco.id) : '',
       brand_id: marcas.length === 1 ? String(marcas[0].id) : '',
+      presentation: 'CONVENCIONAL',
       customer_id: cliente ? String(cliente.id) : '',
       cargo_mode: 'BAJO_CUBIERTA',
       departure_port_id: texto(barco?.departure_port_id),
@@ -282,6 +285,7 @@ export default function PurchaseAllocationPage() {
           id: b.id,
           shipment_id: Number(b.shipment_id),
           brand_id: Number(b.brand_id),
+          presentation: b.presentation,
           customer_id: Number(b.customer_id),
           cargo_mode: b.cargo_mode,
           departure_port_id: num(b.departure_port_id),
@@ -381,6 +385,21 @@ export default function PurchaseAllocationPage() {
                 </div>
               </div>
               {falta < 0 && <p className="text-[11px] text-amber-800 mt-2">Se compran {formatoCajas(-falta)} cajas más de lo pedido.</p>}
+              {(c.pedido_detalle || []).length > 0 && (
+                <div className="mt-2 border-t pt-2 space-y-0.5">
+                  {c.pedido_detalle.map((d) => {
+                    const marca = c.brands.find((m) => m.id === d.brand_id);
+                    const compradoDe = bloques.filter((b) => b.customer_id === String(c.id) && b.brand_id === String(d.brand_id) && b.presentation === d.presentation)
+                      .reduce((s, b) => s + compradoBloque(b), 0);
+                    return (
+                      <p key={`${d.brand_id}|${d.presentation}`} className="flex justify-between text-xs text-gray-600">
+                        <span>{marca?.name || 'SIN MARCA'} {d.presentation}</span>
+                        <span><strong className="text-primario">{formatoCajas(compradoDe)}</strong> / {formatoCajas(d.cajas)}</span>
+                      </p>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           );
         })}
@@ -411,7 +430,7 @@ export default function PurchaseAllocationPage() {
                   {abierto ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
                 </button>
                 <div className="flex-1 min-w-[260px] cursor-pointer" onClick={() => setAbiertos((p) => ({ ...p, [b._key]: !abierto }))}>
-                  <p className="font-bold text-gray-800">{i + 1}. {marcaNombre} · {nombreBarco(b.shipment_id)}</p>
+                  <p className="font-bold text-gray-800">{i + 1}. {marcaConPresentacion(marcaNombre, b.presentation)} · {nombreBarco(b.shipment_id)}</p>
                   <p className="text-xs text-gray-600">
                     {clienteNombre} · {MODALIDADES[b.cargo_mode]} · {puertosSalida.find((p) => String(p.id) === b.departure_port_id)?.name || 'SIN PUERTO'} · {b.purchases.length} compras
                   </p>
@@ -432,7 +451,7 @@ export default function PurchaseAllocationPage() {
               {abierto && (
                 <div className="p-4">
                   {/* Datos del bloque */}
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-4 text-sm">
+                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-4 text-sm">
                     <div>
                       <label className={etiqueta}>Barco *</label>
                       <SelectBuscable value={b.shipment_id} onChange={(e) => cambiarBloque(b._key, 'shipment_id', e.target.value)} className={inputClass}>
@@ -452,6 +471,12 @@ export default function PurchaseAllocationPage() {
                       <SelectBuscable value={b.brand_id} onChange={(e) => cambiarBloque(b._key, 'brand_id', e.target.value)} disabled={tieneBloqueadas || !b.customer_id} className={inputClass}>
                         <option value="">{marcas.length ? 'SELECCIONAR...' : 'SIN MARCAS'}</option>
                         {marcas.map((m) => <option key={m.id} value={String(m.id)}>{m.name}</option>)}
+                      </SelectBuscable>
+                    </div>
+                    <div>
+                      <label className={etiqueta}>Presentación *</label>
+                      <SelectBuscable value={b.presentation} onChange={(e) => cambiarBloque(b._key, 'presentation', e.target.value)} className={inputClass}>
+                        {PRESENTACIONES.map((p) => <option key={p} value={p}>{p}</option>)}
                       </SelectBuscable>
                     </div>
                     <div>
