@@ -134,8 +134,8 @@ export default function AppRouter() {
 
           {/* ===== CONFIGURACIÓN — datos maestros, solo ADMIN ===== */}
           <Route path="terceros" element={P('terceros', <TercerosPage />)} />
-          {/* 29/10/2026: misma pantalla de Terceros filtrada a COMERCIALIZADORA */}
-          <Route path="comercializadoras" element={P('comercializadoras', <TercerosPage key="comercializadoras" tipoFijo="COMERCIALIZADORA" />)} />
+          {/* 02/11/2026: la pantalla Comercializadoras se quitó (repetía Terceros): la ruta vieja abre Terceros filtrado */}
+          <Route path="comercializadoras" element={<Navigate to="/terceros?tipo=COMERCIALIZADORA" replace />} />
           <Route path="fincas" element={P('fincas', <FincasPage />)} />
           {/* 27/10/2026: Clientes, Destinos y Contratos pasaron a CONFIGURACIÓN → RutaSoloAdmin
               (antes RutaNoBodeguero: un JEFE_BODEGA o COORDINADOR podía entrar por URL).

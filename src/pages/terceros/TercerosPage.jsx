@@ -11,7 +11,11 @@
 //  - Migrada por completo a los componentes comunes (EncabezadoPagina, TablaEstandar,
 //    EstadoBadge, AccionesFila, DialogoConfirmacion, ToastFlotante) con la paleta oficial.
 //  - Ahora tiene pestañas ACTIVOS / INACTIVOS / TODOS (vienen con TablaEstandar).
+// CAMBIOS 02/11/2026:
+//  - Se quitó la pantalla Comercializadoras (repetía esta): ahora hay un filtro por tipo con cantidades.
+//    /terceros?tipo=COMERCIALIZADORA abre ya filtrado (a eso redirige la ruta vieja /comercializadoras).
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { getThirdParties, deactivateThirdParty, reactivateThirdParty } from '../../api/thirdParties';
 import ThirdPartyModal from '../../components/ThirdPartyModal';
 import EncabezadoPagina from '../../components/common/EncabezadoPagina';
@@ -35,13 +39,19 @@ const zonaOPais = (t) => {
     return t.zone || '—';
 };
 
-// Títulos cuando la pantalla se abre filtrada por un tipo (29/10/2026: menú CONFIGURACIÓN →
-// Comercializadoras usa esta misma pantalla, así hay un solo maestro de terceros)
-const TITULOS_TIPO = {
-    COMERCIALIZADORA: { titulo: 'Comercializadoras', subtitulo: 'Comerciales y asociaciones a las que se les compra fruta', boton: 'Nueva comercializadora', registros: 'comercializadoras' },
-};
+// Filtro por tipo (02/11/2026). Las cantidades cuentan solo los activos.
+const TIPOS = [
+    { clave: '', etiqueta: 'Todos' },
+    { clave: 'PRODUCTOR', etiqueta: 'Productores' },
+    { clave: 'COMERCIALIZADORA', etiqueta: 'Comercializadoras' },
+    { clave: 'PROVEEDOR', etiqueta: 'Proveedores' },
+    { clave: 'CLIENTE', etiqueta: 'Clientes' },
+];
 
-export default function TercerosPage({ tipoFijo = null }) {
+export default function TercerosPage() {
+    const [params, setParams] = useSearchParams();
+    const tipo = TIPOS.some((t) => t.clave === params.get('tipo')) ? params.get('tipo') : '';
+    const cambiarTipo = (clave) => setParams(clave ? { tipo: clave } : {}, { replace: true });
     const [terceros, setTerceros] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
@@ -99,13 +109,13 @@ export default function TercerosPage({ tipoFijo = null }) {
     };
 
     const handleNuevo = () => {
-        // En la vista filtrada, el nuevo tercero ya viene con ese tipo
-        setTerceroEdit(tipoFijo ? { type: tipoFijo } : null);
+        // Con un tipo elegido en el filtro, el nuevo tercero ya viene con ese tipo
+        setTerceroEdit(tipo ? { type: tipo } : null);
         setShowModal(true);
     };
 
-    const textos = TITULOS_TIPO[tipoFijo];
-    const tercerosVisibles = tipoFijo ? terceros.filter((t) => t.type === tipoFijo) : terceros;
+    const tercerosVisibles = tipo ? terceros.filter((t) => t.type === tipo) : terceros;
+    const activosDe = (clave) => terceros.filter((t) => t.status && (!clave || t.type === clave)).length;
 
     const columnas = [
         { titulo: 'Nombre', render: (t) => t.name, className: 'font-medium' },
@@ -145,17 +155,32 @@ export default function TercerosPage({ tipoFijo = null }) {
             <ToastFlotante toast={toast} onCerrar={() => setToast(null)} />
 
             <EncabezadoPagina
-                titulo={textos?.titulo || 'Terceros'}
-                subtitulo={textos?.subtitulo || 'Productores, comercializadoras y clientes'}
-                textoBoton={textos?.boton || 'Nuevo tercero'}
+                titulo="Terceros"
+                subtitulo="Productores, comercializadoras, proveedores y clientes"
+                textoBoton="Nuevo tercero"
                 onNuevo={handleNuevo}
             />
+
+            <div className="flex flex-wrap gap-2 mb-4">
+                {TIPOS.map((t) => (
+                    <button
+                        key={t.clave || 'todos'}
+                        type="button"
+                        onClick={() => cambiarTipo(t.clave)}
+                        className={`px-3 py-1.5 rounded-full text-sm font-semibold border transition ${
+                            tipo === t.clave ? 'bg-primario text-white border-primario' : 'bg-white text-gray-600 hover:bg-gray-100'
+                        }`}
+                    >
+                        {t.etiqueta} <span className={tipo === t.clave ? 'opacity-80' : 'text-gray-400'}>({activosDe(t.clave)})</span>
+                    </button>
+                ))}
+            </div>
 
             <TablaEstandar
                 columnas={columnas}
                 datos={tercerosVisibles}
                 cargando={loading}
-                nombreRegistros={textos?.registros || 'terceros'}
+                nombreRegistros={tipo ? TIPOS.find((t) => t.clave === tipo).etiqueta.toLowerCase() : 'terceros'}
                 placeholderBusqueda="Buscar por nombre, RUC, zona o país..."
                 textosBusqueda={(t) => [t.name, t.identification, t.zone, paisDe(t), ...(t.customer?.brands || []).map((b) => b.name)]}
             />

@@ -52,7 +52,7 @@ export default function TablaEstandar({
 }) {
     const [busqueda, setBusqueda] = useState('');
     const [pestana, setPestana] = useState('ACTIVOS');
-    const [paginaActual, setPaginaActual] = useState(1);
+    const [paginaGuardada, setPaginaActual] = useState(1);
     const [filaSeleccionada, setFilaSeleccionada] = useState(null);
 
     // Si cambia la búsqueda o la pestaña, se vuelve a la página 1
@@ -79,6 +79,9 @@ export default function TablaEstandar({
 
     // 3) Paginación
     const totalPaginas = Math.max(1, Math.ceil(filtrados.length / porPagina));
+    // 02/11/2026: si la página filtra los datos por fuera (ej. tipo de tercero) y quedan menos páginas,
+    // se muestra la última que existe en vez de una tabla vacía
+    const paginaActual = Math.min(paginaGuardada, totalPaginas);
     const inicio = (paginaActual - 1) * porPagina;
     const filasPagina = filtrados.slice(inicio, inicio + porPagina);
 
@@ -183,7 +186,7 @@ export default function TablaEstandar({
                         <div className="flex items-center gap-2">
                             <button
                                 type="button"
-                                onClick={() => setPaginaActual((p) => Math.max(1, p - 1))}
+                                onClick={() => setPaginaActual(Math.max(1, paginaActual - 1))}
                                 disabled={paginaActual === 1}
                                 className="flex items-center gap-1 px-3 py-1.5 rounded-lg border text-sm text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100"
                             >
@@ -195,7 +198,7 @@ export default function TablaEstandar({
                             </span>
                             <button
                                 type="button"
-                                onClick={() => setPaginaActual((p) => Math.min(totalPaginas, p + 1))}
+                                onClick={() => setPaginaActual(Math.min(totalPaginas, paginaActual + 1))}
                                 disabled={paginaActual === totalPaginas}
                                 className="flex items-center gap-1 px-3 py-1.5 rounded-lg border text-sm text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100"
                             >

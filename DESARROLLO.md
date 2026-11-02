@@ -263,6 +263,25 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 02/11/2026 — Se quita la pantalla Comercializadoras: filtro por tipo en Terceros
+- "Comercializadoras" era la misma pantalla de Terceros filtrada (mismos datos, formulario y permiso). Se quitó del menú y del catálogo de pantallas (`config/pantallas.php`); la ruta vieja `/comercializadoras` abre `/terceros?tipo=COMERCIALIZADORA`.
+- Terceros tiene un **filtro por tipo** (Todos · Productores · Comercializadoras · Proveedores · Clientes) con la cantidad de activos; con un tipo elegido, "Nuevo tercero" ya viene con ese tipo.
+- Migración `2026_11_02_000007`: quien tenía la pantalla `comercializadoras` en su perfil o como excepción pasa a tener `terceros` (en producción nadie la tenía salvo el ADMIN).
+- `TablaEstandar`: si la página filtra los datos por fuera y quedan menos páginas, muestra la última que existe (antes podía quedar vacía).
+- Pruebas: comercializadoras 10 OK (nueva), permisos 50, seguridad 80, clientes/terceros 18; Chrome: filtro, vista filtrada, "Nuevo tercero" con el tipo y redirección OK.
+
+### 02/11/2026 — ETL de productores y comercializadoras (datos de producción)
+- Fuentes: Personas de Contífico ("Listado de Proveedores.xls", 493) y "PRODUCTORES 2026.xlsx" (hoja RUC: 157 vendedores con RUC; hoja CODIGOS MAGAP: 194 productores reales con finca y código MAGAP, sin RUC). Excel quitó el 0 inicial de los RUC. El SRI no responde a consultas automáticas: el nombre se validó contra Contífico (razón social del SRI) y el RUC con su dígito verificador.
+- Decidido con el usuario: nombres completos **APELLIDOS NOMBRES**; una persona que estaba como PRODUCTOR y como COMERCIALIZADORA queda en **un solo registro PRODUCTOR**; se carga **solo lo limpio** y lo demás lo ingresan los usuarios.
+- Aplicado en producción (respaldo `siae_production_20261102_2139_antes_etl_terceros.sql`, una transacción, verificación contra la foto, bitácora `ETL_TERCEROS`): 10 fusiones (se conserva el registro con RUC como PRODUCTOR, su finca pasa a él y el duplicado se desactiva) y 12 terceros nuevos validados (7 PRODUCTOR, 5 COMERCIALIZADORA). Resultado: 281 productores activos (17 con RUC), 125 comercializadoras.
+- Quedan para los usuarios: 54 RUC sin confirmar en Contífico, 2 RUC mal escritos (HERITAGEBLOOM, ADRIAN FISCHERT), nombres que no corresponden a su RUC (RONALD AYALA, TERRABANANAS), RUC repetidos para personas distintas, ~20 duplicados que el archivo no confirma y los productores reales sin RUC.
+
+### 02/11/2026 — Contífico: explorador de solo lectura (solo en local, sin subir)
+- API documentada en https://contifico.github.io/: URL base `https://api.contifico.com/sistema/api/v1/`, clave en el encabezado `Authorization` (la entrega el soporte de Contífico). Lectura: categorías, bodegas, marcas, variantes, productos (y stock), movimientos de inventario, guías, personas, documentos, registro de transacciones, cuentas contables, centros de costo, cuentas y movimientos bancarios. La documentación no dice si pagina, si hay límites ni si hay ambiente de pruebas.
+- Backend: `config/services.php` → `contifico` (`CONTIFICO_API_KEY`, `CONTIFICO_API_URL`, `CONTIFICO_TIMEOUT`); `App\Services\ContificoClient` **solo con GET** (no tiene cómo escribir en Contífico; reintenta solo sin conexión o con 5xx); comando `php artisan contifico:explorar [recursos...] [--filtro=clave=valor] [--muestra] [--guardar]`: muestra cuántos registros y qué campos trae cada recurso; `--guardar` deja el JSON en `storage/app/private/contifico/` (fuera de git). No toca la base del SIAE.
+- Probado con respuestas simuladas (`Http::fake`): sin clave avisa cómo configurarla; arreglo directo y paginado; 400/403 explicados; solo envía GET con la clave en `Authorization`.
+- **Siguiente**: la empresa pide la clave (ojalá de solo lectura), la pone en el `.env` local, se corre el explorador y se decide qué traer (proveedores, productos/costos, facturas de compra, movimientos bancarios).
+
 ### 02/11/2026 — Revisión de seguridad y optimización
 - **Revisado y bien**: sin sesión, todas las rutas de la API dan 401; `.env`/`.git` bloqueados; `APP_DEBUG` apagado; HTTP → HTTPS; solo los puertos 22/80/443 abiertos (PostgreSQL no se ve desde internet); 0 vulnerabilidades en npm y composer; SQL siempre con parámetros; el BODEGUERO limitado a su bodega en el backend.
 - **Lecturas con precios**: antes cualquier pantalla de `$lectura` (ej. Bodegas o Insumos) leía por API los contratos de venta, el pedido de Rusia y las compras a productores. Ahora cada lectura exige su pantalla: contratos = Contratos o Pedido semanal; lista de pedidos = Pedido semanal, Distribución, Cierre, Compra de fruta, Tarjas, Gastos o Ganancia; pedido = Pedido semanal; distribución = Distribución; compras = Compra de fruta; cierre = Cierre. Los catálogos (puertos, clientes, barcos, navieras, destinos) siguen abiertos al personal.

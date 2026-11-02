@@ -6,7 +6,7 @@
 import {
     LayoutDashboard, Users, Sprout, Warehouse, Boxes,
     ArrowLeftRight, ClipboardList, FileText, ShoppingCart,
-    FileSignature, Clock, Building2, Tag, Ship, Container,
+    FileSignature, Clock, Tag, Ship, Container,
     CircleDollarSign, History, ClipboardCheck, HandCoins, Calculator,
     MapPin, CheckCircle2, Truck, Anchor, ShoppingBasket, UserCog, Landmark, Receipt, ScrollText, ShieldCheck, PackageCheck, ListOrdered, Wallet, TrendingUp
 } from "lucide-react";
@@ -93,8 +93,6 @@ export const menuItems = [
             // 30/10/2026: quién registró o cambió qué, con fecha y hora
             { label: "Bitácora", ruta: "/bitacora", icono: ScrollText, soloAdmin: true },
             { label: "Terceros (maestro)", ruta: "/terceros", icono: Users, pantalla: "terceros" },
-            // Misma pantalla de Terceros, filtrada a COMERCIALIZADORA
-            { label: "Comercializadoras", ruta: "/comercializadoras", icono: Building2, pantalla: "comercializadoras" },
             { label: "Fincas", ruta: "/fincas", icono: Sprout, pantalla: "fincas" },
             // 27/10/2026: movidos desde EXPORTACIONES (las rutas /exportaciones/... no cambian)
             { label: "Destinos", ruta: "/exportaciones/destinos", icono: MapPin, pantalla: "destinos" },
