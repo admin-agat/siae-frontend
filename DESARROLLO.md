@@ -108,7 +108,7 @@ Leyenda: ✅ terminado · 🟡 parcial · ⏳ pendiente
 | Contratos de clientes | ✅ | Precio por caja + vigencia + incoterm. No se permiten dos contratos activos que se crucen. |
 | Marcas | ✅ | Movida desde Exportaciones el 28/10/2026. |
 | **Usuarios** | ✅ | Nuevo 29/10/2026. Crear, editar (contraseña opcional), desactivar/reactivar; BODEGUERO con su bodega. 30/10/2026: perfil, "asistente de" y excepciones por persona (pantallas EXTRA o QUITADAS). |
-| **Perfiles y permisos** | ✅ | Nuevo 30/10/2026. Perfil = nombre + tipo base + pantallas. Los 6 perfiles iniciales reproducen los roles de antes. Solo ADMIN. |
+| **Perfiles y permisos** | ✅ | Nuevo 30/10/2026. Perfil = nombre + tipo base + pantallas. Los 6 perfiles iniciales reproducen los roles de antes; 02/11/2026 se agregó GERENCIA. Solo ADMIN. |
 | **Bitácora** | ✅ | Nuevo 30/10/2026. Quién creó/editó/desactivó/borró qué, con fecha y hora, campo por campo; inicios y cierres de sesión. Filtros por usuario, módulo, acción, fechas y texto. Solo ADMIN, solo lectura. |
 
 ### EXPORTACIONES
@@ -148,7 +148,7 @@ Leyenda: ✅ terminado · 🟡 parcial · ⏳ pendiente
 | **Liquidar** | ✅ | Nuevo 29/10/2026. Cupo (productor + semana): fruta − materiales − anticipos; código LIQ-00000001; imprimible; anular sin pagos. Solo ADMIN. |
 | **Pagos e historial** | ✅ | Nuevo 29/10/2026. Registrar 1er pago (100 % / 80 %) y 2do pago (20 %) con fecha y comprobante; bandeja de pendientes. Solo ADMIN. |
 | **Notas de crédito** | ✅ | Nuevo 30/10/2026. Bandeja POR RECIBIR / RECIBIDAS con el total que debe cada vendedor; el N° de factura y de NC se registra en el detalle de la liquidación. Solo ADMIN. |
-| Dashboard | ⏳ | Página vacía. |
+| Dashboard | ⏳ | Demostración con datos de ejemplo. **Solo GERENCIA** (y ADMIN) desde 02/11/2026. |
 
 ---
 
@@ -263,6 +263,12 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 02/11/2026 — Dashboard solo para gerencia
+- Tipo base nuevo **GERENCIA** (`Profile::TIPOS_BASE`, `users_role_check`) y perfil inicial **GERENCIA** con solo el Dashboard. Migración `2026_11_02_000001_dashboard_solo_gerencia`: quita el Dashboard de todos los demás perfiles y de las excepciones de cada persona.
+- `config/pantallas.php`: clave opcional `'solo' => [tipos base]` = únicos tipos que pueden tener esa pantalla. Se aplica en tres lugares: `User::pantallas()` la descarta para otros tipos (aunque esté en la base), Perfiles y Usuarios responden 422 si se intenta dar a otro tipo, y el catálogo `/screens` la devuelve para que el selector de pantallas no la ofrezca (`pantallasDelTipo` en menu.js). El ADMIN la ve igual.
+- Un perfil GERENCIA puede llevar otras pantallas además del Dashboard (ej. ver compras).
+- Pruebas: dashboard/gerencia 14 OK; permisos 50 OK.
+
 ### 31/10/2026 — Costo promedio ponderado de los insumos
 - **Decidido**: costo **promedio ponderado por insumo, uno solo para toda la empresa**; al productor se le cobra el material **al costo**. Antes el costo era el último precio de compra (si quedaban 50 cartones a $1.10 y entraban 50 a $1.20, los 100 salían a $1.20).
 - **Cálculo** (`app/Services/CostoPromedio.php`), desde cero en orden de fecha cada vez que algo cambia: INGRESO con costo → promedio = (saldo × promedio + cantidad × costo neto de descuento) ÷ (saldo + cantidad); INGRESO sin costo y DEVOLUCIÓN entran al promedio vigente; EGRESO baja el saldo; transferencias (motivos 5 y 9) no cuentan. Así corregir o anular una compra vieja corrige el promedio. Se recalcula al crear/corregir/anular movimientos, confirmar transferencias (merma) y crear/anular despachos.
@@ -302,7 +308,7 @@ Pedido del usuario: las jefaturas trabajan con asistentes; dar permisos por pers
 - Catálogo de 30 pantallas en `config/pantallas.php` (clave, sección, nombre y qué tipos base la tienen al inicio). Usuarios, Perfiles y Bitácora no se delegan (solo ADMIN).
 - Migración `2026_10_30_000003_create_profiles_and_user_permissions`: tabla `profiles` (nombre, `base_role`, descripción, `screens` jsonb) y en `users`: `profile_id`, `boss_id` ("asistente de"), `screens_added`, `screens_removed`. Crea un perfil por rol con las pantallas que ese rol veía y se lo asigna a sus usuarios: **nadie gana ni pierde acceso al migrar**.
 - `User::pantallas()` = perfil + agregadas − quitadas (ADMIN: todas; perfil desactivado: ninguna; sin perfil: las iniciales de su tipo base). `User::puede(...)`.
-- **Tipo base** (`users.role`, lo pone el perfil): conserva las reglas internas del rol — BODEGUERO solo su bodega y sus motivos; COORDINADOR/ADMIN corrigen y anulan movimientos y despachos. Un perfil no puede ser de tipo ADMIN (solo ADMINISTRADOR, que no se edita) y no cambia de tipo base si tiene usuarios.
+- **Tipo base** (`users.role`, lo pone el perfil): conserva las reglas internas del rol — BODEGUERO solo su bodega y sus motivos; COORDINADOR/ADMIN corrigen y anulan movimientos y despachos; GERENCIA es el único que puede tener el Dashboard. Un perfil no puede ser de tipo ADMIN (solo ADMINISTRADOR, que no se edita) y no cambia de tipo base si tiene usuarios.
 - API: middleware `pantalla:` reemplaza a `rol:`/`admin` en todas las rutas de pantallas (lectura de exportaciones: cualquier pantalla salvo las 4 del bodeguero, igual que antes). Transferencias pendientes ahora se valida por pantalla. `GET /me` devuelve el usuario con sus pantallas; `GET /screens`, CRUD `/profiles` (ADMIN).
 - Frontend: [menu.js](src/routes/menu.js) (menú + `puede`, `menuDe`, `inicioDe`) usado por Sidebar, AppRouter (`RutaPantalla`) y Login; se borró `routes/roles.js`. Layout pide `/me` al abrir: los cambios de permisos se ven sin volver a iniciar sesión. Pantallas [ProfilesPage](src/pages/configuracion/ProfilesPage.jsx) y [UsersPage](src/pages/configuracion/UsersPage.jsx) con [SelectorPantallas](src/components/common/SelectorPantallas.jsx). Usuario sin pantallas → `/sin-acceso`.
 - Bitácora: los campos JSON (pantallas) se guardan como lista, no como texto.

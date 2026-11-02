@@ -19,6 +19,7 @@ import DialogoConfirmacion from '../../components/common/DialogoConfirmacion';
 import ToastFlotante from '../../components/common/ToastFlotante';
 import ModalShell from '../../components/common/ModalShell';
 import SelectorPantallas from '../../components/common/SelectorPantallas';
+import { pantallasDelTipo } from '../../routes/menu';
 import { getMensajeExito, getMensajeError } from '../../utils/toastMessages';
 import SelectBuscable from '../../components/common/SelectBuscable';
 
@@ -39,11 +40,13 @@ function UserModal({ usuario, perfiles, usuarios, catalogo, bodegas, onClose, on
 
   const perfil = perfiles.find((p) => String(p.id) === form.profile_id);
   const tipo = perfil?.base_role;
-  const delPerfil = perfil?.screens || [];
+  const permitidas = pantallasDelTipo(catalogo, tipo);
+  const esPermitida = (k) => permitidas.some((p) => p.key === k);
+  const delPerfil = (perfil?.screens || []).filter(esPermitida);
   // Lo que verá: perfil + agregadas − quitadas
   const efectivas = tipo === 'ADMIN'
     ? catalogo.map((p) => p.key)
-    : [...new Set([...delPerfil, ...form.screens_added])].filter((k) => !form.screens_removed.includes(k));
+    : [...new Set([...delPerfil, ...form.screens_added])].filter((k) => esPermitida(k) && !form.screens_removed.includes(k));
 
   const cambiar = (campo) => (e) => setForm((f) => ({ ...f, [campo]: campo === 'name' ? e.target.value.toUpperCase() : e.target.value }));
   // Marcar/desmarcar una pantalla respecto a su perfil: lo que no es del perfil queda como EXTRA,
@@ -81,7 +84,7 @@ function UserModal({ usuario, perfiles, usuarios, catalogo, bodegas, onClose, on
         boss_id: form.boss_id ? Number(form.boss_id) : null,
         phone: form.phone.trim() || null,
         warehouse_id: tipo === 'BODEGUERO' ? Number(form.warehouse_id) : null,
-        screens_added: form.screens_added.filter((k) => !delPerfil.includes(k)),
+        screens_added: form.screens_added.filter((k) => esPermitida(k) && !delPerfil.includes(k)),
         screens_removed: form.screens_removed.filter((k) => delPerfil.includes(k)),
         ...(form.password ? { password: form.password } : {}),
       };
@@ -100,7 +103,7 @@ function UserModal({ usuario, perfiles, usuarios, catalogo, bodegas, onClose, on
 
   const label = 'block text-sm font-semibold text-gray-700 mb-1.5';
   const input = 'w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-primario';
-  const nExcepciones = form.screens_added.filter((k) => !delPerfil.includes(k)).length + form.screens_removed.filter((k) => delPerfil.includes(k)).length;
+  const nExcepciones = form.screens_added.filter((k) => esPermitida(k) && !delPerfil.includes(k)).length + form.screens_removed.filter((k) => delPerfil.includes(k)).length;
 
   return (
     <ModalShell
@@ -174,7 +177,7 @@ function UserModal({ usuario, perfiles, usuarios, catalogo, bodegas, onClose, on
                   Marca una pantalla que su perfil no tiene para dársela (<span className="font-semibold text-green-700">EXTRA</span>) o
                   desmarca una del perfil para quitársela (<span className="font-semibold text-red-700">QUITADA</span>). No cambia a los demás del perfil.
                 </p>
-                <SelectorPantallas catalogo={catalogo} marcadas={efectivas} onAlternar={alternar} etiqueta={etiqueta} />
+                <SelectorPantallas catalogo={permitidas} marcadas={efectivas} onAlternar={alternar} etiqueta={etiqueta} />
               </div>
             )}
           </div>

@@ -16,6 +16,7 @@ import ToastFlotante from '../../components/common/ToastFlotante';
 import ModalShell from '../../components/common/ModalShell';
 import SelectBuscable from '../../components/common/SelectBuscable';
 import SelectorPantallas from '../../components/common/SelectorPantallas';
+import { pantallasDelTipo } from '../../routes/menu';
 import { getMensajeExito, getMensajeError } from '../../utils/toastMessages';
 
 // Tipo base → reglas que hereda (se muestra al elegirlo)
@@ -25,6 +26,7 @@ const TIPOS_BASE = {
   COORDINADOR_INVENTARIO: 'Inventario: además corrige y anula movimientos ya registrados y anula despachos.',
   JEFE_BODEGA: 'Inventario: no corrige movimientos ya registrados.',
   BODEGUERO: 'Opera solo SU bodega (se le asigna en Usuarios) y solo los motivos permitidos al bodeguero.',
+  GERENCIA: 'Gerencia: el único tipo que puede ver el Dashboard.',
 };
 
 const formularioVacio = { name: '', base_role: 'COMERCIAL', description: '', screens: [] };
@@ -37,6 +39,8 @@ function PerfilModal({ perfil, catalogo, onClose, onGuardado }) {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
   const [exito, setExito] = useState('');
+  const permitidas = pantallasDelTipo(catalogo, form.base_role);
+  const marcadas = form.screens.filter((k) => permitidas.some((p) => p.key === k));
 
   const cambiar = (campo) => (e) => setForm((f) => ({ ...f, [campo]: campo === 'name' ? e.target.value.toUpperCase() : e.target.value }));
   const alternar = (key) => setForm((f) => ({
@@ -47,13 +51,13 @@ function PerfilModal({ perfil, catalogo, onClose, onGuardado }) {
     e.preventDefault();
     setError('');
     if (!form.name.trim()) return setError('ESCRIBE EL NOMBRE DEL PERFIL.');
-    if (form.screens.length === 0) return setError('MARCA AL MENOS UNA PANTALLA.');
+    if (marcadas.length === 0) return setError('MARCA AL MENOS UNA PANTALLA.');
 
     setGuardando(true);
     const accion = esEdicion ? 'actualizar' : 'crear';
     try {
       // Las claves se mandan en el orden del menú
-      const data = { ...form, name: form.name.trim(), description: form.description.trim() || null, screens: catalogo.map((p) => p.key).filter((k) => form.screens.includes(k)) };
+      const data = { ...form, name: form.name.trim(), description: form.description.trim() || null, screens: permitidas.map((p) => p.key).filter((k) => marcadas.includes(k)) };
       if (esEdicion) await updateProfile(perfil.id, data);
       else await createProfile(data);
       setExito(getMensajeExito('perfil', accion));
@@ -101,8 +105,8 @@ function PerfilModal({ perfil, catalogo, onClose, onGuardado }) {
           <input value={form.description} onChange={cambiar('description')} maxLength={255} placeholder="EJ. AYUDA A LA JEFA COMERCIAL CON LAS COMPRAS" className={input} />
         </div>
         <div className="col-span-2">
-          <label className={label}>Pantallas que ve ({form.screens.length}) *</label>
-          <SelectorPantallas catalogo={catalogo} marcadas={form.screens} onAlternar={alternar} />
+          <label className={label}>Pantallas que ve ({marcadas.length}) *</label>
+          <SelectorPantallas catalogo={permitidas} marcadas={marcadas} onAlternar={alternar} />
           <p className="text-xs text-gray-500 mt-2">
             Quien tiene una pantalla la ve y puede hacer todo en ella. Usuarios, Perfiles y Bitácora son solo del administrador.
             {esEdicion && ' Los cambios se aplican a todos los usuarios con este perfil al abrir el sistema.'}

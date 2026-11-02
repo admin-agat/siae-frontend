@@ -125,3 +125,6 @@ export const inicioDe = (user) => {
     }
     return "/sin-acceso";
 };
+
+// 02/11/2026: pantallas que un tipo base puede tener (las 'solo' de otros tipos no se ofrecen; ej. Dashboard = GERENCIA)
+export const pantallasDelTipo = (catalogo, tipo) => (tipo === 'ADMIN' ? catalogo : catalogo.filter((p) => !p.solo || p.solo.includes(tipo)));
