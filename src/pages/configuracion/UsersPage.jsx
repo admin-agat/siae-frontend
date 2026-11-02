@@ -127,7 +127,7 @@ function UserModal({ usuario, perfiles, usuarios, catalogo, bodegas, onClose, on
         </div>
         <div>
           <label className={label}>{esEdicion ? 'Nueva contraseña' : 'Contraseña *'}</label>
-          <input type="password" value={form.password} onChange={cambiar('password')} maxLength={100} placeholder={esEdicion ? 'Déjala vacía para no cambiarla' : 'Mínimo 8 caracteres'} autoComplete="new-password" className={input} />
+          <input type="password" value={form.password} onChange={cambiar('password')} maxLength={100} placeholder={esEdicion ? 'Déjala vacía para no cambiarla' : 'Mínimo 8, con letras y números'} autoComplete="new-password" className={input} />
         </div>
         <div>
           <label className={label}>Perfil *</label>

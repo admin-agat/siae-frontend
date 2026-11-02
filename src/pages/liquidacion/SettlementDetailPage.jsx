@@ -14,6 +14,7 @@ import { getSettlement, paySettlement, unpaySettlement, annulSettlement, saveSet
 import DialogoConfirmacion from '../../components/common/DialogoConfirmacion';
 import ToastFlotante from '../../components/common/ToastFlotante';
 import { useAuth } from '../../context/AuthContext';
+import { puede } from '../../routes/menu';
 
 const formatoCajas = (n) => Number(n || 0).toLocaleString('es-EC');
 const formatoDinero = (n) => Number(n || 0).toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -26,6 +27,11 @@ export default function SettlementDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  // 02/11/2026: cada acción es de su pantalla (igual que en el backend): anular = Liquidar,
+  // pagos = Pagos, factura y N° de NC = Notas de crédito o Liquidar. Las tres ven el detalle.
+  const puedeAnular = puede(user, 'liquidar');
+  const puedePagar = puede(user, 'pagos');
+  const puedeDocumentos = puede(user, 'notas_credito', 'liquidar');
 
   const [liq, setLiq] = useState(null);
   const [cargando, setCargando] = useState(true);
@@ -159,7 +165,7 @@ export default function SettlementDetailPage() {
         <button type="button" onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-primario text-white hover:bg-primario-hover transition">
           <Printer size={18} /> Imprimir
         </button>
-        {liq.status && (
+        {liq.status && puedeAnular && (
           <button
             type="button"
             onClick={() => (hayPagosRegistrados ? setToast({ tipo: 'error', mensaje: 'Tiene pagos registrados: deshazlos antes de anular' }) : setAnular(true))}
@@ -305,7 +311,7 @@ export default function SettlementDetailPage() {
           <div><p className="text-xs text-gray-500 uppercase">(−) Nota de crédito</p><p className="font-semibold text-primario print:text-black">$ {formatoDinero(liq.credit_note_amount)}</p></div>
           <div><p className="text-xs text-gray-500 uppercase">= Valor de la fruta (precio real)</p><p className="font-semibold">$ {formatoDinero(liq.fruit_amount)}</p></div>
         </div>
-        {liq.status && (
+        {liq.status && puedeDocumentos && (
           <div className="flex flex-wrap items-end gap-3 print:hidden">
             <div>
               <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">N° de factura</label>
@@ -366,7 +372,7 @@ export default function SettlementDetailPage() {
                     <td className={td}>
                       {p.paid_at ? (
                         <span>{formatoFecha(p.paid_at)}{p.reference ? ` · ${p.reference}` : ''}{p.payer ? <span className="text-xs text-gray-400"> ({p.payer.name})</span> : ''}</span>
-                      ) : liq.status ? (
+                      ) : liq.status && puedePagar ? (
                         <div className="flex flex-wrap gap-2 print:hidden">
                           <input type="date" value={f.paid_at ?? hoy()} onChange={(e) => setF('paid_at', e.target.value)} className={inputClass} />
                           <input placeholder="COMPROBANTE / TRANSFERENCIA" maxLength={60} value={f.reference ?? ''} onChange={(e) => setF('reference', e.target.value.toUpperCase())} className={`${inputClass} w-56`} />
@@ -374,7 +380,7 @@ export default function SettlementDetailPage() {
                       ) : '—'}
                     </td>
                     <td className={`${td} text-right print:hidden`}>
-                      {liq.status && (p.paid_at ? (
+                      {liq.status && puedePagar && (p.paid_at ? (
                         <button type="button" onClick={() => setDeshacer(p)} title="Deshacer el registro de este pago" className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50">
                           <Undo2 size={14} /> Deshacer
                         </button>
