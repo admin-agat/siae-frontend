@@ -5,7 +5,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Pencil, Ban, Search, RotateCcw, ChevronLeft, ChevronRight, AlertTriangle, CheckCircle } from 'lucide-react';
 import { getSupplyCategories, deactivateSupplyCategory, reactivateSupplyCategory } from '../../api/supplyCategories';
-import { getSupplies, deactivateSupply, reactivateSupply } from '../../api/supplies';
+import { getSupplies, deactivateSupply, reactivateSupply, getSupplyUsage } from '../../api/supplies';
 import SupplyCategoryModal from '../../components/SupplyCategoryModal';
 import SupplyModal from '../../components/SupplyModal';
 // Estándar centralizado de mensajes toast (crear/actualizar/desactivar/reactivar)
@@ -108,6 +108,14 @@ export default function SuppliesMasterDetailPage() {
 
     const pedirConfirmacion = (tipo, item, accion) => {
         setConfirmacion({ tipo, item, accion });
+        // 03/11/2026: antes de desactivar un insumo se muestra dónde se usa (recetas, stock, movimientos);
+        // si está en una receta activa o tiene stock, no se puede desactivar
+        if (tipo === 'insumo' && accion === 'desactivar') {
+            setConfirmacion({ tipo, item, accion, cargandoUso: true });
+            getSupplyUsage(item.id)
+                .then((res) => setConfirmacion((c) => (c?.item.id === item.id ? { ...c, uso: res.data, cargandoUso: false } : c)))
+                .catch(() => setConfirmacion((c) => (c?.item.id === item.id ? { ...c, cargandoUso: false } : c)));
+        }
     };
 
     const ejecutarConfirmacion = async () => {
@@ -129,7 +137,7 @@ export default function SuppliesMasterDetailPage() {
             setToast({ tipo: 'exito', mensaje: getMensajeExito(tipo, accion) });
         } catch (error) {
             console.error(`Error al ${accion} ${tipo}:`, error);
-            setToast({ tipo: 'error', mensaje: getMensajeError(tipo, accion) });
+            setToast({ tipo: 'error', mensaje: error.response?.data?.message || getMensajeError(tipo, accion) });
         } finally {
             setConfirmacion(null);
         }
@@ -526,6 +534,23 @@ export default function SuppliesMasterDetailPage() {
                                 <p className="text-sm text-gray-500 mt-1">
                                     ¿Estás seguro de {confirmacion.accion} <strong>{confirmacion.item.name}</strong>?
                                 </p>
+                                {confirmacion.cargandoUso && <p className="text-xs text-gray-400 mt-2">Revisando dónde se usa...</p>}
+                                {confirmacion.uso && (
+                                    <div className="text-xs mt-3 space-y-1">
+                                        <p className="text-gray-600">
+                                            Recetas: <strong>{confirmacion.uso.recetas.length ? confirmacion.uso.recetas.join(', ') : 'ninguna'}</strong>
+                                        </p>
+                                        <p className="text-gray-600">
+                                            Stock: <strong>{confirmacion.uso.stock.length ? confirmacion.uso.stock.map((s) => `${s.bodega} ${Number(s.cantidad)}`).join(', ') : 'sin stock'}</strong>
+                                        </p>
+                                        <p className="text-gray-600">Movimientos registrados: <strong>{confirmacion.uso.movimientos}</strong></p>
+                                        {confirmacion.uso.bloqueo ? (
+                                            <p className="text-red-600 font-semibold pt-1">No se puede desactivar. {confirmacion.uso.bloqueo}</p>
+                                        ) : confirmacion.uso.movimientos > 0 && (
+                                            <p className="text-amber-700 pt-1">Tiene movimientos: su kárdex y costo promedio se conservan, pero ya no se podrá usar en compras, despachos ni recetas.</p>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </div>
                         <div className="flex justify-end gap-3">
@@ -537,7 +562,8 @@ export default function SuppliesMasterDetailPage() {
                             </button>
                             <button
                                 onClick={ejecutarConfirmacion}
-                                className={`px-4 py-2 text-sm font-semibold text-white rounded-lg ${
+                                disabled={confirmacion.cargandoUso || Boolean(confirmacion.uso?.bloqueo)}
+                                className={`px-4 py-2 text-sm font-semibold text-white rounded-lg disabled:opacity-40 disabled:cursor-not-allowed ${
                                     confirmacion.accion === 'desactivar'
                                         ? 'bg-red-600 hover:bg-red-700'
                                         : 'bg-green-600 hover:bg-green-700'

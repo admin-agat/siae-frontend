@@ -93,11 +93,10 @@ export default function InventoryMovementReceiptPage() {
             }
             : { rol: 'Productor / Comercializadora', nombre: movement.third_party?.name };
 
-    const fechaFormateada = new Date(movement.date + 'T00:00:00').toLocaleDateString('es-EC', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-    });
+    // 03/11/2026: el servidor manda la fecha con hora ("2026-11-02T00:00:00.000000Z"); antes se le
+    // agregaba otra hora y salía "Invalid Date". Se toma solo AAAA-MM-DD y se muestra DD/MM/AAAA.
+    const [anio, mes, dia] = String(movement.date ?? '').slice(0, 10).split('-');
+    const fechaFormateada = dia ? `${dia}/${mes}/${anio}` : '—';
 
     return (
         <div className="max-w-4xl mx-auto p-6 space-y-4">
@@ -137,7 +136,7 @@ export default function InventoryMovementReceiptPage() {
                         <p className="text-gray-800">{movement.warehouse?.name}</p>
                     </div>
                     <div>
-                        <p className="text-xs font-semibold text-gray-500">Fecha</p>
+                        <p className="text-xs font-semibold text-gray-500">{esIngreso ? 'Fecha de recepción' : 'Fecha'}</p>
                         <p className="text-gray-800">{fechaFormateada}</p>
                     </div>
                     <div>

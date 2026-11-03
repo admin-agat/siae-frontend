@@ -10,6 +10,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, Plus, Trash2, Search } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { puede } from '../../routes/menu';
 import {
     getInventoryMovements, getInventoryMovement, updateInventoryMovement,
     deactivateInventoryMovement, getKardex,
@@ -66,6 +67,8 @@ export default function InventoryMovementsPage() {
     const navigate = useNavigate();
     const { user } = useAuth();
     const esBodeguero = user?.role === 'BODEGUERO';
+    // 03/11/2026: costos y valores solo con el permiso "Ver costos y valores" (antes: todos menos el BODEGUERO)
+    const verCostos = puede(user, 'ver_costos');
     const corrige = ROLES_QUE_CORRIGEN.includes(user?.role);
 
     const [pestana, setPestana] = useState('MOVIMIENTOS');
@@ -188,7 +191,7 @@ export default function InventoryMovementsPage() {
                 </div>
             ),
         },
-        ...(esBodeguero ? [] : [{ titulo: 'Total', render: (m) => `$${num(m.total)}`, className: 'text-right' }]),
+        ...(!verCostos ? [] : [{ titulo: 'Total', render: (m) => `$${num(m.total)}`, className: 'text-right' }]),
         { titulo: 'Registró', render: (m) => m.created_by?.name, className: 'text-xs' },
         { titulo: 'Estado', render: (m) => <EstadoBadge activo={m.status} textoInactivo="ANULADO" /> },
         {
@@ -339,7 +342,7 @@ export default function InventoryMovementsPage() {
                                 <strong>{insumoKardex?.name}</strong>
                                 {insumoKardex?.unit && <span className="text-gray-400"> ({insumoKardex.unit})</span>}
                                 {' · '}{bodegas.find((b) => String(b.id) === String(kFiltros.warehouse_id))?.name}
-                                {!esBodeguero && kardex.costo_promedio_actual != null && (
+                                {verCostos && kardex.costo_promedio_actual != null && (
                                     <span className="float-right text-gray-500">
                                         Costo promedio actual: <strong className="text-gray-800">{dinero(kardex.costo_promedio_actual, 4)}</strong>
                                         {kardex.ultima_compra != null && <> · Última compra: {dinero(kardex.ultima_compra, 4)}</>}
@@ -356,7 +359,7 @@ export default function InventoryMovementsPage() {
                                         <th className="text-right px-4 py-2">Entrada</th>
                                         <th className="text-right px-4 py-2">Salida</th>
                                         <th className="text-right px-4 py-2">Saldo</th>
-                                        {!esBodeguero && (
+                                        {verCostos && (
                                             <>
                                                 <th className="text-right px-4 py-2">Costo mov.</th>
                                                 <th className="text-right px-4 py-2" title="Costo promedio de la empresa después de este movimiento">Costo prom.</th>
@@ -369,7 +372,7 @@ export default function InventoryMovementsPage() {
                                     <tr className="bg-gray-100 font-semibold">
                                         <td className="px-4 py-2" colSpan={6}>SALDO INICIAL{kFiltros.date_from ? ` al ${kFiltros.date_from}` : ''}</td>
                                         <td className="px-4 py-2 text-right">{num(kardex.saldo_inicial)}</td>
-                                        {!esBodeguero && (
+                                        {verCostos && (
                                             <>
                                                 <td />
                                                 <td className="px-4 py-2 text-right">{dinero(kardex.costo_inicial, 4)}</td>
@@ -396,7 +399,7 @@ export default function InventoryMovementsPage() {
                                             <td className="px-4 py-2 text-right text-green-700">{f.entrada ? num(f.entrada) : ''}</td>
                                             <td className="px-4 py-2 text-right text-red-700">{f.salida ? num(f.salida) : ''}</td>
                                             <td className={`px-4 py-2 text-right font-semibold ${f.saldo < 0 ? 'text-red-600' : ''}`}>{num(f.saldo)}</td>
-                                            {!esBodeguero && (
+                                            {verCostos && (
                                                 <>
                                                     <td className="px-4 py-2 text-right text-gray-500">{dinero(f.unit_cost, 4)}</td>
                                                     <td className="px-4 py-2 text-right">{dinero(f.costo_promedio, 4)}</td>
@@ -412,7 +415,7 @@ export default function InventoryMovementsPage() {
                                         <td className="px-4 py-2 text-right text-green-700">{num(kardex.total_entradas)}</td>
                                         <td className="px-4 py-2 text-right text-red-700">{num(kardex.total_salidas)}</td>
                                         <td className="px-4 py-2 text-right text-primario">{num(kardex.saldo_final)}</td>
-                                        {!esBodeguero && (
+                                        {verCostos && (
                                             <>
                                                 <td />
                                                 <td />

@@ -17,6 +17,10 @@ import SelectBuscable from './common/SelectBuscable';
 // FRASCOS: usado por los químicos (ACIDO CITRICO, MERTEC, QUATTRO, NLARGE, AQUA FORT, SB 100).
 const UNIDADES = ['CAJAS', 'FRASCOS', 'LIBRAS', 'ROLLOS', 'SACOS', 'UNIDAD'];
 
+// 03/11/2026: palabras de un nombre para buscar insumos parecidos (sin tildes ni signos)
+const palabras = (n) => new Set(String(n || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase()
+    .split(/[^A-Z0-9]+/).filter((w) => w.length >= 3));
+
 export default function SupplyModal({ supply, onClose, onGuardado }) {
     const esEdicion = Boolean(supply?.id);
     // El backend deja last_purchase_cost en null mientras el insumo no tenga compras
@@ -168,6 +172,23 @@ export default function SupplyModal({ supply, onClose, onGuardado }) {
         onClose();
     };
 
+    // 03/11/2026: insumos con un nombre parecido (para no crear otro igual por no encontrarlo)
+    const parecidos = (() => {
+        const p = palabras(form.name);
+        if (p.size === 0) return [];
+        return insumosExistentes
+            .filter((i) => i.id !== supply?.id)
+            .map((i) => {
+                const q = palabras(i.name);
+                const comunes = [...p].filter((w) => q.has(w)).length;
+                return { i, nota: comunes / Math.max(p.size, q.size, 1) };
+            })
+            .filter((x) => x.nota >= 0.5)
+            .sort((a, b) => b.nota - a.nota)
+            .slice(0, 5)
+            .map((x) => x.i);
+    })();
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
@@ -189,7 +210,7 @@ export default function SupplyModal({ supply, onClose, onGuardado }) {
             }, 1200);
         } catch (err) {
             // Mensaje de error estandarizado (antes era un texto fijo genérico)
-            setError(getMensajeError('insumo', accion));
+            setError(err.response?.data?.message || getMensajeError('insumo', accion));
             console.error(err);
             setLoading(false);
         }
@@ -235,6 +256,14 @@ export default function SupplyModal({ supply, onClose, onGuardado }) {
                     placeholder="Ej: TAPA CARTÓN ESTÁNDAR"
                     className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-blue-500"
                 />
+                {parecidos.length > 0 && (
+                    <div className="mt-1.5 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                        <p className="font-semibold">Ya hay insumos con un nombre parecido, revisa que no sea el mismo:</p>
+                        {parecidos.map((i) => (
+                            <p key={i.id}>{i.code} — {i.name}{i.status === false ? ' (INACTIVO)' : ''}</p>
+                        ))}
+                    </div>
+                )}
             </div>
 
             {/* Descripción */}

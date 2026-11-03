@@ -26,6 +26,11 @@ export const updateSupply = (id, data) => {
   return axios.put(`/supplies/${id}`, data);
 };
 
+// 03/11/2026: dónde se usa un insumo (recetas activas, stock por bodega, movimientos) antes de desactivarlo
+export const getSupplyUsage = (id) => {
+  return axios.get(`/supplies/${id}/usage`);
+};
+
 export const deactivateSupply = (id) => {
   return axios.patch(`/supplies/${id}/deactivate`);
 };

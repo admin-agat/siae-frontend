@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, FileText, Ban, AlertTriangle, CheckCircle, X, Plus } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { puede } from '../../routes/menu';
 import { getDespachos, anularDespacho } from '../../api/materialDispatch';
 import { getWarehouses } from '../../api/warehouses';
 import { getThirdParties } from '../../api/thirdParties';
@@ -34,6 +35,8 @@ export default function MaterialDispatchHistoryPage() {
     const puedeAnular = ['COORDINADOR_INVENTARIO', 'ADMIN'].includes(user?.role);
     // Al BODEGUERO el backend ya le fuerza su bodega: el filtro no le sirve
     const esBodeguero = user?.role === 'BODEGUERO';
+    // 03/11/2026: los valores solo con el permiso "Ver costos y valores"
+    const verCostos = puede(user, 'ver_costos');
 
     // Filtros: año actual por defecto para no traer todo el histórico de golpe
     const [filtros, setFiltros] = useState({
@@ -202,7 +205,7 @@ export default function MaterialDispatchHistoryPage() {
                                     <th className="py-2 pr-3">PRODUCTOR</th>
                                     <th className="py-2 pr-3">RETIRÓ</th>
                                     <th className="py-2 pr-3">REGISTRÓ</th>
-                                    <th className="py-2 pr-3 text-right">VALOR</th>
+                                    {verCostos && <th className="py-2 pr-3 text-right">VALOR</th>}
                                     <th className="py-2 text-center">ACCIONES</th>
                                 </tr>
                             </thead>
@@ -225,7 +228,7 @@ export default function MaterialDispatchHistoryPage() {
                                                 <p className="text-xs text-gray-400">C.I. {d.received_by_document ?? '—'}</p>
                                             </td>
                                             <td className="py-2 pr-3 text-gray-500">{d.created_by?.name ?? '—'}</td>
-                                            <td className="py-2 pr-3 text-right font-semibold">{dinero(d.valor_total)}</td>
+                                            {verCostos && <td className="py-2 pr-3 text-right font-semibold">{dinero(d.valor_total)}</td>}
                                             {/* stopPropagation: los botones no disparan la selección de fila */}
                                             <td className="py-2 text-center" onClick={(e) => e.stopPropagation()}>
                                                 <div className="flex justify-center gap-2">
@@ -260,9 +263,11 @@ export default function MaterialDispatchHistoryPage() {
                 {despachos.length > 0 && (
                     <div className="flex justify-between items-center pt-4 mt-2 border-t text-sm text-gray-600">
                         <span>{despachos.length} DESPACHO(S)</span>
-                        <span>
-                            TOTAL A DESCONTAR: <span className="text-lg font-bold text-gray-800">{dinero(valorTotal)}</span>
-                        </span>
+                        {verCostos && (
+                            <span>
+                                TOTAL A DESCONTAR: <span className="text-lg font-bold text-gray-800">{dinero(valorTotal)}</span>
+                            </span>
+                        )}
                     </div>
                 )}
             </div>
@@ -273,7 +278,7 @@ export default function MaterialDispatchHistoryPage() {
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm px-6 py-6">
                         <h3 className="text-base font-bold text-gray-800 mb-2">¿Anular el despacho N° {confirmarAnular.id}?</h3>
                         <p className="text-sm text-gray-500 mb-1">
-                            {confirmarAnular.third_party?.name} — {dinero(confirmarAnular.valor_total)}
+                            {confirmarAnular.third_party?.name}{verCostos && <> — {dinero(confirmarAnular.valor_total)}</>}
                         </p>
                         <p className="text-sm text-gray-500 mb-6">
                             El material regresará al stock de {confirmarAnular.warehouse?.name} y ya no se descontará al productor.

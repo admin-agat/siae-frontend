@@ -2,7 +2,7 @@
 // Formulario para crear una Orden de Compra (OC): se le pide a un proveedor
 // una lista de insumos con cantidad, precio, % IVA, % descuento y % Retención IR
 // por línea — igual que el formato que ya usa Contífico. El código (OC-2026-0001)
-// y la Semana se generan/calculan automáticamente.
+// se genera automáticamente; la Semana se elige entre la de la fecha y la siguiente (03/11/2026).
 import { useState, useEffect } from 'react';
 import { Plus, Trash2, CheckCircle, Save, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -22,6 +22,15 @@ const lineaVacia = () => ({
     discount_percent: 0,
     retention_rate: 0,
 });
+
+// 03/11/2026: la OC puede ser de la semana de la fecha o de la siguiente (ej. se compra el sábado de la
+// sm 44 para el proceso del lunes de la sm 45). Una OC es de UNA sola semana.
+const semanasPosibles = (fecha) => {
+    const d = new Date(fecha + 'T00:00:00');
+    const siguiente = new Date(d);
+    siguiente.setDate(d.getDate() + 7);
+    return [getISOWeek(d), getISOWeek(siguiente)];
+};
 
 // Calcula el número de semana ISO 8601 (semana bananera) para una fecha dada
 function getISOWeek(fecha) {
@@ -123,7 +132,7 @@ export default function PurchaseOrderFormPage() {
     // backend el próximo código de OC como vista previa (no reserva nada).
     useEffect(() => {
         if (!fecha) return;
-        setWeek(getISOWeek(new Date(fecha + 'T00:00:00')));
+        setWeek(semanasPosibles(fecha)[0]);
         getNextPurchaseOrderCode(fecha)
             .then((res) => setPreviewCode(res.data.code))
             .catch(() => setPreviewCode(''));
@@ -262,6 +271,7 @@ export default function PurchaseOrderFormPage() {
                 third_party_id: thirdPartyId,
                 warehouse_id: warehouseId,
                 date: fecha,
+                week: week || null,
                 reference: reference || null,
                 lines: lineasValidas.map((l) => ({
                     supply_id: l.supply_id,
@@ -331,14 +341,16 @@ export default function PurchaseOrderFormPage() {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Semana</label>
-                            <input
-                                type="number"
+                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Semana *</label>
+                            <select
                                 value={week}
-                                readOnly
-                                disabled
-                                className="w-full bg-gray-200 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-600 outline-none cursor-not-allowed"
-                            />
+                                onChange={(e) => setWeek(Number(e.target.value))}
+                                className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none"
+                            >
+                                {fecha && semanasPosibles(fecha).map((w, i) => (
+                                    <option key={w} value={w}>{`SEMANA ${w}${i === 0 ? ' (de la fecha)' : ' (siguiente)'}`}</option>
+                                ))}
+                            </select>
                         </div>
 
                         

@@ -263,6 +263,18 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 03/11/2026 — Inventario: retroalimentación de usuarios (documento SUGERENCIA.docx, partes A y B)
+- **Recibo de ingreso:** decía "Invalid Date" (se le agregaba una hora a una fecha que ya traía hora). Ahora muestra DD/MM/AAAA y el título **Fecha de recepción**.
+- **Despacho de materiales:** el BODEGUERO ve solo su bodega (fija, con candado; el backend ya lo bloqueaba al guardar). Se quitó el campo Motivo (siempre ENTREGA A PRODUCTOR) y una "W" suelta en la confirmación.
+- **Nuevo movimiento:** si el ingreso viene de una orden de compra, el motivo queda fijo en COMPRA A PROVEEDOR. La **guía de remisión es obligatoria** en todo ingreso por compra (con OC o con ese motivo); el backend valida las dos reglas.
+- **Orden de compra:** la semana se elige entre la de la fecha y la siguiente (compra el sábado de la sm 44 para el proceso del lunes de la sm 45). Una OC es de una sola semana.
+- **Sin decimales en lo que se cuenta por pieza:** solo LIBRAS acepta decimales (`Supply::UNIDADES_CON_DECIMALES`); TAPA, FONDO, FRASCOS, etc. van en enteros en OC, ingresos, transferencias y despachos.
+- **Desactivar un insumo:** antes se muestra dónde se usa (recetas activas, stock por bodega, movimientos — `GET /supplies/{id}/usage`). No se desactiva si está en una receta activa o tiene stock.
+- **Insumos duplicados:** no se repite el mismo nombre en la misma categoría (sin importar mayúsculas, tildes ni signos), aunque el otro esté inactivo; al escribir el nombre se avisa de insumos parecidos.
+- **Permiso "Ver costos y valores"** (`ver_costos` en Perfiles, sección INVENTARIO): sin él no se ven valores en Despacho, Historial de despachos, Movimientos ni Kárdex, y la API no los envía (`Controller::sinCostos`). La migración `2026_11_03_000001` se lo da a los perfiles que tienen Insumos u Órdenes de compra; los bodegueros no lo tienen.
+- Pruebas: `prueba_sugerencias_inv.php` 28 OK; inventario 111, movimientos 33, costo promedio 23, seguridad 80 (las viejas, con guía de remisión agregada a sus compras).
+- Pendiente de decisión (parte D del documento): unidades exactas sin decimales, bodegas del asistente de compras, listas de precios por proveedor con aprobación, cédula/RUC obligatoria al crear productores.
+
 ### 03/11/2026 — Menú angosto de iconos
 - El menú de la izquierda (`Sidebar.jsx`) quedó como una barra de 64 px con un icono por sección (la sección de la página actual se marca). Clic en un icono → la lista de opciones de esa sección se abre **encima** del contenido; ☰ abre el menú completo (secciones plegables como antes). Se cierra al elegir una opción, con clic afuera o con Esc. PRINCIPAL (una sola opción) va directo. La pantalla de trabajo gana unos 220 px de ancho.
 

@@ -42,6 +42,8 @@ const NOMBRE_MOTIVO_TRANSFERENCIA = 'TRANSFERENCIA A OTRA BODEGA';
 // Motivos visibles por tipo, solo para BODEGUERO/JEFE_BODEGA — Coordinador/Admin ven todo el catálogo.
 // "ENTREGA A PRODUCTOR" ya no está aquí: ese flujo vive en /despacho-materiales.
 const ROLES_RESTRINGIDOS = ['BODEGUERO', 'JEFE_BODEGA'];
+// Motivo de un ingreso desde una orden de compra (mismo nombre que en el backend)
+const MOTIVO_COMPRA = 'COMPRA A PROVEEDOR';
 const MOTIVOS_PERMITIDOS_POR_TIPO = {
     INGRESO: ['COMPRA A PROVEEDOR'],
     EGRESO: ['TRANSFERENCIA A OTRA BODEGA'],
@@ -178,6 +180,8 @@ export default function InventoryMovementFormPage() {
     };
 
     const motivoSeleccionado = motivos.find((m) => String(m.id) === String(movementReasonId));
+    // Ingreso por compra (con OC o con motivo COMPRA A PROVEEDOR): pide guía de remisión
+    const esCompra = tipo === 'INGRESO' && (Boolean(purchaseOrderId) || motivoSeleccionado?.name === MOTIVO_COMPRA);
     const esTransferencia = tipo === 'EGRESO' && motivoSeleccionado?.name === NOMBRE_MOTIVO_TRANSFERENCIA;
 
     // Filtra la lista visible del select de Motivo según el rol
@@ -275,6 +279,9 @@ export default function InventoryMovementFormPage() {
 
         // Precarga también el proveedor de la OC, ya que el Ingreso es de ese mismo tercero
         if (orden.third_party_id) setThirdPartyId(String(orden.third_party_id));
+        // 03/11/2026: si viene de una OC, el motivo es siempre COMPRA A PROVEEDOR (queda fijo)
+        const compra = motivos.find((m) => m.name === MOTIVO_COMPRA);
+        if (compra) setMovementReasonId(String(compra.id));
 
         const lineasDeOC = orden.lines.map((l) => {
             const pendiente = Number(l.quantity_ordered) - Number(l.quantity_received || 0);
@@ -377,6 +384,12 @@ export default function InventoryMovementFormPage() {
 
         if (!warehouseId || !movementReasonId || !fecha) {
             setError('BODEGA, MOTIVO Y FECHA SON OBLIGATORIOS');
+            return;
+        }
+
+        // 03/11/2026: la guía de remisión es el comprobante de lo recibido: obligatoria en toda compra
+        if (esCompra && !deliveryNote.trim()) {
+            setError('LA GUÍA DE REMISIÓN ES OBLIGATORIA EN UN INGRESO POR COMPRA');
             return;
         }
 
@@ -577,7 +590,9 @@ export default function InventoryMovementFormPage() {
                                 value={movementReasonId}
                                 onChange={(e) => setMovementReasonId(e.target.value)}
                                 required
-                                className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none"
+                                // con una OC el motivo es COMPRA A PROVEEDOR y no se cambia
+                                disabled={Boolean(purchaseOrderId)}
+                                className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none disabled:opacity-60"
                             >
                                                                 <option value="">Seleccionar motivo...</option>
                                 {motivosVisibles.map((m) => (
@@ -647,9 +662,10 @@ export default function InventoryMovementFormPage() {
                         )}
 
                         <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Guía de remisión</label>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Guía de remisión{esCompra ? ' *' : ''}</label>
                             <input
                                 value={deliveryNote}
+                                required={esCompra}
                                 onChange={(e) => setDeliveryNote(e.target.value.toUpperCase())}
                                 placeholder="Ej: 001-002-000123"
                                 className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none"

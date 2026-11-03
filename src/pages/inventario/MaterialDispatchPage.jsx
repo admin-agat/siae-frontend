@@ -10,9 +10,13 @@
 // El backend recalcula y valida todo (stock, receta, cupo liquidado).
 // 28/10/2026 (Fase 3): si COMERCIAL le asignó cupo al productor, se elige ese cupo y la marca y
 // las cajas salen de él (no se escriben a mano). Sin cupo de Comercial se sigue como antes.
+// 03/11/2026: el BODEGUERO solo ve su bodega; los valores (costo promedio) solo los ve quien tiene
+// el permiso "Ver costos y valores"; se quitó el campo Motivo (siempre ENTREGA A PRODUCTOR).
 import { useState, useEffect, useMemo } from 'react';
-import { Calculator, AlertTriangle, CheckCircle, Save, Info, X } from 'lucide-react';
+import { Calculator, AlertTriangle, CheckCircle, Save, Info, X, Lock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import { puede } from '../../routes/menu';
 import { calcularDespacho, guardarDespacho, getCuposAsignados } from '../../api/materialDispatch';
 import { getWarehouses } from '../../api/warehouses';
 import { getThirdParties } from '../../api/thirdParties';
@@ -44,6 +48,9 @@ const comoLista = (res) => (Array.isArray(res?.data) ? res.data : []);
 
 export default function MaterialDispatchPage() {
     const navigate = useNavigate();
+    const { user } = useAuth();
+    const esBodeguero = user?.role === 'BODEGUERO';
+    const verCostos = puede(user, 'ver_costos');
 
     // ---- Cabecera ----
     const [warehouseId, setWarehouseId] = useState('');
@@ -141,7 +148,11 @@ export default function MaterialDispatchPage() {
                 getThirdParties(),
                 getBrands(),
             ]);
-            setBodegas(comoLista(resBodegas).filter((b) => b.status));
+            const activas = comoLista(resBodegas).filter((b) => b.status);
+            // El BODEGUERO solo despacha desde su bodega (el backend también lo valida): queda fija
+            const visibles = esBodeguero ? activas.filter((b) => b.responsible_user_id === user?.id) : activas;
+            setBodegas(visibles);
+            if (esBodeguero && visibles.length > 0) setWarehouseId(String(visibles[0].id));
             // Solo quienes reciben material: PRODUCTOR / COMERCIALIZADORA
             setTerceros(comoLista(resTerceros).filter((t) => ['PRODUCTOR', 'COMERCIALIZADORA'].includes(t.type)));
             // Solo marcas ACTIVAS en el selector (las nuevas aparecen solas)
@@ -227,9 +238,10 @@ export default function MaterialDispatchPage() {
         }
     };
 
-    // Edita "a retirar" de una fila (acepta decimales para LIBRAS)
+    // Edita "a retirar" de una fila: decimales solo para LIBRAS (lo demás se cuenta por pieza)
     const handleCambiarRetirar = (supplyId, valor) => {
-        const limpio = valor.replace(/[^0-9.]/g, '');
+        const unidad = materiales.find((m) => m.supply_id === supplyId)?.unit;
+        const limpio = valor.replace(unidad === 'LIBRAS' ? /[^0-9.]/g : /[^0-9]/g, '');
         setMateriales((prev) =>
             prev.map((m) => (m.supply_id === supplyId ? { ...m, valor_a_retirar: limpio } : m))
         );
@@ -338,8 +350,8 @@ export default function MaterialDispatchPage() {
                 <h2 className="font-semibold mb-4">DATOS DEL DESPACHO</h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                        <label className={LABEL}>Bodega *</label>
-                        <SelectBuscable value={warehouseId} onChange={(e) => cambiarBodega(e.target.value)} className={INPUT}>
+                        <label className={LABEL}>Bodega * {esBodeguero && <Lock size={12} className="inline ml-1 text-gray-400" />}</label>
+                        <SelectBuscable value={warehouseId} onChange={(e) => cambiarBodega(e.target.value)} disabled={esBodeguero} className={`${INPUT} disabled:opacity-60`}>
                             <option value="">Seleccionar bodega...</option>
                             {bodegas.map((b) => (
                                 <option key={b.id} value={b.id}>{b.name}</option>
@@ -357,11 +369,7 @@ export default function MaterialDispatchPage() {
                         </SelectBuscable>
                     </div>
 
-                    {/* Motivo FIJO: un despacho siempre es ENTREGA A PRODUCTOR (lo pone el backend) */}
-                    <div>
-                        <label className={LABEL}>Motivo</label>
-                        <div className={`${INPUT} text-gray-500 cursor-not-allowed`}>ENTREGA A PRODUCTOR</div>
-                    </div>
+                    {/* Motivo: no se muestra, un despacho siempre es ENTREGA A PRODUCTOR (lo pone el backend) */}
 
                     <div>
                         <label className={LABEL}>Semana</label>
@@ -529,7 +537,7 @@ export default function MaterialDispatchPage() {
                                     <th className="py-2 pr-2 text-right">RECOMENDADO</th>
                                     <th className="py-2 pr-2 text-right">STOCK</th>
                                     <th className="py-2 pr-2 text-right">A RETIRAR</th>
-                                    <th className="py-2 text-right">VALOR</th>
+                                    {verCostos && <th className="py-2 text-right">VALOR</th>}
                                 </tr>
                             </thead>
                             <tbody>
@@ -563,7 +571,7 @@ export default function MaterialDispatchPage() {
                                                 }`}
                                             />
                                         </td>
-                                        <td className="py-2 text-right">{dinero(f.valor)}</td>
+                                        {verCostos && <td className="py-2 text-right">{dinero(f.valor)}</td>}
                                     </tr>
                                 ))}
                             </tbody>
@@ -602,10 +610,12 @@ export default function MaterialDispatchPage() {
 
                     {/* ===== Total + confirmar ===== */}
                     <div className="flex flex-wrap items-center justify-between gap-4 pt-2 border-t">
-                        <p className="text-sm text-gray-600">
-                            VALOR A DESCONTAR AL PRODUCTOR:{' '}
-                            <span className="text-lg font-bold text-gray-800">{dinero(valorTotal)}</span>
-                        </p>
+                        {verCostos ? (
+                            <p className="text-sm text-gray-600">
+                                VALOR A DESCONTAR AL PRODUCTOR:{' '}
+                                <span className="text-lg font-bold text-gray-800">{dinero(valorTotal)}</span>
+                            </p>
+                        ) : <span />}
                         <button
                             onClick={abrirConfirmacion}
                             disabled={guardando || cupoLiquidado}
@@ -629,8 +639,8 @@ export default function MaterialDispatchPage() {
                             <p>RETIRA: <span className="font-semibold text-gray-800">{retiraNombre} — C.I. {retiraCedula}</span></p>
                             <p>MATERIALES: <span className="font-semibold text-gray-800">{lineasARetirar.length}</span>
                                 {cantAjustados > 0 && <span className="text-amber-700"> ({cantAjustados} AJUSTADOS)</span>}
-                            </p>W
-                            <p>VALOR A DESCONTAR: <span className="font-semibold text-gray-800">{dinero(valorTotal)}</span></p>
+                            </p>
+                            {verCostos && <p>VALOR A DESCONTAR: <span className="font-semibold text-gray-800">{dinero(valorTotal)}</span></p>}
                             <p className="text-xs text-gray-400 pt-2">Se descontará del stock de la bodega de inmediato.</p>
                         </div>
                         <div className="flex justify-end gap-3">
