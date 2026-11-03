@@ -62,6 +62,8 @@ export default function ThirdPartyModal({ thirdParty, onClose, onGuardado }) {
 
     // ¿El tipo elegido es CLIENTE? → muestra País, Contacto y Marcas
     const esCliente = form.type === 'CLIENTE';
+    // 03/11/2026: cédula/RUC obligatoria para PRODUCTOR o COMERCIALIZADORA nuevo; uno viejo sin RUC se puede seguir editando
+    const pideIdentificacion = ['PRODUCTOR', 'COMERCIALIZADORA'].includes(form.type) && (!esEdicion || Boolean(thirdParty?.identification));
 
     // Marcas activas + las que el cliente ya tenga aunque estén inactivas (para poder quitarlas)
     useEffect(() => {
@@ -252,9 +254,12 @@ export default function ThirdPartyModal({ thirdParty, onClose, onGuardado }) {
                             {/* Fila 2: Identificación + Zona (productor, comercializadora, proveedor) */}
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className={labelClass}>RUC / Identificación</label>
-                                    <input name="identification" value={form.identification} onChange={handleChange} maxLength={50}
-                                        placeholder="Ej: 0912345678001" className={inputClass} />
+                                    {/* 03/11/2026: obligatoria para un productor o comercializadora nuevo (o que ya la tenía);
+                                        el backend revisa provincia y dígito verificador */}
+                                    <label className={labelClass}>Cédula / RUC{pideIdentificacion ? ' *' : ''}</label>
+                                    <input name="identification" value={form.identification} onChange={handleChange} maxLength={['PRODUCTOR', 'COMERCIALIZADORA'].includes(form.type) ? 13 : 50}
+                                        required={pideIdentificacion} inputMode="numeric"
+                                        placeholder="Cédula (10) o RUC (13 dígitos)" className={inputClass} />
                                 </div>
                                 <div>
                                     <label className={labelClass}>Zona</label>

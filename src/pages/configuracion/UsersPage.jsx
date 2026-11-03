@@ -23,7 +23,7 @@ import { pantallasDelTipo } from '../../routes/menu';
 import { getMensajeExito, getMensajeError } from '../../utils/toastMessages';
 import SelectBuscable from '../../components/common/SelectBuscable';
 
-const formularioVacio = { name: '', email: '', password: '', profile_id: '', boss_id: '', phone: '', warehouse_id: '', screens_added: [], screens_removed: [] };
+const formularioVacio = { name: '', email: '', password: '', profile_id: '', boss_id: '', phone: '', warehouse_id: '', warehouse_ids: [], screens_added: [], screens_removed: [] };
 
 function UserModal({ usuario, perfiles, usuarios, catalogo, bodegas, onClose, onGuardado }) {
   const esEdicion = Boolean(usuario?.id);
@@ -31,6 +31,7 @@ function UserModal({ usuario, perfiles, usuarios, catalogo, bodegas, onClose, on
     name: usuario.name || '', email: usuario.email || '', password: '',
     profile_id: usuario.profile_id ? String(usuario.profile_id) : '', boss_id: usuario.boss_id ? String(usuario.boss_id) : '',
     phone: usuario.phone || '', warehouse_id: usuario.warehouse_id ? String(usuario.warehouse_id) : '',
+    warehouse_ids: usuario.warehouse_ids || [],
     screens_added: usuario.screens_added || [], screens_removed: usuario.screens_removed || [],
   } : formularioVacio));
   const [verExcepciones, setVerExcepciones] = useState(() => Boolean(usuario?.screens_added?.length || usuario?.screens_removed?.length));
@@ -84,6 +85,8 @@ function UserModal({ usuario, perfiles, usuarios, catalogo, bodegas, onClose, on
         boss_id: form.boss_id ? Number(form.boss_id) : null,
         phone: form.phone.trim() || null,
         warehouse_id: tipo === 'BODEGUERO' ? Number(form.warehouse_id) : null,
+        // 03/11/2026: bodegas que opera (ninguna = todas); el BODEGUERO y el ADMIN no llevan
+        warehouse_ids: ['ADMIN', 'BODEGUERO'].includes(tipo) ? [] : form.warehouse_ids,
         screens_added: form.screens_added.filter((k) => esPermitida(k) && !delPerfil.includes(k)),
         screens_removed: form.screens_removed.filter((k) => delPerfil.includes(k)),
         ...(form.password ? { password: form.password } : {}),
@@ -154,6 +157,32 @@ function UserModal({ usuario, perfiles, usuarios, catalogo, bodegas, onClose, on
               <option value="">SELECCIONAR...</option>
               {bodegas.map((b) => <option key={b.id} value={String(b.id)}>{b.name}</option>)}
             </SelectBuscable>
+          </div>
+        )}
+        {tipo && !['ADMIN', 'BODEGUERO'].includes(tipo) && (
+          <div className="col-span-2">
+            <label className={label}>Bodegas que opera</label>
+            <div className="flex flex-wrap gap-2">
+              {bodegas.map((b) => {
+                const marcada = form.warehouse_ids.includes(b.id);
+                return (
+                  <button
+                    key={b.id}
+                    type="button"
+                    aria-pressed={marcada}
+                    onClick={() => setForm((f) => ({ ...f, warehouse_ids: marcada ? f.warehouse_ids.filter((x) => x !== b.id) : [...f.warehouse_ids, b.id] }))}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${marcada ? 'bg-primario text-white border-primario' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+                  >
+                    {b.name}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-xs text-gray-400 mt-1">
+              {form.warehouse_ids.length
+                ? 'Solo podrá despachar, registrar y ver movimientos de las bodegas marcadas.'
+                : 'Sin ninguna marcada puede operar todas las bodegas.'}
+            </p>
           </div>
         )}
 
@@ -250,7 +279,7 @@ export default function UsersPage() {
         );
       },
     },
-    { titulo: 'Bodega', render: (u) => u.warehouse_name || <span className="text-gray-400">—</span> },
+    { titulo: 'Bodega', render: (u) => u.warehouse_name || (u.warehouse_names?.length ? u.warehouse_names.join(', ') : <span className="text-gray-400">—</span>) },
     { titulo: 'Estado', render: (u) => <EstadoBadge activo={u.status} /> },
     {
       titulo: 'Acciones',

@@ -10,7 +10,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, Plus, Trash2, Search } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { puede } from '../../routes/menu';
+import { puede, bodegasPermitidas } from '../../routes/menu';
 import {
     getInventoryMovements, getInventoryMovement, updateInventoryMovement,
     deactivateInventoryMovement, getKardex,
@@ -93,7 +93,7 @@ export default function InventoryMovementsPage() {
     useEffect(() => {
         Promise.all([getWarehouses(), getSupplies()])
             .then(([resB, resI]) => {
-                setBodegas(resB.data);
+                setBodegas(bodegasPermitidas(user, resB.data));
                 setInsumos(resI.data);
                 if (esBodeguero) {
                     const mia = resB.data.find((b) => b.responsible_user_id === user.id);

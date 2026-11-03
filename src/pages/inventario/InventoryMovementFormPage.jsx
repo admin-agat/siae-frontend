@@ -24,6 +24,7 @@ import { getActiveMovementReasonsByType } from '../../api/movementReasons';
 // por el mismo patrón que warehouses/thirdParties/supplies.
 import api from '../../api/axios';
 import SelectBuscable from '../../components/common/SelectBuscable';
+import { bodegasPermitidas } from '../../routes/menu';
 
 // Una línea vacía nueva, para el botón "Agregar insumo".
 const lineaVacia = () => ({
@@ -578,7 +579,7 @@ export default function InventoryMovementFormPage() {
                                 }`}
                             >
                                 <option value="">Seleccionar bodega...</option>
-                                {bodegas.map((b) => (
+                                {bodegasPermitidas(user, bodegas).map((b) => (
                                     <option key={b.id} value={b.id}>{b.name}</option>
                                 ))}
                             </SelectBuscable>

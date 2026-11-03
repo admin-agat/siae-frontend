@@ -16,7 +16,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Calculator, AlertTriangle, CheckCircle, Save, Info, X, Lock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { puede } from '../../routes/menu';
+import { puede, bodegasPermitidas } from '../../routes/menu';
 import { calcularDespacho, guardarDespacho, getCuposAsignados } from '../../api/materialDispatch';
 import { getWarehouses } from '../../api/warehouses';
 import { getThirdParties } from '../../api/thirdParties';
@@ -149,10 +149,10 @@ export default function MaterialDispatchPage() {
                 getBrands(),
             ]);
             const activas = comoLista(resBodegas).filter((b) => b.status);
-            // El BODEGUERO solo despacha desde su bodega (el backend también lo valida): queda fija
-            const visibles = esBodeguero ? activas.filter((b) => b.responsible_user_id === user?.id) : activas;
+            // Solo sus bodegas (BODEGUERO: la suya; otros: las asignadas en Usuarios). El backend también lo valida.
+            const visibles = esBodeguero ? activas.filter((b) => b.responsible_user_id === user?.id) : bodegasPermitidas(user, activas);
             setBodegas(visibles);
-            if (esBodeguero && visibles.length > 0) setWarehouseId(String(visibles[0].id));
+            if (visibles.length === 1) setWarehouseId(String(visibles[0].id));
             // Solo quienes reciben material: PRODUCTOR / COMERCIALIZADORA
             setTerceros(comoLista(resTerceros).filter((t) => ['PRODUCTOR', 'COMERCIALIZADORA'].includes(t.type)));
             // Solo marcas ACTIVAS en el selector (las nuevas aparecen solas)
@@ -351,7 +351,7 @@ export default function MaterialDispatchPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                         <label className={LABEL}>Bodega * {esBodeguero && <Lock size={12} className="inline ml-1 text-gray-400" />}</label>
-                        <SelectBuscable value={warehouseId} onChange={(e) => cambiarBodega(e.target.value)} disabled={esBodeguero} className={`${INPUT} disabled:opacity-60`}>
+                        <SelectBuscable value={warehouseId} onChange={(e) => cambiarBodega(e.target.value)} disabled={esBodeguero || bodegas.length === 1} className={`${INPUT} disabled:opacity-60`}>
                             <option value="">Seleccionar bodega...</option>
                             {bodegas.map((b) => (
                                 <option key={b.id} value={b.id}>{b.name}</option>

@@ -106,6 +106,11 @@ export const menuItems = [
 
 export const esAdmin = (user) => user?.role === "ADMIN";
 
+// 03/11/2026: bodegas que el usuario puede operar (user.bodegas viene del login y de /me; null = todas).
+// Solo arma las listas: el backend es el que valida.
+export const bodegasPermitidas = (user, lista) =>
+    (Array.isArray(user?.bodegas) ? lista.filter((b) => user.bodegas.includes(b.id)) : lista);
+
 // true si el usuario tiene al menos una de las pantallas (el ADMIN, todas)
 export const puede = (user, ...pantallas) =>
     esAdmin(user) || pantallas.some((p) => user?.pantallas?.includes(p));

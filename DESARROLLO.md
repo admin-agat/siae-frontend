@@ -263,6 +263,12 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 03/11/2026 — Bodegas por usuario (D2), cédula/RUC obligatoria (D4) y revisión de seguridad
+- **Bodegas que opera cada usuario** (tabla `user_warehouses`, se asignan en Usuarios; sin ninguna = todas). El BODEGUERO sigue con su bodega (`responsible_user_id`) y el ADMIN con todas. `User::bodegasPermitidas()` / `puedeBodega()` se aplican en el servidor a: registrar, corregir, ver y listar movimientos, kárdex, stock general, transferencias, calcular/guardar/ver/listar despachos. El login y `/me` envían `bodegas` y las pantallas solo muestran esas (`bodegasPermitidas()` en `routes/menu.js`). Las órdenes de compra no se limitan por bodega. Cambios de bodegas quedan en la bitácora (`BODEGAS_USUARIO`).
+- **Cédula / RUC obligatoria** para PRODUCTOR y COMERCIALIZADORA nuevos (`App\Support\IdentificacionEcuador`): 10 o 13 dígitos, provincia 01–24 o 30, dígito verificador de la cédula (persona natural); de sociedades solo la estructura, porque el SRI emite RUC que no cumplen el módulo 11. Probado con los 493 RUC del Listado de Proveedores de Contífico: solo rechaza 9999999999999 (consumidor final). Los terceros viejos sin RUC se siguen editando; el RUC que ya tienen no se puede borrar. Proveedores y clientes no cambian.
+- **Seguridad:** quien no tiene "Ver costos y valores" ya no fija el costo de un ingreso o devolución: el servidor pone el precio de la OC o el costo promedio del insumo (antes se aceptaba el que mandaba la pantalla y un bodeguero podía alterar el costo promedio). Tampoco recibe precios en Órdenes de compra ni el costo en la lista de Insumos. `composer audit` y `npm audit`: sin vulnerabilidades.
+- Pruebas: `prueba_d2_d4.php` 32 OK; sugerencias 33, inventario 111, movimientos 33, costo promedio 23, seguridad 80, permisos 50, exportaciones 88, bitácora 22, NC 36, presentación 21, terceros 18. (`prueba_cierre` y `prueba_proforma_turno` fallan igual sin estos cambios: dependen de datos locales.)
+
 ### 03/11/2026 — Inventario: retroalimentación de usuarios (documento SUGERENCIA.docx, partes A y B)
 - **Recibo de ingreso:** decía "Invalid Date" (se le agregaba una hora a una fecha que ya traía hora). Ahora muestra DD/MM/AAAA y el título **Fecha de recepción**.
 - **Despacho de materiales:** el BODEGUERO ve solo su bodega (fija, con candado; el backend ya lo bloqueaba al guardar). Se quitó el campo Motivo (siempre ENTREGA A PRODUCTOR) y una "W" suelta en la confirmación.

@@ -8,7 +8,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, FileText, Ban, AlertTriangle, CheckCircle, X, Plus } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { puede } from '../../routes/menu';
+import { puede, bodegasPermitidas } from '../../routes/menu';
 import { getDespachos, anularDespacho } from '../../api/materialDispatch';
 import { getWarehouses } from '../../api/warehouses';
 import { getThirdParties } from '../../api/thirdParties';
@@ -70,7 +70,7 @@ export default function MaterialDispatchHistoryPage() {
     const cargarCatalogos = async () => {
         try {
             const [resBodegas, resTerceros] = await Promise.all([getWarehouses(), getThirdParties()]);
-            setBodegas(comoLista(resBodegas));
+            setBodegas(bodegasPermitidas(user, comoLista(resBodegas)));
             setTerceros(comoLista(resTerceros).filter((t) => ['PRODUCTOR', 'COMERCIALIZADORA'].includes(t.type)));
         } catch (err) {
             console.error('ERROR AL CARGAR CATÁLOGOS:', err);
