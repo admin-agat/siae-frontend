@@ -5,6 +5,7 @@
 // 29/10/2026: la hoja de Logística "Asignación de carga WK-xx" dentro del sistema.
 // Por cada barco de la semana: ventana de carga, zarpe, ETA y sus BOOKINGS con lo REALMENTE
 // embarcado y sus documentos (booking, DAE, B/L, AUCP, orden, Forma A, consignee, notify, estado DAE).
+// 02/11/2026: proforma y turno pagados por booking (columnas de la hoja de Logística).
 // - Se puede embarcar más o menos que el cupo, y un contenedor puede salir incompleto: se avisa en
 //   ámbar, no se bloquea (es lo que pasó).
 // - Lo que falta de un CONTRATO se completa con SPOT en otro booking: el resumen por cliente lo muestra.
@@ -31,6 +32,13 @@ const texto = (v) => (v === null || v === undefined ? '' : String(v));
 let contador = 0;
 const nuevaClave = () => `k-${++contador}`;
 
+// Proforma / turno pagados (02/11/2026): un clic cambia entre PAGADO (verde) y NO PAGADO (rojo), como en la hoja
+const BotonPagado = ({ pagado, onClick }) => (
+  <button type="button" onClick={onClick} className={`w-full px-2 py-1.5 rounded-lg text-xs font-bold text-white whitespace-nowrap ${pagado ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}>
+    {pagado ? 'PAGADO' : 'NO PAGADO'}
+  </button>
+);
+
 const bookingDesdeBackend = (k) => ({
   _key: `k-b${k.id}`,
   id: k.id,
@@ -46,6 +54,8 @@ const bookingDesdeBackend = (k) => ({
   aucp: texto(k.aucp),
   order_ref: texto(k.order_ref),
   forma_a: texto(k.forma_a),
+  proforma_paid: Boolean(k.proforma_paid),
+  turn_paid: Boolean(k.turn_paid),
   consignee_name: texto(k.consignee_name),
   consignee_address: texto(k.consignee_address),
   notify_name: texto(k.notify_name),
@@ -227,7 +237,7 @@ export default function ShipmentClosingPage() {
         negotiation_type: anterior?.negotiation_type || 'SPOT',
         cargo_mode: anterior?.cargo_mode || 'BODEGA',
         holds: '', containers_qty: '',
-        booking_number: '', dae_number: anterior?.dae_number || '', bl_number: '', aucp: '', order_ref: '', forma_a: '',
+        booking_number: '', dae_number: anterior?.dae_number || '', bl_number: '', aucp: '', order_ref: '', forma_a: '', proforma_paid: false, turn_paid: false,
         consignee_name: texto(anterior?.consignee_name || p?.consignee_name),
         consignee_address: texto(anterior?.consignee_address || p?.consignee_address),
         notify_name: texto(anterior?.notify_name || p?.notify_name),
@@ -304,6 +314,8 @@ export default function ShipmentClosingPage() {
             aucp: k.aucp || null,
             order_ref: k.order_ref || null,
             forma_a: k.forma_a || null,
+            proforma_paid: k.proforma_paid,
+            turn_paid: k.turn_paid,
             consignee_name: k.consignee_name || null,
             consignee_address: k.consignee_address || null,
             notify_name: k.notify_name || null,
@@ -477,7 +489,7 @@ export default function ShipmentClosingPage() {
                 </div>
 
                 <div className="overflow-x-auto border rounded-lg">
-                  <table className="w-full text-sm min-w-[2800px]">
+                  <table className="w-full text-sm min-w-[3000px]">
                     <thead className="bg-primario text-white">
                       <tr>
                         <th className={th}>#</th>
@@ -489,6 +501,8 @@ export default function ShipmentClosingPage() {
                         <th className={th}>Booking</th>
                         <th className={th}>DAE</th>
                         <th className={th}>B/L</th>
+                        <th className={th} title="Proforma de la naviera pagada">Proforma</th>
+                        <th className={th} title="Turno del puerto pagado">Turno</th>
                         <th className={`${th} text-right`}>Cupo</th>
                         <th className={`${th} text-right`}>Embarcado</th>
                         <th className={`${th} text-right`}>Dif.</th>
@@ -506,7 +520,7 @@ export default function ShipmentClosingPage() {
                     </thead>
                     <tbody>
                       {b.bookings.length === 0 ? (
-                        <tr><td colSpan={22} className="text-center py-5 text-gray-400">Agrega el primer booking de este barco</td></tr>
+                        <tr><td colSpan={24} className="text-center py-5 text-gray-400">Agrega el primer booking de este barco</td></tr>
                       ) : b.bookings.map((k, j) => {
                         const cambiar = (campo) => (e) => cambiarBooking(b.id, k._key, campo, e.target.value);
                         const mayus = (campo) => (e) => cambiarBooking(b.id, k._key, campo, e.target.value.toUpperCase());
@@ -551,6 +565,8 @@ export default function ShipmentClosingPage() {
                             <td className="px-2 py-1.5 min-w-[170px]"><input value={k.booking_number} maxLength={30} onChange={mayus('booking_number')} placeholder="N° BOOKING" className={inputClass} /></td>
                             <td className="px-2 py-1.5 min-w-[190px]"><input value={k.dae_number} maxLength={30} onChange={mayus('dae_number')} placeholder="N° DAE" className={inputClass} /></td>
                             <td className="px-2 py-1.5 min-w-[130px]"><input value={k.bl_number} maxLength={30} onChange={mayus('bl_number')} className={inputClass} /></td>
+                            <td className="px-2 py-1.5"><BotonPagado pagado={k.proforma_paid} onClick={() => cambiarBooking(b.id, k._key, 'proforma_paid', !k.proforma_paid)} /></td>
+                            <td className="px-2 py-1.5"><BotonPagado pagado={k.turn_paid} onClick={() => cambiarBooking(b.id, k._key, 'turn_paid', !k.turn_paid)} /></td>
                             <td className="px-2 py-1.5 min-w-[95px]"><input type="number" min="0" value={k.quota_boxes} onChange={cambiar('quota_boxes')} className={`${inputClass} text-right`} /></td>
                             <td className="px-2 py-1.5 min-w-[100px]"><input type="number" min="0" value={k.shipped_boxes} onChange={cambiar('shipped_boxes')} className={`${inputClass} text-right font-semibold`} /></td>
                             <td className={`px-2 py-1.5 text-right whitespace-nowrap font-semibold ${dif < 0 ? 'text-amber-700' : dif > 0 ? 'text-green-700' : 'text-gray-400'}`}>{dif > 0 ? '+' : ''}{formatoCajas(dif)}</td>
@@ -575,7 +591,7 @@ export default function ShipmentClosingPage() {
                           abierto && (
                             <tr key={`${k._key}-partes`} className={fondo}>
                               <td></td>
-                              <td colSpan={21} className="px-2 pb-3">
+                              <td colSpan={23} className="px-2 pb-3">
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 max-w-[1500px]">
                                   <div>
                                     <label className={etiqueta}>Consignee</label>

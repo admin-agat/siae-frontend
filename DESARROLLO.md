@@ -263,6 +263,21 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 03/11/2026 — Menú angosto de iconos
+- El menú de la izquierda (`Sidebar.jsx`) quedó como una barra de 64 px con un icono por sección (la sección de la página actual se marca). Clic en un icono → la lista de opciones de esa sección se abre **encima** del contenido; ☰ abre el menú completo (secciones plegables como antes). Se cierra al elegir una opción, con clic afuera o con Esc. PRINCIPAL (una sola opción) va directo. La pantalla de trabajo gana unos 220 px de ancho.
+
+### 03/11/2026 — Terceros validados de la compra WK-44 (datos de producción)
+- Cruce de los vendedores (columna COMERCIAL) y productores de la hoja de compra WK-44 con Terceros, el Listado de Proveedores de Contífico y PRODUCTORES 2026. Solo dos tipos: **PRODUCTOR** (vende su propia fruta) y **COMERCIALIZADORA** (junta fruta de varios productores).
+- Aplicado con respaldo `siae_production_20261103_1904_antes_terceros_wk44.sql` (script con simulación previa y verificación de la foto): **9 fusiones** (el registro de nombre corto sin RUC se desactiva, sus fincas pasan al registro con RUC: KAREN SANCHEZ, PROBADECUA, PATRICIO y MANUEL ZUMBA, ROBERT AGUILAR, WILSON VERGARA, RODRIGO GOMEZ, ADRIAN FISCHERT, JOEL y HOLGER VARGAS → VARGAS LOZANO HOLGER JOEL); **2 RUC completados** (VEGA BRITO ANGEL GERARDO, VEGA BRITO MARIA ROSA); **4 creados** (ASOPROABAORE, MULVENSER, RAMON LOPEZ BYRON PORFIRIO, VEGA BRITO JORGE EFRAIN).
+- Pendiente con la asistente comercial (Excel `WK44_Terceros_para_validar.xlsx`): RUC de 6 vendedores (ASOPRODMAR, JOSE LUIS SALDAÑA, ORODELTI, AGROSIGAL, GODCORP, ANDER ALVAREZ) y datos de los productores que venden por medio de comercializadoras (opcionales). El SRI no se puede consultar de forma automática (captcha / no responde).
+
+### 02/11/2026 — WK-45: pedido corregido, barcos y proforma/turno pagados en el cierre
+- Pedido WK-45 corregido según el correo de Rusia y la hoja de Logística (respaldo `siae_production_20261103_0313_antes_corregir_wk45.sql`, por la API de Pedido semanal): GT 4.800 y RVI 14.400 pasan a **bodega** (no contenedor), RVI 65.000 a **CONTRATO 002 ($8,10)**, RVI 20.000 a **Puerto Bolívar**. El pedido queda con 35 contenedores, como la naviera.
+- Distribución de barcos WK-45 (UNIREEFER) cargada según la "Asignación de carga WK-45" de Logística (respaldos `..._0323_antes_distribucion_wk45.sql` y `..._0331_antes_ajuste_dist_wk45.sql`): KANO REEFER 10.000 · CS ENDEAVOUR 84.000 · ICE GLACIER 34.800 · BALTIC WINTER 37.400 = 166.200, 0 pendientes. Zarpe = fin de la ventana de carga; ETA al puerto y ventana en el comentario de cada barco. El contrato RVI va 8.600 en BALTIC WINTER y 56.400 en CS ENDEAVOUR (la tabla del correo ruso lo repartía 23.000/42.000; manda la hoja de Logística, que cuadra con las bodegas).
+- Cierre de embarque: columnas **Proforma** y **Turno** por booking (botón PAGADO verde / NO PAGADO rojo, como en la hoja). Migración `2026_11_02_000008` (`shipment_bookings.proforma_paid`, `turn_paid`, booleanos con valor por defecto falso).
+- Pendiente de negocio: en la hoja, GT 10.800 (contenedores) y GT 4.800 (CFR) dicen CONTRATO banda azul (= PACKED), pero el contrato de GT solo tiene precio CONVENCIONAL; en el pedido siguen SPOT hasta tener el precio PACKED.
+- Pruebas: proforma/turno 8 OK (nueva).
+
 ### 02/11/2026 — Se quita la pantalla Comercializadoras: filtro por tipo en Terceros
 - "Comercializadoras" era la misma pantalla de Terceros filtrada (mismos datos, formulario y permiso). Se quitó del menú y del catálogo de pantallas (`config/pantallas.php`); la ruta vieja `/comercializadoras` abre `/terceros?tipo=COMERCIALIZADORA`.
 - Terceros tiene un **filtro por tipo** (Todos · Productores · Comercializadoras · Proveedores · Clientes) con la cantidad de activos; con un tipo elegido, "Nuevo tercero" ya viene con ese tipo.
