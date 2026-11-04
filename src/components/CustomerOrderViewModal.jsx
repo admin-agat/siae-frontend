@@ -4,6 +4,10 @@
 // del contrato actual) y el resumen por cliente. Para cambiar algo se usa "Editar".
 // 29/10/2026: botón Imprimir (también desde la acción Imprimir de la tabla: imprimirAlAbrir).
 // La hoja impresa es un bloque aparte (id="area-impresion", ver @media print en index.css).
+// 04/11/2026 (prueba de interfaz): columnas CARGA y NEGOCIACIÓN (antes "Modalidad"/"Tipo", al revés de
+// lo que se esperaba), el incoterm va debajo de la negociación, N° pedido y notas debajo del cliente
+// (casi siempre estaban vacías), nada se parte en dos líneas, resumen por cliente ARRIBA, fila de
+// total en la tabla, encabezado fijo al bajar y el comentario en una fila propia.
 import { useState, useEffect, useRef } from 'react';
 import { X, Pencil, Printer } from 'lucide-react';
 import { getCustomerOrder } from '../api/customerOrders';
@@ -21,6 +25,8 @@ const TIPOS_CARGA = {
 const formatoCajas = (n) => Number(n || 0).toLocaleString('es-EC');
 const formatoDinero = (n) => Number(n || 0).toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const formatoFecha = (f) => (f ? f.split('-').reverse().join('/') : '—');
+const sinPrecio = (l) => l.box_price === null || l.box_price === undefined;
+const carga = (l) => `${TIPOS_CARGA[l.cargo_type] || l.cargo_type}${l.containers_qty ? ` (${l.containers_qty} × ${formatoCajas(l.boxes_per_container)})` : ''}`;
 
 export default function CustomerOrderViewModal({ pedidoId, onClose, onEditar, imprimirAlAbrir = false }) {
     const { user } = useAuth();
@@ -53,15 +59,18 @@ export default function CustomerOrderViewModal({ pedidoId, onClose, onEditar, im
             resumen.push(fila);
         }
         if (l.negotiation_type === 'CONTRATO') fila.contrato += l.boxes; else fila.spot += l.boxes;
-        if (l.box_price === null || l.box_price === undefined) fila.sinPrecio += l.boxes;
+        if (sinPrecio(l)) fila.sinPrecio += l.boxes;
         else fila.monto += l.boxes * Number(l.box_price);
     });
     const totalCajas = lineas.reduce((s, l) => s + l.boxes, 0);
     const totalMonto = resumen.reduce((s, r) => s + r.monto, 0);
     const totalSinPrecio = resumen.reduce((s, r) => s + r.sinPrecio, 0);
+    const conNumeroPedido = lineas.some((l) => l.order_number);
 
-    const th = 'border border-gray-400 px-1.5 py-1 text-left font-semibold bg-gray-100';
+    const th = 'border border-gray-400 px-1.5 py-1 text-left font-semibold bg-gray-100 whitespace-nowrap';
     const td = 'border border-gray-300 px-1.5 py-0.5';
+    // Pantalla: encabezado fijo al bajar (sticky dentro del cuerpo del modal) y sin partir el texto
+    const thPantalla = 'sticky top-0 z-10 bg-primario text-white px-3 py-2 uppercase whitespace-nowrap';
 
     return (
         <>
@@ -91,14 +100,14 @@ export default function CustomerOrderViewModal({ pedidoId, onClose, onEditar, im
                         <tr>
                             <th className={`${th} w-6`}>#</th>
                             <th className={th}>Cliente</th>
-                            <th className={th}>Modalidad</th>
+                            <th className={th}>Carga</th>
                             <th className={`${th} text-right`}>Cajas</th>
-                            <th className={th}>Incoterm</th>
                             <th className={th}>Puerto</th>
-                            <th className={th}>Tipo</th>
+                            <th className={th}>Negociación</th>
+                            <th className={th}>Incoterm</th>
                             <th className={`${th} text-right`}>Precio caja</th>
                             <th className={`${th} text-right`}>Monto</th>
-                            <th className={th}>N° pedido</th>
+                            {conNumeroPedido && <th className={th}>N° pedido</th>}
                             <th className={th}>Notas</th>
                         </tr>
                     </thead>
@@ -107,17 +116,24 @@ export default function CustomerOrderViewModal({ pedidoId, onClose, onEditar, im
                             <tr key={l.id}>
                                 <td className={td}>{i + 1}</td>
                                 <td className={td}>{l.customer?.third_party?.name}{l.brand && ` · ${marcaConPresentacion(l.brand.name, l.presentation)}`}</td>
-                                <td className={td}>{TIPOS_CARGA[l.cargo_type] || l.cargo_type}{l.containers_qty ? ` (${l.containers_qty} × ${formatoCajas(l.boxes_per_container)})` : ''}</td>
-                                <td className={`${td} text-right font-semibold`}>{formatoCajas(l.boxes)}</td>
-                                <td className={td}>{l.incoterm}</td>
-                                <td className={td}>{l.departure_port?.name}</td>
+                                <td className={td}>{carga(l)}</td>
+                                <td className={`${td} text-right font-semibold whitespace-nowrap`}>{formatoCajas(l.boxes)}</td>
+                                <td className={`${td} whitespace-nowrap`}>{l.departure_port?.name}</td>
                                 <td className={td}>{l.negotiation_type}</td>
-                                <td className={`${td} text-right`}>{l.box_price === null ? 'PENDIENTE' : `$ ${formatoDinero(l.box_price)}`}</td>
-                                <td className={`${td} text-right`}>{l.box_price === null ? '—' : `$ ${formatoDinero(l.boxes * Number(l.box_price))}`}</td>
-                                <td className={td}>{l.order_number || '—'}</td>
+                                <td className={td}>{l.incoterm}</td>
+                                <td className={`${td} text-right whitespace-nowrap`}>{sinPrecio(l) ? 'PENDIENTE' : `$ ${formatoDinero(l.box_price)}`}</td>
+                                <td className={`${td} text-right whitespace-nowrap`}>{sinPrecio(l) ? '—' : `$ ${formatoDinero(l.boxes * Number(l.box_price))}`}</td>
+                                {conNumeroPedido && <td className={td}>{l.order_number || '—'}</td>}
                                 <td className={td}>{l.notes || '—'}</td>
                             </tr>
                         ))}
+                        <tr className="font-bold">
+                            <td className={td} colSpan={3}>TOTAL SEMANA {pedido.week}</td>
+                            <td className={`${td} text-right whitespace-nowrap`}>{formatoCajas(totalCajas)}</td>
+                            <td className={td} colSpan={4}></td>
+                            <td className={`${td} text-right whitespace-nowrap`}>$ {formatoDinero(totalMonto)}</td>
+                            <td className={td} colSpan={conNumeroPedido ? 2 : 1}>{totalSinPrecio > 0 ? `${formatoCajas(totalSinPrecio)} cajas sin precio` : ''}</td>
+                        </tr>
                     </tbody>
                 </table>
                 <table className="border-collapse min-w-[50%] break-inside-avoid">
@@ -164,15 +180,15 @@ export default function CustomerOrderViewModal({ pedidoId, onClose, onEditar, im
                     </button>
                 </div>
 
-                <div className="px-6 py-4 overflow-y-auto">
+                <div className="px-6 pb-4 overflow-y-auto">
                     {error ? (
-                        <p className="text-red-600 text-sm">{error}</p>
+                        <p className="text-red-600 text-sm pt-4">{error}</p>
                     ) : !pedido ? (
-                        <p className="text-gray-400 text-sm">Cargando pedido...</p>
+                        <p className="text-gray-400 text-sm pt-4">Cargando pedido...</p>
                     ) : (
                         <>
                             {/* Cabecera */}
-                            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4 text-sm">
+                            <div className="flex flex-wrap gap-x-10 gap-y-3 pt-4 mb-3 text-sm">
                                 <div>
                                     <p className="text-xs text-gray-500 uppercase">Total semana</p>
                                     <p className="font-bold text-gray-800">{formatoCajas(pedido.expected_boxes ?? totalCajas)} cajas</p>
@@ -189,28 +205,48 @@ export default function CustomerOrderViewModal({ pedidoId, onClose, onEditar, im
                                     <p className="text-xs text-gray-500 uppercase">Estado</p>
                                     <EstadoBadge activo={pedido.status} textoActivo="ACTIVO" textoInactivo="ANULADO" />
                                 </div>
-                                <div>
+                            </div>
+                            {pedido.comment && (
+                                <div className="mb-3 text-sm">
                                     <p className="text-xs text-gray-500 uppercase">Comentario</p>
-                                    <p className="text-gray-800">{pedido.comment || '—'}</p>
+                                    <p className="text-gray-800">{pedido.comment}</p>
+                                </div>
+                            )}
+
+                            {/* Resumen por cliente (arriba: se ve sin bajar) */}
+                            <div className="flex flex-wrap gap-3 mb-4">
+                                {resumen.map((r) => (
+                                    <div key={r.customer_id} className="rounded-xl border bg-primario-claro/40 px-4 py-2 text-sm min-w-[200px]">
+                                        <p className="font-semibold text-primario">{r.nombre}</p>
+                                        <p className="font-bold text-gray-800">{formatoCajas(r.contrato + r.spot)} cajas</p>
+                                        <p className="text-xs text-gray-500">Contrato {formatoCajas(r.contrato)} · Spot {formatoCajas(r.spot)}</p>
+                                        <p className="text-xs text-gray-700">
+                                            $ {formatoDinero(r.monto)}
+                                            {r.sinPrecio > 0 && <span className="text-amber-600"> · {formatoCajas(r.sinPrecio)} cajas sin precio</span>}
+                                        </p>
+                                    </div>
+                                ))}
+                                <div className="rounded-xl border bg-gray-50 px-4 py-2 text-sm min-w-[200px]">
+                                    <p className="font-semibold text-gray-700">TOTAL SEMANA {pedido.week}</p>
+                                    <p className="font-bold text-gray-800">{formatoCajas(totalCajas)} cajas</p>
+                                    <p className="text-xs text-gray-700">$ {formatoDinero(totalMonto)} conocido</p>
+                                    {totalSinPrecio > 0 && <p className="text-xs text-amber-600">{formatoCajas(totalSinPrecio)} cajas sin precio</p>}
                                 </div>
                             </div>
 
-                            {/* Líneas */}
-                            <div className="overflow-x-auto rounded-xl border mb-4">
-                                <table className="w-full text-sm min-w-[1000px]">
-                                    <thead className="bg-primario text-white">
+                            {/* Líneas (sin overflow en el contenedor para que el encabezado quede fijo al bajar) */}
+                            <div className="rounded-xl border">
+                                <table className="w-full text-sm">
+                                    <thead>
                                         <tr>
-                                            <th className="text-left px-3 py-2 uppercase">#</th>
-                                            <th className="text-left px-3 py-2 uppercase">Cliente</th>
-                                            <th className="text-left px-3 py-2 uppercase">Modalidad</th>
-                                            <th className="text-right px-3 py-2 uppercase">Cajas</th>
-                                            <th className="text-left px-3 py-2 uppercase">Incoterm</th>
-                                            <th className="text-left px-3 py-2 uppercase">Puerto</th>
-                                            <th className="text-left px-3 py-2 uppercase">Tipo</th>
-                                            <th className="text-right px-3 py-2 uppercase">Precio caja</th>
-                                            <th className="text-right px-3 py-2 uppercase">Monto</th>
-                                            <th className="text-left px-3 py-2 uppercase">N° pedido</th>
-                                            <th className="text-left px-3 py-2 uppercase">Notas</th>
+                                            <th className={`${thPantalla} text-left rounded-tl-xl`}>#</th>
+                                            <th className={`${thPantalla} text-left`}>Cliente</th>
+                                            <th className={`${thPantalla} text-left`}>Carga</th>
+                                            <th className={`${thPantalla} text-right`}>Cajas</th>
+                                            <th className={`${thPantalla} text-left`}>Puerto</th>
+                                            <th className={`${thPantalla} text-left`}>Negociación</th>
+                                            <th className={`${thPantalla} text-right`}>Precio caja</th>
+                                            <th className={`${thPantalla} text-right rounded-tr-xl`}>Monto</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -218,74 +254,44 @@ export default function CustomerOrderViewModal({ pedidoId, onClose, onEditar, im
                                             <tr key={l.id} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
                                                 <td className="px-3 py-2 text-gray-400">{i + 1}</td>
                                                 <td className="px-3 py-2 font-medium">
-                                                    {l.customer?.third_party?.name}
+                                                    <span className="whitespace-nowrap">{l.customer?.third_party?.name}</span>
                                                     {l.brand && <span className="block text-xs font-normal text-gray-500">{marcaConPresentacion(l.brand.name, l.presentation)}</span>}
+                                                    {l.order_number && <span className="block text-xs font-normal text-gray-500">N° pedido: {l.order_number}</span>}
+                                                    {l.notes && <span className="block text-xs font-normal text-gray-500 italic max-w-xs">{l.notes}</span>}
                                                 </td>
                                                 <td className="px-3 py-2">
-                                                    {TIPOS_CARGA[l.cargo_type] || l.cargo_type}
+                                                    <span className="whitespace-nowrap">{TIPOS_CARGA[l.cargo_type] || l.cargo_type}</span>
                                                     {l.containers_qty && (
                                                         <span className="block text-xs text-gray-500">{l.containers_qty} × {formatoCajas(l.boxes_per_container)}</span>
                                                     )}
                                                 </td>
-                                                <td className="px-3 py-2 text-right font-semibold">{formatoCajas(l.boxes)}</td>
-                                                <td className="px-3 py-2">{l.incoterm}</td>
-                                                <td className="px-3 py-2">{l.departure_port?.name}</td>
-                                                <td className="px-3 py-2">
+                                                <td className="px-3 py-2 text-right font-semibold whitespace-nowrap">{formatoCajas(l.boxes)}</td>
+                                                <td className="px-3 py-2 whitespace-nowrap">{l.departure_port?.name}</td>
+                                                <td className="px-3 py-2 whitespace-nowrap">
                                                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                                                         l.negotiation_type === 'CONTRATO' ? 'bg-primario-claro text-primario' : 'bg-amber-50 text-amber-700'
                                                     }`}>
                                                         {l.negotiation_type}
                                                     </span>
+                                                    <span className="block text-xs text-gray-500 mt-0.5">{l.incoterm}</span>
                                                 </td>
-                                                <td className="px-3 py-2 text-right">
-                                                    {l.box_price === null ? <span className="text-amber-600 text-xs font-semibold">PENDIENTE</span> : `$ ${formatoDinero(l.box_price)}`}
+                                                <td className="px-3 py-2 text-right whitespace-nowrap">
+                                                    {sinPrecio(l) ? <span className="text-amber-600 text-xs font-semibold">PENDIENTE</span> : `$ ${formatoDinero(l.box_price)}`}
                                                 </td>
-                                                <td className="px-3 py-2 text-right">
-                                                    {l.box_price === null ? '—' : `$ ${formatoDinero(l.boxes * Number(l.box_price))}`}
-                                                </td>
-                                                <td className="px-3 py-2">{l.order_number || '—'}</td>
-                                                <td className="px-3 py-2 text-xs text-gray-600">{l.notes || '—'}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            {/* Resumen por cliente */}
-                            <div className="rounded-xl border overflow-hidden">
-                                <table className="w-full text-sm">
-                                    <thead className="bg-primario-claro text-primario">
-                                        <tr>
-                                            <th className="text-left px-4 py-2 uppercase">Cliente</th>
-                                            <th className="text-right px-4 py-2 uppercase">Contrato</th>
-                                            <th className="text-right px-4 py-2 uppercase">Spot</th>
-                                            <th className="text-right px-4 py-2 uppercase">Total cajas</th>
-                                            <th className="text-right px-4 py-2 uppercase">Monto (USD)</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {resumen.map((r) => (
-                                            <tr key={r.customer_id} className="border-t">
-                                                <td className="px-4 py-2 font-medium">{r.nombre}</td>
-                                                <td className="px-4 py-2 text-right">{formatoCajas(r.contrato)}</td>
-                                                <td className="px-4 py-2 text-right">{formatoCajas(r.spot)}</td>
-                                                <td className="px-4 py-2 text-right font-semibold">{formatoCajas(r.contrato + r.spot)}</td>
-                                                <td className="px-4 py-2 text-right">
-                                                    {formatoDinero(r.monto)}
-                                                    {r.sinPrecio > 0 && <span className="block text-xs text-amber-600">{formatoCajas(r.sinPrecio)} cajas sin precio</span>}
+                                                <td className="px-3 py-2 text-right whitespace-nowrap">
+                                                    {sinPrecio(l) ? '—' : `$ ${formatoDinero(l.boxes * Number(l.box_price))}`}
                                                 </td>
                                             </tr>
                                         ))}
                                     </tbody>
-                                    <tfoot className="bg-gray-50 border-t-2">
+                                    <tfoot className="bg-gray-100 border-t-2 font-bold">
                                         <tr>
-                                            <td className="px-4 py-2 font-bold">TOTAL SEMANA {pedido.week}</td>
-                                            <td colSpan={2}></td>
-                                            <td className="px-4 py-2 text-right font-bold">{formatoCajas(totalCajas)}</td>
-                                            <td className="px-4 py-2 text-right font-bold">
-                                                {formatoDinero(totalMonto)}
-                                                {totalSinPrecio > 0 && <span className="block text-xs font-normal text-amber-600">{formatoCajas(totalSinPrecio)} cajas sin precio</span>}
+                                            <td className="px-3 py-2 rounded-bl-xl" colSpan={3}>TOTAL SEMANA {pedido.week}</td>
+                                            <td className="px-3 py-2 text-right whitespace-nowrap">{formatoCajas(totalCajas)}</td>
+                                            <td colSpan={3} className="px-3 py-2 text-right text-xs font-normal text-amber-600">
+                                                {totalSinPrecio > 0 && `${formatoCajas(totalSinPrecio)} cajas sin precio`}
                                             </td>
+                                            <td className="px-3 py-2 text-right whitespace-nowrap rounded-br-xl">$ {formatoDinero(totalMonto)}</td>
                                         </tr>
                                     </tfoot>
                                 </table>
