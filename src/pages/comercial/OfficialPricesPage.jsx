@@ -18,6 +18,7 @@ import ToastFlotante from '../../components/common/ToastFlotante';
 import ModalShell from '../../components/common/ModalShell';
 import SelectBuscable from '../../components/common/SelectBuscable';
 import { getMensajeExito, getMensajeError } from '../../utils/toastMessages';
+import CampoNumero from '../../components/common/CampoNumero';
 
 const fecha = (f) => (f ? f.split('-').reverse().join('/') : '');
 const hoy = () => new Date().toISOString().slice(0, 10);
@@ -85,7 +86,7 @@ function PrecioModal({ precio, tiposCaja, onClose, onGuardado }) {
         </div>
         <div>
           <label className={label}>Precio oficial por caja (US$) *</label>
-          <input type="number" min="0.01" step="0.01" value={form.price} onChange={cambiar('price')} placeholder="EJ. 7.25" className={`${input} text-right`} />
+          <CampoNumero decimales={2} value={form.price} onChange={cambiar('price')} placeholder="EJ. 7.25" className={`${input} text-right`} />
         </div>
         <div>
           <label className={label}>Rige desde *</label>

@@ -22,6 +22,7 @@ import DialogoConfirmacion from '../../components/common/DialogoConfirmacion';
 import ToastFlotante from '../../components/common/ToastFlotante';
 import ClosingPrint from '../../components/ClosingPrint';
 import SelectBuscable from '../../components/common/SelectBuscable';
+import CampoNumero from '../../components/common/CampoNumero';
 
 const CAJAS_POR_CONTENEDOR = 1200;
 const formatoCajas = (v) => Number(v || 0).toLocaleString('es-EC');
@@ -559,7 +560,7 @@ export default function ShipmentClosingPage() {
                             </td>
                             <td className="px-2 py-1.5 min-w-[110px]">
                               {k.cargo_mode === 'CONTENEDOR'
-                                ? <input type="number" min="1" value={k.containers_qty} onChange={cambiar('containers_qty')} placeholder="# CONT." title="Número de contenedores" className={`${inputClass} text-right`} />
+                                ? <CampoNumero decimales={0} value={k.containers_qty} onChange={cambiar('containers_qty')} placeholder="# CONT." title="Número de contenedores" className={`${inputClass} text-right`} />
                                 : <input value={k.holds} maxLength={40} onChange={mayus('holds')} placeholder="2ABCDE" title="Bodegas del barco" className={inputClass} />}
                             </td>
                             <td className="px-2 py-1.5 min-w-[170px]"><input value={k.booking_number} maxLength={30} onChange={mayus('booking_number')} placeholder="N° BOOKING" className={inputClass} /></td>
@@ -567,12 +568,12 @@ export default function ShipmentClosingPage() {
                             <td className="px-2 py-1.5 min-w-[130px]"><input value={k.bl_number} maxLength={30} onChange={mayus('bl_number')} className={inputClass} /></td>
                             <td className="px-2 py-1.5"><BotonPagado pagado={k.proforma_paid} onClick={() => cambiarBooking(b.id, k._key, 'proforma_paid', !k.proforma_paid)} /></td>
                             <td className="px-2 py-1.5"><BotonPagado pagado={k.turn_paid} onClick={() => cambiarBooking(b.id, k._key, 'turn_paid', !k.turn_paid)} /></td>
-                            <td className="px-2 py-1.5 min-w-[95px]"><input type="number" min="0" value={k.quota_boxes} onChange={cambiar('quota_boxes')} className={`${inputClass} text-right`} /></td>
-                            <td className="px-2 py-1.5 min-w-[100px]"><input type="number" min="0" value={k.shipped_boxes} onChange={cambiar('shipped_boxes')} className={`${inputClass} text-right font-semibold`} /></td>
+                            <td className="px-2 py-1.5 min-w-[95px]"><CampoNumero decimales={0} value={k.quota_boxes} onChange={cambiar('quota_boxes')} className={`${inputClass} text-right`} /></td>
+                            <td className="px-2 py-1.5 min-w-[100px]"><CampoNumero decimales={0} value={k.shipped_boxes} onChange={cambiar('shipped_boxes')} className={`${inputClass} text-right font-semibold`} /></td>
                             <td className={`px-2 py-1.5 text-right whitespace-nowrap font-semibold ${dif < 0 ? 'text-amber-700' : dif > 0 ? 'text-green-700' : 'text-gray-400'}`}>{dif > 0 ? '+' : ''}{formatoCajas(dif)}</td>
-                            <td className="px-2 py-1.5 min-w-[100px]"><input type="number" min="0" value={k.port_entry_boxes} onChange={cambiar('port_entry_boxes')} placeholder="—" title="Si la DAE cubre varios bookings, escribe el ingreso en uno solo" className={`${inputClass} text-right`} /></td>
-                            <td className="px-2 py-1.5 min-w-[80px]"><input type="number" min="0" step="0.01" value={k.net_weight_per_box} onChange={cambiar('net_weight_per_box')} placeholder="19.40" className={`${inputClass} text-right`} /></td>
-                            <td className="px-2 py-1.5 min-w-[80px]"><input type="number" min="0" step="0.01" value={k.gross_weight_per_box} onChange={cambiar('gross_weight_per_box')} placeholder="20.80" className={`${inputClass} text-right`} /></td>
+                            <td className="px-2 py-1.5 min-w-[100px]"><CampoNumero decimales={0} value={k.port_entry_boxes} onChange={cambiar('port_entry_boxes')} placeholder="—" title="Si la DAE cubre varios bookings, escribe el ingreso en uno solo" className={`${inputClass} text-right`} /></td>
+                            <td className="px-2 py-1.5 min-w-[80px]"><CampoNumero decimales={2} value={k.net_weight_per_box} onChange={cambiar('net_weight_per_box')} placeholder="19.40" className={`${inputClass} text-right`} /></td>
+                            <td className="px-2 py-1.5 min-w-[80px]"><CampoNumero decimales={2} value={k.gross_weight_per_box} onChange={cambiar('gross_weight_per_box')} placeholder="20.80" className={`${inputClass} text-right`} /></td>
                             <td className="px-2 py-1.5 text-right whitespace-nowrap">{formatoKilos(n(k.shipped_boxes) * n(k.net_weight_per_box))}</td>
                             <td className="px-2 py-1.5 text-right whitespace-nowrap">{formatoKilos(n(k.shipped_boxes) * n(k.gross_weight_per_box))}</td>
                             <td className="px-2 py-1.5 min-w-[80px]"><input value={k.aucp} maxLength={20} onChange={mayus('aucp')} className={inputClass} /></td>
@@ -610,7 +611,7 @@ export default function ShipmentClosingPage() {
                                     </div>
                                     <div>
                                       <label className={etiqueta}>Cajas muestra</label>
-                                      <input type="number" min="0" value={k.sample_boxes} onChange={cambiar('sample_boxes')} className={`${inputClass} text-right`} />
+                                      <CampoNumero decimales={0} value={k.sample_boxes} onChange={cambiar('sample_boxes')} className={`${inputClass} text-right`} />
                                     </div>
                                   </div>
                                   <div>

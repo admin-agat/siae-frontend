@@ -16,16 +16,22 @@
 // 30/10/2026: el precio OFICIAL lo fija el MAG por tipo de caja (Comercial → Precios oficiales MAG): la compra
 // nueva lo propone según la caja de la marca y la fecha de corte (o el lunes de la semana). Oficial − real =
 // NOTA DE CRÉDITO que debe entregar el vendedor (se muestra por compra y en el total).
+// 04/11/2026: la FINCA se elige de una lista con búsqueda con las fincas del productor real (o del vendedor si
+// es compra directa); si tiene una sola se pone sola y, si no tiene, "+ NUEVA FINCA" la crea en el catálogo.
+// El código MAG no se escribe: sale de la finca (el backend guarda la copia al comprar). Obligatoria en
+// compras nuevas; las de antes sin finca se siguen guardando y muestran lo que se escribió.
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Plus, Trash2, Save, X, Lock, ChevronDown, ChevronRight, AlertTriangle } from 'lucide-react';
-import { getOrderPurchases, saveOrderPurchases } from '../../api/customerOrders';
+import { getOrderPurchases, saveOrderPurchases, createPurchaseFarm } from '../../api/customerOrders';
 import { getThirdParties } from '../../api/thirdParties';
 import { getPorts } from '../../api/ports';
 import DialogoConfirmacion from '../../components/common/DialogoConfirmacion';
 import ToastFlotante from '../../components/common/ToastFlotante';
 import SelectBuscable from '../../components/common/SelectBuscable';
+import ModalShell from '../../components/common/ModalShell';
 import { PRESENTACIONES, marcaConPresentacion } from '../../utils/presentaciones';
+import CampoNumero from '../../components/common/CampoNumero';
 
 const formatoCajas = (n) => Number(n || 0).toLocaleString('es-EC');
 const formatoDinero = (n) => Number(n || 0).toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -52,6 +58,7 @@ const compraDesdeBackend = (c) => ({
   id: c.id,
   third_party_id: texto(c.third_party_id),
   producer_id: texto(c.producer_id),
+  farm_id: texto(c.farm_id),
   farm_name: texto(c.farm_name),
   mag_code: texto(c.mag_code),
   executive: texto(c.executive),
@@ -87,7 +94,7 @@ const bloqueDesdeBackend = (b) => ({
 // oficial es el del MAG (si no hay uno registrado, el de la fila anterior)
 const compraVacia = (anterior, puertoBloque, precioMag) => ({
   _key: nuevaClave('c'), id: null,
-  third_party_id: '', producer_id: '', farm_name: '', mag_code: '',
+  third_party_id: '', producer_id: '', farm_id: '', farm_name: '', mag_code: '',
   executive: anterior?.executive || '', cut_date: anterior?.cut_date || '',
   delivery_port_id: anterior ? anterior.delivery_port_id : puertoBloque,
   boxes: '', official_price: precioMag ? texto(precioMag.price) : (anterior?.official_price || ''), real_price: '',
@@ -111,6 +118,10 @@ export default function PurchaseAllocationPage() {
   const [bodegas, setBodegas] = useState([]);
   const [ultimaBodega, setUltimaBodega] = useState({}); // { third_party_id: warehouse_id }
   const [preciosMag, setPreciosMag] = useState([]); // precios oficiales MAG activos
+  const [fincas, setFincas] = useState([]); // fincas del catálogo (activas + las ya usadas)
+  const [nuevaFinca, setNuevaFinca] = useState(null); // { bKey, cKey, third_party_id, dueno, name, magap_code, zone }
+  const [errorFinca, setErrorFinca] = useState('');
+  const [guardandoFinca, setGuardandoFinca] = useState(false);
 
   const [vendedores, setVendedores] = useState([]);
   const [puertosSalida, setPuertosSalida] = useState([]);
@@ -129,6 +140,7 @@ export default function PurchaseAllocationPage() {
     setBodegas(data.warehouses || []);
     setUltimaBodega(data.last_pickup || {});
     setPreciosMag(data.official_prices || []);
+    setFincas(data.farms || []);
     setVersion(data.version);
     const lista = data.blocks.map(bloqueDesdeBackend);
     setBloques(lista);
@@ -182,6 +194,11 @@ export default function PurchaseAllocationPage() {
     return b ? `${nombre}${b.voyage && !nombre.includes(b.voyage) ? ` · ${b.voyage}` : ''}` : '—';
   };
 
+  // La finca es del productor real; en compra directa, del vendedor
+  const duenoFinca = (c) => c.producer_id || c.third_party_id;
+  const fincasDe = (tpId, actual) => fincas.filter((f) => String(f.third_party_id) === String(tpId) && (f.status || String(f.id) === String(actual)));
+  const conFinca = (c, finca) => ({ ...c, farm_id: finca ? String(finca.id) : '', farm_name: finca?.name || '', mag_code: finca?.magap_code || '' });
+
   // Precio MAG vigente para la marca del bloque (según su tipo de caja) en la fecha de corte
   const precioMagDe = (b, c) => {
     const marca = clientes.flatMap((x) => x.brands).find((m) => String(m.id) === b.brand_id);
@@ -224,6 +241,11 @@ export default function PurchaseAllocationPage() {
         if (campo === 'third_party_id' && tipoDe(valor) === 'PRODUCTOR') nueva.producer_id = '';
         // Al elegir vendedor se propone la última bodega donde retiró materiales
         if (campo === 'third_party_id' && ultimaBodega[valor]) nueva.pickup_warehouse_id = String(ultimaBodega[valor]);
+        if (campo === 'third_party_id' || campo === 'producer_id') {
+          const propias = fincasDe(duenoFinca(nueva)).filter((x) => x.status);
+          return conFinca(nueva, propias.length === 1 ? propias[0] : null);
+        }
+        if (campo === 'farm_id') return conFinca(nueva, fincas.find((x) => String(x.id) === valor));
         return nueva;
       }),
     })));
@@ -273,6 +295,11 @@ export default function PurchaseAllocationPage() {
       b.purchases.forEach((c, j) => {
         if (!c.third_party_id) faltan.push(`BLOQUE ${i + 1}, COMPRA ${j + 1}: FALTA A QUIÉN SE LE COMPRA.`);
         if (!n(c.boxes)) faltan.push(`BLOQUE ${i + 1}, COMPRA ${j + 1}: FALTAN LAS CAJAS.`);
+        if (!c.id && !c.farm_id) {
+          faltan.push(tipoDe(c.third_party_id) === 'COMERCIALIZADORA' && !c.producer_id
+            ? `BLOQUE ${i + 1}, COMPRA ${j + 1}: ELIGE EL PRODUCTOR REAL Y SU FINCA.`
+            : `BLOQUE ${i + 1}, COMPRA ${j + 1}: FALTA LA FINCA.`);
+        }
         if (!c.pickup_warehouse_id) faltan.push(`BLOQUE ${i + 1}, COMPRA ${j + 1}: FALTA LA BODEGA DONDE RETIRA LOS MATERIALES.`);
       });
     });
@@ -300,8 +327,7 @@ export default function PurchaseAllocationPage() {
             id: c.id,
             third_party_id: Number(c.third_party_id),
             producer_id: num(c.producer_id),
-            farm_name: c.farm_name || null,
-            mag_code: c.mag_code || null,
+            farm_id: num(c.farm_id),
             executive: c.executive || null,
             cut_date: c.cut_date || null,
             delivery_port_id: num(c.delivery_port_id),
@@ -324,6 +350,35 @@ export default function PurchaseAllocationPage() {
       setErrores(e ? Object.values(e).flat() : [err.response?.data?.message || 'Error al guardar las compras']);
     } finally {
       setGuardando(false);
+    }
+  };
+
+  const abrirNuevaFinca = (bKey, c) => {
+    const duenoId = duenoFinca(c);
+    setErrorFinca('');
+    setNuevaFinca({ bKey, cKey: c._key, third_party_id: duenoId, dueno: vendedores.find((v) => String(v.id) === String(duenoId))?.name || '', name: '', magap_code: '', zone: '' });
+  };
+
+  const guardarNuevaFinca = async (e) => {
+    e.preventDefault();
+    if (!nuevaFinca.name.trim()) { setErrorFinca('ESCRIBE EL NOMBRE DE LA FINCA.'); return; }
+    setGuardandoFinca(true);
+    try {
+      const { data } = await createPurchaseFarm(id, {
+        third_party_id: Number(nuevaFinca.third_party_id),
+        name: nuevaFinca.name, magap_code: nuevaFinca.magap_code || null, zone: nuevaFinca.zone || null,
+      });
+      setFincas((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+      setBloques((prev) => prev.map((b) => (b._key !== nuevaFinca.bKey ? b : {
+        ...b, purchases: b.purchases.map((c) => (c._key === nuevaFinca.cKey ? conFinca(c, data) : c)),
+      })));
+      setNuevaFinca(null);
+      setToast({ tipo: 'exito', mensaje: `Finca ${data.name} creada` });
+    } catch (err) {
+      const errs = err.response?.data?.errors;
+      setErrorFinca(errs ? Object.values(errs).flat().join(' ') : err.response?.data?.message || 'NO SE PUDO CREAR LA FINCA.');
+    } finally {
+      setGuardandoFinca(false);
     }
   };
 
@@ -499,7 +554,7 @@ export default function PurchaseAllocationPage() {
                     </div>
                     <div>
                       <label className={etiqueta}>Meta (cajas)</label>
-                      <input type="number" min="0" value={b.target_boxes} onChange={(e) => cambiarBloque(b._key, 'target_boxes', e.target.value)} placeholder="EJ. 13200" className={`${inputClass} text-right`} />
+                      <CampoNumero decimales={0} value={b.target_boxes} onChange={(e) => cambiarBloque(b._key, 'target_boxes', e.target.value)} placeholder="EJ. 13200" className={`${inputClass} text-right`} />
                     </div>
                   </div>
 
@@ -559,8 +614,21 @@ export default function PurchaseAllocationPage() {
                                   {productores.map((v) => <option key={v.id} value={String(v.id)}>{v.name}</option>)}
                                 </SelectBuscable>
                               </td>
-                              <td className="px-2 py-1.5 min-w-[130px]"><input value={c.farm_name} maxLength={120} onChange={mayus('farm_name')} disabled={c.liquidada} className={inputClass} /></td>
-                              <td className="px-2 py-1.5 min-w-[80px]"><input value={c.mag_code} maxLength={20} onChange={mayus('mag_code')} disabled={c.liquidada} className={inputClass} /></td>
+                              <td className="px-2 py-1.5 min-w-[190px]">
+                                <SelectBuscable value={c.farm_id}
+                                  onChange={(e) => (e.target.value === '__nueva' ? abrirNuevaFinca(b._key, c) : cambiarCompra(b._key, c._key, 'farm_id', e.target.value))}
+                                  disabled={c.liquidada || !duenoFinca(c)}
+                                  title={!duenoFinca(c) ? 'Elige primero a quién se le compra' : 'Fincas del productor real (o del vendedor si es compra directa)'}
+                                  className={`${inputClass} ${!c.farm_id && !c.liquidada && duenoFinca(c) ? 'ring-1 ring-amber-400' : ''}`}>
+                                  <option value="">{c.farm_name && !c.farm_id ? `${c.farm_name} (SIN CATÁLOGO)` : 'SELECCIONAR...'}</option>
+                                  {fincasDe(duenoFinca(c), c.farm_id).map((f) => <option key={f.id} value={String(f.id)}>{f.name}{f.magap_code ? ` · ${f.magap_code}` : ''}</option>)}
+                                  <option value="__nueva">+ NUEVA FINCA</option>
+                                </SelectBuscable>
+                              </td>
+                              <td className="px-2 py-1.5 min-w-[90px]">
+                                {/* El código MAG sale de la finca: no se escribe */}
+                                <input value={c.mag_code} readOnly tabIndex={-1} title="Sale de la finca elegida (se corrige en Configuración → Fincas)" className={`${inputClass} bg-gray-200 text-gray-600 cursor-not-allowed`} />
+                              </td>
                               <td className="px-2 py-1.5 min-w-[130px]"><input list="ejecutivos" value={c.executive} maxLength={60} onChange={mayus('executive')} disabled={c.liquidada} className={inputClass} /></td>
                               <td className="px-2 py-1.5"><input type="date" value={c.cut_date} onChange={cambiar('cut_date')} disabled={c.liquidada} className={inputClass} /></td>
                               <td className="px-2 py-1.5 min-w-[130px]">
@@ -575,9 +643,9 @@ export default function PurchaseAllocationPage() {
                                   {bodegas.filter((w) => w.status || String(w.id) === c.pickup_warehouse_id).map((w) => <option key={w.id} value={String(w.id)}>{w.name}</option>)}
                                 </SelectBuscable>
                               </td>
-                              <td className="px-2 py-1.5 min-w-[90px]"><input type="number" min="1" value={c.boxes} onChange={cambiar('boxes')} disabled={c.liquidada} className={`${inputClass} text-right font-semibold`} /></td>
+                              <td className="px-2 py-1.5 min-w-[90px]"><CampoNumero decimales={0} value={c.boxes} onChange={cambiar('boxes')} disabled={c.liquidada} className={`${inputClass} text-right font-semibold`} /></td>
                               <td className="px-2 py-1.5 min-w-[90px]">
-                                <input type="number" min="0" step="0.01" value={c.official_price} onChange={cambiar('official_price')} disabled={c.liquidada} title="Precio oficial MAG: el vendedor factura a este precio" className={`${inputClass} text-right`} />
+                                <CampoNumero decimales={2} value={c.official_price} onChange={cambiar('official_price')} disabled={c.liquidada} title="Precio oficial MAG: el vendedor factura a este precio" className={`${inputClass} text-right`} />
                                 {mag && c.official_price !== '' && n(c.official_price) !== n(mag.price) && !c.liquidada && (
                                   <button type="button" onClick={() => cambiarCompra(b._key, c._key, 'official_price', texto(mag.price))} title="Usar el precio oficial MAG vigente" className="block w-full text-right text-[10px] font-semibold text-amber-700 hover:underline mt-0.5">
                                     MAG: {formatoDinero(mag.price)}
@@ -589,7 +657,7 @@ export default function PurchaseAllocationPage() {
                                   </button>
                                 )}
                               </td>
-                              <td className="px-2 py-1.5 min-w-[80px]"><input type="number" min="0" step="0.01" value={c.real_price} onChange={cambiar('real_price')} disabled={c.liquidada} className={`${inputClass} text-right font-semibold`} /></td>
+                              <td className="px-2 py-1.5 min-w-[80px]"><CampoNumero decimales={2} value={c.real_price} onChange={cambiar('real_price')} disabled={c.liquidada} className={`${inputClass} text-right font-semibold`} /></td>
                               <td className="px-2 py-1.5 min-w-[130px]">
                                 {/* 02/11/2026: la fruta PACKED se compra siempre SPOT (precio negociado con cada productor) */}
                                 <SelectBuscable value={c.negotiation_type} onChange={cambiar('negotiation_type')} disabled={c.liquidada || b.presentation === 'PACKED'}
@@ -602,7 +670,7 @@ export default function PurchaseAllocationPage() {
                                   <option value="80_20">PAGO 80 / 20</option>
                                 </SelectBuscable>
                               </td>
-                              <td className="px-2 py-1.5 min-w-[90px]"><input type="number" min="0" step="0.01" value={c.transport_deduction} onChange={cambiar('transport_deduction')} disabled={c.liquidada} placeholder="0" title="Transporte de contenedor negociado: se descuenta al liquidar" className={`${inputClass} text-right`} /></td>
+                              <td className="px-2 py-1.5 min-w-[90px]"><CampoNumero decimales={2} value={c.transport_deduction} onChange={cambiar('transport_deduction')} disabled={c.liquidada} placeholder="0" title="Transporte de contenedor negociado: se descuenta al liquidar" className={`${inputClass} text-right`} /></td>
                               <td className="px-2 py-1.5 text-right whitespace-nowrap">{c.real_price === '' ? <span className="text-xs text-amber-600 font-semibold">SIN PRECIO</span> : `$ ${formatoDinero(n(c.boxes) * n(c.real_price))}`}</td>
                               <td className="px-2 py-1.5 text-right whitespace-nowrap">
                                 {nc === null ? <span className="text-gray-400">—</span>
@@ -649,6 +717,27 @@ export default function PurchaseAllocationPage() {
           <Save size={16} /> {guardando ? 'Guardando...' : 'Guardar compras'}
         </button>
       </div>
+
+      {nuevaFinca && (
+        <ModalShell title="Nueva finca" size="sm" onClose={() => setNuevaFinca(null)} onSubmit={guardarNuevaFinca} guardando={guardandoFinca} error={errorFinca}>
+          <div>
+            <label className={etiqueta}>Productor</label>
+            <input value={nuevaFinca.dueno} readOnly className={`${inputClass} bg-gray-200 text-gray-600`} />
+          </div>
+          <div>
+            <label className={etiqueta}>Nombre de la finca *</label>
+            <input autoFocus value={nuevaFinca.name} maxLength={255} onChange={(e) => setNuevaFinca((p) => ({ ...p, name: e.target.value.toUpperCase() }))} placeholder="EJ. LA PACIENCIA" className={inputClass} />
+          </div>
+          <div>
+            <label className={etiqueta}>Código MAG</label>
+            <input value={nuevaFinca.magap_code} maxLength={50} onChange={(e) => setNuevaFinca((p) => ({ ...p, magap_code: e.target.value.toUpperCase() }))} placeholder="EJ. C-0040" className={inputClass} />
+          </div>
+          <div>
+            <label className={etiqueta}>Zona</label>
+            <input value={nuevaFinca.zone} maxLength={100} onChange={(e) => setNuevaFinca((p) => ({ ...p, zone: e.target.value.toUpperCase() }))} placeholder="EJ. MACHALA" className={inputClass} />
+          </div>
+        </ModalShell>
+      )}
 
       {mostrarConfirmarSalida && (
         <DialogoConfirmacion

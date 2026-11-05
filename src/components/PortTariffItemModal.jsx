@@ -5,6 +5,7 @@ import { History } from 'lucide-react';
 import { createPortTariffItem, updatePortTariffItem, getPortTariffItemPriceHistory } from '../api/portTariffItems';
 import { getMensajeExito, getMensajeError } from '../utils/toastMessages';
 import ModalShell from './common/ModalShell';
+import CampoNumero from './common/CampoNumero';
 
 export default function PortTariffItemModal({ item, portId, onClose, onGuardado }) {
     const esEdicion = Boolean(item?.id);
@@ -132,10 +133,7 @@ export default function PortTariffItemModal({ item, portId, onClose, onGuardado 
                     </div>
                     <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-1.5">Monto (USD) *</label>
-                        <input
-                            type="number"
-                            step="0.01"
-                            min="0"
+                        <CampoNumero decimales={2}
                             name="amount"
                             value={form.amount}
                             onChange={handleChange}

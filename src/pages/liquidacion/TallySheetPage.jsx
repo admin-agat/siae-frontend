@@ -14,6 +14,7 @@ import { getOrderTallies, saveOrderTallies } from '../../api/settlements';
 import DialogoConfirmacion from '../../components/common/DialogoConfirmacion';
 import ToastFlotante from '../../components/common/ToastFlotante';
 import SelectBuscable from '../../components/common/SelectBuscable';
+import CampoNumero from '../../components/common/CampoNumero';
 
 const formatoCajas = (n) => Number(n || 0).toLocaleString('es-EC');
 const hoy = () => new Date().toISOString().slice(0, 10);
@@ -274,9 +275,9 @@ export default function TallySheetPage() {
                   <td className="px-3 py-2 min-w-[90px]"><input value={t.number} maxLength={30} onChange={(e) => cambiar(t._key, 'number', e.target.value.toUpperCase())} disabled={bloqueada} className={inputClass} /></td>
                   <td className="px-3 py-2 min-w-[90px]"><input value={t.truck_plate} maxLength={15} onChange={(e) => cambiar(t._key, 'truck_plate', e.target.value.toUpperCase())} disabled={bloqueada} placeholder="GBC-1234" className={inputClass} /></td>
                   <td className="px-3 py-2 min-w-[120px]"><input value={t.container_number} maxLength={15} onChange={(e) => cambiar(t._key, 'container_number', e.target.value.toUpperCase())} disabled={bloqueada} placeholder="OTPU6756531" className={inputClass} /></td>
-                  <td className="px-3 py-2 min-w-[90px]"><input type="number" min="0" value={t.boxes_shipped} onChange={(e) => cambiar(t._key, 'boxes_shipped', e.target.value)} disabled={bloqueada} className={`${inputClass} text-right`} /></td>
-                  <td className="px-3 py-2 min-w-[80px]"><input type="number" min="0" value={t.boxes_fallen} onChange={(e) => cambiar(t._key, 'boxes_fallen', e.target.value)} disabled={bloqueada} className={`${inputClass} text-right`} /></td>
-                  <td className="px-3 py-2 min-w-[80px]"><input type="number" min="0" value={t.boxes_rejected} onChange={(e) => cambiar(t._key, 'boxes_rejected', e.target.value)} disabled={bloqueada} className={`${inputClass} text-right text-red-600`} /></td>
+                  <td className="px-3 py-2 min-w-[90px]"><CampoNumero decimales={0} value={t.boxes_shipped} onChange={(e) => cambiar(t._key, 'boxes_shipped', e.target.value)} disabled={bloqueada} className={`${inputClass} text-right`} /></td>
+                  <td className="px-3 py-2 min-w-[80px]"><CampoNumero decimales={0} value={t.boxes_fallen} onChange={(e) => cambiar(t._key, 'boxes_fallen', e.target.value)} disabled={bloqueada} className={`${inputClass} text-right`} /></td>
+                  <td className="px-3 py-2 min-w-[80px]"><CampoNumero decimales={0} value={t.boxes_rejected} onChange={(e) => cambiar(t._key, 'boxes_rejected', e.target.value)} disabled={bloqueada} className={`${inputClass} text-right text-red-600`} /></td>
                   <td className="px-3 py-2 text-right">{formatoCajas(recibidas(t))}</td>
                   <td className="px-3 py-2 text-right font-semibold text-green-700">{formatoCajas(aPagar(t))}</td>
                   <td className="px-3 py-2">

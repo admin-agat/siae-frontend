@@ -8,6 +8,7 @@ import { getMensajeExito } from '../utils/toastMessages';
 import ModalShell from './common/ModalShell';
 import DialogoConfirmacion from './common/DialogoConfirmacion';
 import SelectBuscable from './common/SelectBuscable';
+import CampoNumero from './common/CampoNumero';
 
 const hoy = () => new Date().toISOString().slice(0, 10);
 
@@ -110,7 +111,7 @@ export default function ProducerAdvanceModal({ anticipo, onClose, onGuardado }) 
           </div>
           <div>
             <label className={labelClass}>Monto ($) *</label>
-            <input type="number" name="amount" min="0.01" step="0.01" value={form.amount} onChange={handleChange} className={`${inputClass} text-right`} />
+            <CampoNumero decimales={2} name="amount" value={form.amount} onChange={handleChange} className={`${inputClass} text-right`} />
           </div>
           <div>
             <label className={labelClass}>Comprobante / transferencia</label>

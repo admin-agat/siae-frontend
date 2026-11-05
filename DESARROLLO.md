@@ -258,10 +258,21 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 - **Bitácora**: todo modelo nuevo lleva `use \App\Models\Concerns\Auditable;`. Borrar o actualizar varios registros se hace uno por uno (`->get()->each->delete()`), nunca con `where(...)->delete()/update()`.
 - **Pantalla nueva** (permisos por persona): agregar su clave en `siae-backend/config/pantallas.php`, la misma `pantalla` en [menu.js](src/routes/menu.js), la ruta con `P('clave', <Pagina />)` en AppRouter y proteger su API con `->middleware('pantalla:clave')`. No usar `rol:` para dar acceso a una pantalla (solo para acciones internas que dependen del tipo base).
 - **No usar `<select>` nativo**: usar `SelectBuscable` (mismas props y `<option>`/`<optgroup>`), que permite escribir para buscar.
+- **No usar `<input type="number">`**: usar `CampoNumero` (`decimales={0}` para cajas y cantidades por pieza, `2` para dinero; `max` opcional). El tipo number del navegador deja pasar letras y convierte lo inválido en vacío (se guardaba 0).
 
 ---
 
 ## 7. Historial de cambios
+
+### 05/11/2026 — Cierre de sesión por inactividad y semana bananera en la barra
+- **Inactividad (60 min):** `components/common/AvisoInactividad.jsx` (en `Layout`). Cuenta como actividad mover el mouse, escribir, hacer clic, la rueda o tocar; la última se guarda en `localStorage.ultimaActividad`, así varias pestañas cuentan como una. A los 58 min sale **"¿Sigues ahí?"** con cuenta regresiva, **Seguir conectado** y **Cerrar sesión**; a los 60 cierra y va a `/login?inactividad=1`, que explica el motivo.
+- Mientras hay actividad, el navegador llama `GET /me` cada 5 min. Así el servidor ve trabajando a quien llena un formulario largo sin guardar.
+- **Servidor:** `config/sanctum.php` `inactividad` (`SANCTUM_INACTIVIDAD`, 65 = 60 + margen; 0 = sin límite). `AppServiceProvider` rechaza el token cuyo `last_used_at` (o `created_at` si nunca se usó) pasó ese tiempo, aunque el navegador quede apagado. El máximo de 12 h desde el login (`SANCTUM_EXPIRATION`) sigue igual.
+- **Barra azul:** `SEMANA 45 · jueves 05/11/2026 · 09:03` (se actualiza cada 20 s). La semana bananera es la ISO (`utils/semana.js` → `semanaISO`), la misma del backend (`isoWeek`); se comparó día por día 2025–2028 con el cálculo de Despacho, sin diferencias.
+- Pruebas:
+  - `prueba_inactividad.php`, 10 OK: 30 y 64 min valen; 70 min y nunca usado → 401; 12 h sigue; 0 = sin límite; usuario desactivado.
+  - Seguridad 80 y permisos 50, sin cambios.
+  - Chrome (`ui_inactividad.mjs`) 15 OK: barra, aviso a los 58,5 min, Seguir conectado, cierre a los 61 min, mensaje del login, token borrado.
 
 ### 05/11/2026 — Se quita la pantalla Bookings
 - Revisión: **Bookings** guardaba naviera, barco, viaje, ETA, destino y N° de booking sin ligarse al pedido. Eso ya está en **Distribución en barcos** (el plan, por barco) y en **Cierre de embarque** (lo real, un booking por cliente y marca). Distribución y Cierre NO se repiten: plan contra embarcado.
@@ -288,6 +299,15 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ### 03/11/2026 — Menú angosto de iconos
 - El menú de la izquierda (`Sidebar.jsx`) quedó como una barra de 64 px con un icono por sección (la sección de la página actual se marca). Clic en un icono → la lista de opciones de esa sección se abre **encima** del contenido; ☰ abre el menú completo (secciones plegables como antes). Se cierra al elegir una opción, con clic afuera o con Esc. PRINCIPAL (una sola opción) va directo. La pantalla de trabajo gana unos 220 px de ancho.
+
+### 04/11/2026 — Compra de fruta: finca del catálogo y campos solo numéricos
+- **Finca** (pedido del usuario, para trazabilidad): en Compra de fruta se elige de una lista con búsqueda con las fincas del **productor real** (en compra directa, del vendedor); muestra `NOMBRE · MAG`. Si tiene una sola, se pone sola; al cambiar vendedor o productor se vuelve a elegir. Si no tiene, **+ NUEVA FINCA** abre un formulario (nombre, código MAG, zona) y la deja en el catálogo: `POST /customer-orders/{id}/purchases/farms` con la pantalla Compra de fruta (Comercial no tiene la pantalla Fincas); no repite el nombre para el mismo productor y solo es para PRODUCTOR o COMERCIALIZADORA activos.
+- **El código MAG ya no se escribe**: es de solo lectura y sale de la finca; se corrige en Configuración → Fincas.
+- Backend: `producer_quota_lines.farm_id` (migración `2026_11_04_000001`). La finca es **obligatoria en compras nuevas**; a un comercial sin productor real se le pide elegirlo. Se valida que la finca sea de ese productor y esté activa. `farm_name` y `mag_code` quedan como **copia** de la finca al comprar (si después editan la finca, las compras ya hechas no cambian; el MAG que mande la pantalla se ignora). Las compras de antes sin finca se siguen guardando y muestran lo escrito "(SIN CATÁLOGO)"; la migración enlaza solas las que coinciden por nombre con una única finca del productor. En una compra liquidada no se cambia la finca.
+- Dato de producción (foto del 02/11): solo 50 de 277 productores activos tienen finca: el catálogo se irá completando con "+ NUEVA FINCA".
+- **Campos numéricos**: nuevo `CampoNumero` ([src/components/common/CampoNumero.jsx](src/components/common/CampoNumero.jsx)) en los 46 campos de 15 pantallas que eran `type="number"`: solo dígitos y un separador decimal (la coma se escribe como punto), sin negativos, decimales según el campo (cajas enteras, dinero 2, costo unitario 4, precio de OC 6), al pegar limpia el texto (`$ 1.234,50` → `1234.50`), la rueda del mouse y las flechas ya no cambian el valor, teclado numérico en el celular. Antes Chrome dejaba escribir `e`, `+`, `-` y Firefox cualquier letra, y un valor inválido llegaba vacío y se guardaba 0. Se quitaron los bloqueos de teclado propios de Órdenes de compra.
+- **Terceros**: la cédula/RUC de PRODUCTOR y COMERCIALIZADORA solo acepta dígitos (la del cliente extranjero no, un TAX ID puede llevar letras). **Teléfono** (Terceros y Usuarios): dígitos, espacios y `+` al inicio.
+- Pruebas: exportaciones 98 OK (10 nuevas de finca: crear desde la compra, repetida, proveedor, permisos, sin finca, comercial sin productor real, finca ajena, copia del MAG, el MAG no cambia al editar la finca); bitácora 22, NC 36, permisos 50, seguridad 80, presentación 21 (las que crean compras ahora mandan finca). Chrome 16 OK (`ui_finca_numeros.mjs`: finca automática, limpiar al cambiar, + NUEVA FINCA, MAG de solo lectura, letras/e/-/coma, pegar, rueda y flecha, guardar sin finca). Linter: los mismos 19 avisos de antes, ninguno nuevo.
 
 ### 04/11/2026 — Revisión del SEGUIMIENTO DE COMPRAS 2026 y catálogo de Barcos (datos de producción)
 - Revisado el Excel anual de Comercial (WK-13 a WK-45: 6.862 filas, 4,2 millones de cajas terminadas; hojas PROGRAMA y CONTRATOS). Problemas divididos en 7 partes (catálogos fijos, nombres de terceros, celdas mezcladas, tarifa de transporte, IDs, cupos/cumplimiento, MAG/contratos); se resuelven por parte con la aprobación del usuario.

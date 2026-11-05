@@ -13,6 +13,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Calculator, X, AlertTriangle } from 'lucide-react';
 import { getSettlementPreview, createSettlement } from '../../api/settlements';
 import DialogoConfirmacion from '../../components/common/DialogoConfirmacion';
+import CampoNumero from '../../components/common/CampoNumero';
 
 const formatoCajas = (n) => Number(n || 0).toLocaleString('es-EC');
 const formatoDinero = (n) => Number(n || 0).toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -263,8 +264,7 @@ export default function SettlementFormPage() {
                     <td className="px-3 py-2">{a.type === 'PRESTAMO' ? 'PRÉSTAMO' : 'ANTICIPO'}{a.concept ? ` · ${a.concept}` : ''}</td>
                     <td className="px-3 py-2 text-right">$ {formatoDinero(a.saldo)}</td>
                     <td className="px-3 py-2 text-right">
-                      <input
-                        type="number" min="0" step="0.01" max={a.saldo}
+                      <CampoNumero decimales={2}
                         value={aplicar[a.id] ?? ''} disabled={!marcado}
                         onChange={(e) => setAplicar((prev) => ({ ...prev, [a.id]: e.target.value }))}
                         className={`${inputClass} w-32 text-right disabled:opacity-40 ${excede ? 'ring-2 ring-red-500' : ''}`}

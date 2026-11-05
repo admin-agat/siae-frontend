@@ -23,6 +23,7 @@ import ToastFlotante from '../../components/common/ToastFlotante';
 import { getMensajeExito, getMensajeError } from '../../utils/toastMessages';
 import SelectBuscable from '../../components/common/SelectBuscable';
 import { PRESENTACIONES } from '../../utils/presentaciones';
+import CampoNumero from '../../components/common/CampoNumero';
 
 const INCOTERMS = ['FOB', 'CFR', 'CIF'];
 
@@ -393,16 +394,15 @@ export default function CustomerOrderFormPage() {
       <div className="bg-white rounded-xl shadow p-4 mb-4 grid grid-cols-1 md:grid-cols-5 gap-4">
         <div>
           <label className={labelClass}>Semana *</label>
-          <input type="number" min="1" max="53" name="week" value={cabecera.week} onChange={cambiarCabecera} className={inputClass} />
+          <CampoNumero decimales={0} max="53" name="week" value={cabecera.week} onChange={cambiarCabecera} className={inputClass} />
         </div>
         <div>
           <label className={labelClass}>Año *</label>
-          <input type="number" min="2020" name="year" value={cabecera.year} onChange={cambiarCabecera} className={inputClass} />
+          <CampoNumero decimales={0} name="year" value={cabecera.year} onChange={cambiarCabecera} className={inputClass} />
         </div>
         <div>
           <label className={labelClass}>Total cajas semana *</label>
-          <input
-            type="number" min="1" name="expected_boxes" value={cabecera.expected_boxes}
+          <CampoNumero decimales={0} name="expected_boxes" value={cabecera.expected_boxes}
             onChange={cambiarCabecera} placeholder="Ej: 150000"
             className={`${inputClass} font-semibold`}
           />
@@ -478,16 +478,15 @@ export default function CustomerOrderFormPage() {
                   <td className="px-2 py-2 min-w-[150px]">
                     {contenedor ? (
                       <div className="flex items-center gap-1">
-                        <input type="number" min="1" value={l.containers_qty} onChange={(e) => cambiarLinea(l._key, 'containers_qty', e.target.value)} placeholder="9" className={inputClass} />
+                        <CampoNumero decimales={0} value={l.containers_qty} onChange={(e) => cambiarLinea(l._key, 'containers_qty', e.target.value)} placeholder="9" className={inputClass} />
                         <span className="text-gray-400">×</span>
-                        <input type="number" min="1" value={l.boxes_per_container} onChange={(e) => cambiarLinea(l._key, 'boxes_per_container', e.target.value)} placeholder="1200" className={inputClass} />
+                        <CampoNumero decimales={0} value={l.boxes_per_container} onChange={(e) => cambiarLinea(l._key, 'boxes_per_container', e.target.value)} placeholder="1200" className={inputClass} />
                       </div>
                     ) : <span className="text-gray-300">—</span>}
                   </td>
                   <td className="px-2 py-2 min-w-[100px]">
                     {/* En contenedor las cajas se calculan solas */}
-                    <input
-                      type="number" min="1" value={l.boxes}
+                    <CampoNumero decimales={0} value={l.boxes}
                       onChange={(e) => cambiarLinea(l._key, 'boxes', e.target.value)}
                       readOnly={contenedor}
                       title={contenedor ? 'Se calcula: contenedores × cajas por contenedor' : ''}
@@ -513,7 +512,7 @@ export default function CustomerOrderFormPage() {
                   </td>
                   <td className="px-2 py-2 min-w-[120px]">
                     {l.negotiation_type === 'SPOT' ? (
-                      <input type="number" min="0" step="0.01" value={l.box_price} onChange={(e) => cambiarLinea(l._key, 'box_price', e.target.value)} placeholder="Pendiente" className={inputClass} />
+                      <CampoNumero decimales={2} value={l.box_price} onChange={(e) => cambiarLinea(l._key, 'box_price', e.target.value)} placeholder="Pendiente" className={inputClass} />
                     ) : origen === 'SIN_CONTRATO' ? (
                       <span className="text-xs font-semibold text-red-600">{l.customer_id ? 'SIN CONTRATO VIGENTE' : '—'}</span>
                     ) : origen === 'SIN_PRECIO' ? (

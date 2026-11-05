@@ -37,6 +37,9 @@ export const getOrderPurchases = (id) => axios.get(`/customer-orders/${id}/purch
 // boxes, real_price, pickup_warehouse_id (bodega de retiro), ... }] }] }. 409 si otro usuario guardó antes.
 export const saveOrderPurchases = (id, data) => axios.put(`/customer-orders/${id}/purchases`, data);
 
+// 04/11/2026: finca nueva desde la compra { third_party_id, name, magap_code, zone } → queda en el catálogo
+export const createPurchaseFarm = (id, data) => axios.post(`/customer-orders/${id}/purchases/farms`, data);
+
 // 29/10/2026 — Cierre de embarque (Exportaciones): bookings con lo realmente embarcado y documentos
 // Devuelve { order, customers, shipments (con bookings), tallies, parties, version }
 export const getOrderClosing = (id) => axios.get(`/customer-orders/${id}/closing`);

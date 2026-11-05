@@ -14,6 +14,7 @@ import ModalShell from './common/ModalShell';
 import DialogoConfirmacion from './common/DialogoConfirmacion';
 import { getMensajeExito, getMensajeError } from '../utils/toastMessages';
 import SelectBuscable from './common/SelectBuscable';
+import { soloTelefono } from '../utils/telefono';
 
 const FORM_VACIO = {
     name: '',
@@ -102,6 +103,10 @@ export default function ThirdPartyModal({ thirdParty, onClose, onGuardado }) {
         const { name, value, type, checked } = e.target;
         let nuevoValor = type === 'checkbox' ? checked : value;
         if (CAMPOS_MAYUSCULAS.includes(name)) nuevoValor = nuevoValor.toUpperCase();
+        // 04/11/2026: la cédula/RUC de productor o comercializadora solo lleva dígitos (la del cliente
+        // extranjero no: un TAX ID puede llevar letras); el teléfono, dígitos, espacios y + al inicio
+        if (name === 'identification' && ['PRODUCTOR', 'COMERCIALIZADORA'].includes(form.type)) nuevoValor = nuevoValor.replace(/\D/g, '');
+        if (name === 'phone') nuevoValor = soloTelefono(nuevoValor);
         setForm(prev => ({ ...prev, [name]: nuevoValor }));
     };
 

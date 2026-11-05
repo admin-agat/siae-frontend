@@ -22,6 +22,7 @@ import SelectorPantallas from '../../components/common/SelectorPantallas';
 import { pantallasDelTipo } from '../../routes/menu';
 import { getMensajeExito, getMensajeError } from '../../utils/toastMessages';
 import SelectBuscable from '../../components/common/SelectBuscable';
+import { soloTelefono } from '../../utils/telefono';
 
 const formularioVacio = { name: '', email: '', password: '', profile_id: '', boss_id: '', phone: '', warehouse_id: '', warehouse_ids: [], screens_added: [], screens_removed: [] };
 
@@ -49,7 +50,7 @@ function UserModal({ usuario, perfiles, usuarios, catalogo, bodegas, onClose, on
     ? catalogo.map((p) => p.key)
     : [...new Set([...delPerfil, ...form.screens_added])].filter((k) => esPermitida(k) && !form.screens_removed.includes(k));
 
-  const cambiar = (campo) => (e) => setForm((f) => ({ ...f, [campo]: campo === 'name' ? e.target.value.toUpperCase() : e.target.value }));
+  const cambiar = (campo) => (e) => setForm((f) => ({ ...f, [campo]: campo === 'name' ? e.target.value.toUpperCase() : campo === 'phone' ? soloTelefono(e.target.value) : e.target.value }));
   // Marcar/desmarcar una pantalla respecto a su perfil: lo que no es del perfil queda como EXTRA,
   // lo que es del perfil y se desmarca queda como QUITADA
   const alternar = (key) => setForm((f) => {

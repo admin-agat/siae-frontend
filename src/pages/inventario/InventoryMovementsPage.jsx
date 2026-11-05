@@ -27,6 +27,7 @@ import ModalShell from '../../components/common/ModalShell';
 import DialogoConfirmacion from '../../components/common/DialogoConfirmacion';
 import ToastFlotante from '../../components/common/ToastFlotante';
 import SelectBuscable from '../../components/common/SelectBuscable';
+import CampoNumero from '../../components/common/CampoNumero';
 
 const ROLES_QUE_CORRIGEN = ['ADMIN', 'COORDINADOR_INVENTARIO'];
 
@@ -603,8 +604,7 @@ function EditarMovimientoModal({ id, insumos, onClose, onGuardado }) {
                                         </td>
                                         {['quantity', 'unit_cost', 'discount'].map((campo) => (
                                             <td key={campo} className="px-3 py-1.5">
-                                                <input
-                                                    type="number" min="0" step={campo === 'unit_cost' ? '0.0001' : '0.01'}
+                                                <CampoNumero decimales={campo === 'unit_cost' ? 4 : 2}
                                                     value={l[campo]}
                                                     onChange={(e) => cambiarLinea(i, campo, e.target.value)}
                                                     className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-right outline-none focus:ring-2 focus:ring-primario"

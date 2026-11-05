@@ -10,6 +10,7 @@ import { getCustomers } from '../api/customers';
 import { getMensajeExito, getMensajeError } from '../utils/toastMessages';
 import ModalShell from './common/ModalShell';
 import SelectBuscable from './common/SelectBuscable';
+import CampoNumero from './common/CampoNumero';
 
 const formVacio = {
     booking_number: '',
@@ -251,12 +252,12 @@ export default function BookingModal({ booking, onClose, onGuardado }) {
                     {/* Fila 3: Cupo semana, # de cajas, Salida estimada */}
                     <div>
                         <label className={labelClass}>Cupo Semana (cajas)</label>
-                        <input type="number" min="0" name="weekly_quota" value={form.weekly_quota} onChange={handleChange} className={inputClass} />
+                        <CampoNumero decimales={0} name="weekly_quota" value={form.weekly_quota} onChange={handleChange} className={inputClass} />
                     </div>
 
                     <div>
                         <label className={labelClass}># de Cajas</label>
-                        <input type="number" min="0" name="boxes_quantity" value={form.boxes_quantity} onChange={handleChange} className={inputClass} />
+                        <CampoNumero decimales={0} name="boxes_quantity" value={form.boxes_quantity} onChange={handleChange} className={inputClass} />
                     </div>
 
                     <div>
@@ -277,7 +278,7 @@ export default function BookingModal({ booking, onClose, onGuardado }) {
 
                     <div>
                         <label className={labelClass}>Semana Salida</label>
-                        <input type="number" min="1" max="53" name="departure_week" value={form.departure_week} onChange={handleChange} className={inputClass} />
+                        <CampoNumero decimales={0} max="53" name="departure_week" value={form.departure_week} onChange={handleChange} className={inputClass} />
                     </div>
                 </div>
             </ModalShell>

@@ -19,6 +19,7 @@ import ToastFlotante from '../../components/common/ToastFlotante';
 import DistributionPrint from '../../components/DistributionPrint';
 import { useAuth } from '../../context/AuthContext';
 import SelectBuscable from '../../components/common/SelectBuscable';
+import CampoNumero from '../../components/common/CampoNumero';
 
 const TIPOS_CARGA = {
   CAJA_BAJO_CUBIERTA: 'BAJO CUBIERTA',
@@ -376,8 +377,7 @@ export default function OrderDistributionPage() {
                       return (
                         <td key={b._key} className="px-2 py-2">
                           <div className="flex items-center gap-1">
-                            <input
-                              type="number" min="0" step={l.boxes_per_container || 1} value={valor}
+                            <CampoNumero decimales={0} value={valor}
                               onChange={(e) => cambiarAsignacion(b._key, l.id, e.target.value)}
                               title={otroPuerto ? `La línea sale de ${l.departure_port?.name} y el barco de ${nombrePuerto(b.departure_port_id)}` : ''}
                               className={`${inputClass} text-right ${otroPuerto ? 'ring-2 ring-amber-400' : ''}`}

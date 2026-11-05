@@ -10,6 +10,7 @@ import { getThirdParties } from '../../api/thirdParties';
 import { getVoyageCosts, getVoyageCost, saveVoyageCost } from '../../api/voyageCosts';
 import SelectBuscable from '../../components/common/SelectBuscable';
 import ToastFlotante from '../../components/common/ToastFlotante';
+import CampoNumero from '../../components/common/CampoNumero';
 
 const dinero = (n) => Number(n || 0).toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const cajas = (n) => Number(n || 0).toLocaleString('es-EC', { maximumFractionDigits: 2 });
@@ -189,12 +190,12 @@ export default function VoyageCostsPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>
               <label className={etiqueta}>Tarifa por contenedor (USD)</label>
-              <input type="number" min="0" step="0.01" value={form.container_rate} onChange={(e) => cambiar('container_rate', e.target.value)} placeholder="EJ. 2400" className={`${input} text-right`} />
+              <CampoNumero decimales={2} value={form.container_rate} onChange={(e) => cambiar('container_rate', e.target.value)} placeholder="EJ. 2400" className={`${input} text-right`} />
               <p className="text-[11px] text-gray-500 mt-1">{cajas(conFlete)} contenedores CFR/CIF × tarifa = <strong>$ {dinero(fleteContenedor)}</strong>. En FOB el flete lo paga el cliente.</p>
             </div>
             <div>
               <label className={etiqueta}>Flete bajo cubierta, total (USD)</label>
-              <input type="number" min="0" step="0.01" value={form.under_deck_amount} onChange={(e) => cambiar('under_deck_amount', e.target.value)} placeholder="SI NO SE COBRA, 0" className={`${input} text-right`} />
+              <CampoNumero decimales={2} value={form.under_deck_amount} onChange={(e) => cambiar('under_deck_amount', e.target.value)} placeholder="SI NO SE COBRA, 0" className={`${input} text-right`} />
               <p className="text-[11px] text-gray-500 mt-1">Se reparte entre los clientes según sus cajas bajo cubierta.</p>
             </div>
             <div>
@@ -249,7 +250,7 @@ export default function VoyageCostsPage() {
                       </td>
                       <td className="px-2 py-1.5 min-w-[120px]"><input value={g.invoice_number} onChange={(e) => cambiarGasto(g._key, 'invoice_number', e.target.value)} maxLength={40} className={input} /></td>
                       <td className="px-2 py-1.5 min-w-[140px]"><input type="date" value={g.invoice_date} onChange={(e) => cambiarGasto(g._key, 'invoice_date', e.target.value)} className={input} /></td>
-                      <td className="px-2 py-1.5 min-w-[110px]"><input type="number" min="0" step="0.01" value={g.amount} onChange={(e) => cambiarGasto(g._key, 'amount', e.target.value)} className={`${input} text-right font-semibold`} /></td>
+                      <td className="px-2 py-1.5 min-w-[110px]"><CampoNumero decimales={2} value={g.amount} onChange={(e) => cambiarGasto(g._key, 'amount', e.target.value)} className={`${input} text-right font-semibold`} /></td>
                       <td className="px-2 py-1.5">
                         <button type="button" onClick={() => quitarGasto(g._key)} title="Quitar gasto" className="text-white p-1.5 rounded-lg bg-red-600 hover:bg-red-700"><Trash2 size={16} /></button>
                       </td>

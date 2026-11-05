@@ -25,6 +25,7 @@ import { getActiveMovementReasonsByType } from '../../api/movementReasons';
 import api from '../../api/axios';
 import SelectBuscable from '../../components/common/SelectBuscable';
 import { bodegasPermitidas } from '../../routes/menu';
+import CampoNumero from '../../components/common/CampoNumero';
 
 // Una línea vacía nueva, para el botón "Agregar insumo".
 const lineaVacia = () => ({
@@ -522,8 +523,7 @@ export default function InventoryMovementFormPage() {
                          <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1.5">Semana</label>
                             {/* Calculada automáticamente (semana ISO) a partir de la fecha — solo lectura */}
-                            <input
-                                type="number"
+                            <CampoNumero decimales={0}
                                 value={week}
                                 readOnly
                                 disabled
@@ -822,10 +822,7 @@ export default function InventoryMovementFormPage() {
                                 : stockDisponibleDe(linea.supply_id)}
                         </td>
                         <td className="px-4 py-2">
-                            <input
-                                type="number"
-                                step="0.01"
-                                min="0.01"
+                            <CampoNumero decimales={2}
                                 value={linea.quantity}
                                 onChange={(e) => actualizarLinea(index, 'quantity', e.target.value)}
                                 className={`w-full border rounded-lg px-2 py-1.5 text-sm text-right outline-none focus:ring-2 ${
@@ -847,8 +844,7 @@ export default function InventoryMovementFormPage() {
                         {/* Cantidad comprada: viene de la OC (quantity_ordered - ya recibido),
                             solo lectura — el bodeguero NO puede tocar este valor */}
                         <td className="px-4 py-2">
-                            <input
-                                type="number"
+                            <CampoNumero decimales={0}
                                 value={linea.pendiente ?? ''}
                                 readOnly
                                 disabled
@@ -858,10 +854,7 @@ export default function InventoryMovementFormPage() {
                         {/* Cantidad ingresada: lo único que el bodeguero puede editar,
                             es el mismo campo linea.quantity de siempre */}
                         <td className="px-4 py-2">
-                            <input
-                                type="number"
-                                step="0.01"
-                                min="0.01"
+                            <CampoNumero decimales={2}
                                 value={linea.quantity}
                                 onChange={(e) => actualizarLinea(index, 'quantity', e.target.value)}
                                 className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-right outline-none focus:ring-2 focus:ring-primario"
@@ -871,30 +864,21 @@ export default function InventoryMovementFormPage() {
                 ) : (
                     <>
                         <td className="px-4 py-2">
-                            <input
-                                type="number"
-                                step="0.01"
-                                min="0.01"
+                            <CampoNumero decimales={2}
                                 value={linea.quantity}
                                 onChange={(e) => actualizarLinea(index, 'quantity', e.target.value)}
                                 className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-right outline-none focus:ring-2 focus:ring-primario"
                             />
                         </td>
                         <td className="px-4 py-2">
-                            <input
-                                type="number"
-                                step="0.0001"
-                                min="0"
+                            <CampoNumero decimales={4}
                                 value={linea.unit_cost}
                                 onChange={(e) => actualizarLinea(index, 'unit_cost', e.target.value)}
                                 className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-right outline-none focus:ring-2 focus:ring-primario"
                             />
                         </td>
                         <td className="px-4 py-2">
-                            <input
-                                type="number"
-                                step="0.01"
-                                min="0"
+                            <CampoNumero decimales={2}
                                 value={linea.discount}
                                 onChange={(e) => actualizarLinea(index, 'discount', e.target.value)}
                                 className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-right outline-none focus:ring-2 focus:ring-primario"

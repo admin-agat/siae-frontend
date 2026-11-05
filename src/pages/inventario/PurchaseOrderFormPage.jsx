@@ -11,6 +11,7 @@ import { getWarehouses } from '../../api/warehouses';
 import { getThirdParties } from '../../api/thirdParties';
 import { getSupplies } from '../../api/supplies';
 import SelectBuscable from '../../components/common/SelectBuscable';
+import CampoNumero from '../../components/common/CampoNumero';
 
 // Una línea vacía nueva, para el botón "Agregar insumo".
 // tax_rate arranca en 15 (el IVA más común); discount_percent y retention_rate en 0.
@@ -43,36 +44,7 @@ function getISOWeek(fecha) {
     return 1 + Math.round((d - primerJueves) / (7 * 24 * 3600 * 1000));
 }
 
-// Bloquea CUALQUIER tecla que no sea parte de un número válido.
-// Usamos lista blanca (en vez de lista negra) porque bloquear solo
-// "e/E/+/-" deja pasar cualquier otra letra en algunos navegadores.
-// Se permiten: dígitos, un solo punto decimal, teclas de edición/navegación
-// (Backspace, Delete, flechas, Tab) y combinaciones con Ctrl/Cmd (copiar,
-// pegar, seleccionar todo) — el pegado en sí se valida aparte, ver abajo.
-function bloquearTeclasInvalidas(e) {
-    const teclasPermitidas = [
-        'Backspace', 'Delete', 'Tab', 'Escape', 'Enter',
-        'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End',
-    ];
-    if (teclasPermitidas.includes(e.key)) return;
-    if (e.ctrlKey || e.metaKey) return; // Ctrl+C, Ctrl+V, Ctrl+A, etc.
-
-    // Solo dígitos y un único punto decimal (si ya hay uno, se bloquea otro)
-    const esDigito = /^[0-9]$/.test(e.key);
-    const esPuntoValido = e.key === '.' && !e.target.value.includes('.');
-
-    if (!esDigito && !esPuntoValido) {
-        e.preventDefault();
-    }
-}
-
-// Bloquea pegar texto que no sea un número válido (ej. pegar "abc123")
-function bloquearPegadoInvalido(e) {
-    const texto = e.clipboardData.getData('text');
-    if (!/^\d*\.?\d*$/.test(texto)) {
-        e.preventDefault();
-    }
-}
+// 04/11/2026: los campos numéricos usan CampoNumero (bloquea letras, e, +, - y limpia lo pegado)
 
 // --- Cálculos de una línea, en el mismo orden que el backend (PurchaseOrderLine.php) ---
 // subtotalBruto = cantidad x precio
@@ -490,26 +462,16 @@ export default function PurchaseOrderFormPage() {
                                                 </SelectBuscable>
                                             </td>
                                             <td className="px-3 py-2">
-                                                <input
-                                                    type="number"
-                                                    step="0.01"
-                                                    min="0.01"
+                                                <CampoNumero decimales={2}
                                                     value={linea.quantity_ordered}
                                                     onChange={(e) => actualizarLinea(index, 'quantity_ordered', e.target.value)}
-                                                    onKeyDown={bloquearTeclasInvalidas}
-                                                    onPaste={bloquearPegadoInvalido}
                                                     className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-right outline-none focus:ring-2 focus:ring-primario"
                                                 />
                                             </td>
                                             <td className="px-3 py-2">
-                                                <input
-                                                    type="number"
-                                                    step="0.000001"
-                                                    min="0"
+                                                <CampoNumero decimales={6}
                                                     value={linea.unit_price}
                                                     onChange={(e) => actualizarLinea(index, 'unit_price', e.target.value)}
-                                                    onKeyDown={bloquearTeclasInvalidas}
-                                                    onPaste={bloquearPegadoInvalido}
                                                     className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-right outline-none focus:ring-2 focus:ring-primario"
                                                 />
                                             </td>
@@ -525,28 +487,18 @@ export default function PurchaseOrderFormPage() {
                                                 </SelectBuscable>
                                             </td>
                                             <td className="px-3 py-2">
-                                                <input
-                                                    type="number"
-                                                    step="0.01"
-                                                    min="0"
+                                                <CampoNumero decimales={2}
                                                     max="100"
                                                     value={linea.discount_percent}
                                                     onChange={(e) => actualizarLinea(index, 'discount_percent', e.target.value)}
-                                                    onKeyDown={bloquearTeclasInvalidas}
-                                                    onPaste={bloquearPegadoInvalido}
                                                     className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center outline-none focus:ring-2 focus:ring-primario"
                                                 />
                                             </td>
                                             <td className="px-3 py-2">
-                                                <input
-                                                    type="number"
-                                                    step="0.01"
-                                                    min="0"
+                                                <CampoNumero decimales={2}
                                                     max="100"
                                                     value={linea.retention_rate}
                                                     onChange={(e) => actualizarLinea(index, 'retention_rate', e.target.value)}
-                                                    onKeyDown={bloquearTeclasInvalidas}
-                                                    onPaste={bloquearPegadoInvalido}
                                                     className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center outline-none focus:ring-2 focus:ring-primario"
                                                 />
                                             </td>

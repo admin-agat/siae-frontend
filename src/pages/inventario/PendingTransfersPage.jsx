@@ -8,6 +8,7 @@
 import { useState, useEffect, Fragment } from 'react';
 import { CheckCircle2, ArrowRight, AlertTriangle, Eye, XCircle } from 'lucide-react';
 import { getPendingTransfers, confirmTransfer, cancelTransfer } from '../../api/inventoryMovements';
+import CampoNumero from '../../components/common/CampoNumero';
 
 // 31/10/2026: soloRecibir = vista del bodeguero de destino ("Recibir transferencias"):
 // solo confirma lo que llega a su bodega; cancelar sigue siendo del Coordinador.
@@ -437,10 +438,7 @@ export default function PendingTransfersPage({ soloRecibir = false }) {
                                                 {linea.cantidad_enviada}
                                             </td>
                                             <td className="px-3 py-2">
-                                                <input
-                                                    type="number"
-                                                    step="0.01"
-                                                    min="0"
+                                                <CampoNumero decimales={2}
                                                     value={linea.quantity}
                                                     onChange={(e) => actualizarLineaModal(index, 'quantity', e.target.value)}
                                                     className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-right outline-none focus:ring-2 focus:ring-primario"

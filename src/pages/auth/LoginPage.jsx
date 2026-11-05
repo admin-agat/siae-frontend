@@ -11,12 +11,13 @@ export default function LoginPage() {
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    // Si se llega aquí porque la sesión venció (axios.js redirige con ?expirada=1), se avisa
-    const [error, setError] = useState(() =>
-        new URLSearchParams(window.location.search).has("expirada")
-            ? "Tu sesión expiró. Vuelve a iniciar sesión."
-            : ""
-    );
+    // Si se llega aquí porque la sesión venció (axios.js redirige con ?expirada=1), se avisa.
+    // 05/11/2026: ?inactividad=1 = la cerró el aviso de inactividad (Layout → AvisoInactividad)
+    const [error, setError] = useState(() => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.has("inactividad")) return "Tu sesión se cerró por inactividad (60 minutos sin usar el sistema). Vuelve a iniciar sesión.";
+        return params.has("expirada") ? "Tu sesión expiró. Vuelve a iniciar sesión." : "";
+    });
     const [loading, setLoading] = useState(false);
 
     const [idioma, setIdioma] = useState("ES");
