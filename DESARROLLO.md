@@ -267,6 +267,37 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 05/11/2026 — Bandeja "Por despachar" (grupo B del análisis de experiencia de usuario)
+- **Pantalla nueva:** Inventario → **Por despachar** (`/despacho-materiales/pendientes`, `pages/inventario/DispatchPendingPage.jsx`). Usa el permiso de **Despacho** (`pantalla:despacho`), sin cambios en perfiles.
+- Es la primera opción de INVENTARIO, así que el bodeguero entra directo a ella (antes entraba a Stock General).
+- **Qué muestra:**
+  - Una fila por compra de Comercial sin liquidar: cupo + marca + bodega de retiro.
+  - Columnas: semana, productor (y finca), marca, cajas, bodega de retiro, estado, último retiro (y cuántos) y el botón **Despachar**.
+  - Resumen arriba: por despachar, sin retirar nada, retiro a medias, completos.
+  - Filtros POR DESPACHAR / COMPLETOS / TODOS y buscador.
+- **Estado:** se calcula con las mismas reglas del despacho (fórmula = cajas × ratio de la receta, menos lo ya retirado de esa marca contra ese cupo).
+  - **PENDIENTE:** no retiró nada.
+  - **PARCIAL:** falta algún material. Muestra el % y cuántos materiales faltan.
+  - **COMPLETO:** no falta nada.
+  - **SIN RECETA:** la marca no tiene receta activa.
+  - Los despachos anulados no cuentan.
+  - Lo retirado se cuenta en la bodega de retiro, salvo que alguna compra de esa marca no tenga bodega (igual que `bodegaParaDescontar`).
+- **Bodegas:**
+  - El BODEGUERO ve las compras de su bodega; los demás, las de sus bodegas asignadas (`bodegasPermitidas`).
+  - Las compras sin bodega fija las ven todos.
+- **Despachar →** abre Despacho de materiales con bodega, productor y el cupo de esa fila ya elegidos, por `location.state` (`warehouse_id`, `third_party_id`, `producer_quota_id`, `brand_code`). El bodeguero calcula, revisa y guarda como siempre.
+- **Backend:** `GET /material-dispatch/pending` (`MaterialDispatchController@pending`, opcional `?week=&year=`). Es de solo lectura; no hay migración ni cambios en la base.
+- Pruebas:
+  - `prueba_por_despachar.php` 18 OK, en transacción revertida: pendiente → parcial → completo; retiro en otra bodega no cuenta; anulado no cuenta; bodeguero propio sí y ajeno no; sin bodega la ven todos; filtro de semana; liquidado no aparece; no modifica nada.
+  - Usuario sin permiso de despacho → 403.
+  - Seguridad 80 y permisos 50, sin cambios.
+  - Chrome (`ui_por_despachar.mjs`):
+    - Bodeguero de SAN JUAN entra directo a la bandeja, ve la compra, filtra y busca.
+    - "Despachar" abre el despacho lleno (bodega, productor, cupo semana 37, PALMS BANANAS, 5.000 cajas) y calcula los materiales.
+    - El bodeguero de PROCARSA no la ve; el ADMIN sí.
+    - Celular sin scroll horizontal, sin errores de consola.
+  - Build OK. Lint: los mismos 82 avisos de antes.
+
 ### 05/11/2026 — Ajustes de interfaz (grupo A del análisis de experiencia de usuario)
 Solo presentación: no toca datos, base ni backend.
 - **Botones de solo icono con nombre:** el lápiz y el de desactivar en Navieras, Bodegas, Insumos, Marcas y Motivos muestran "Editar" / "Desactivar" al pasar el mouse (`title` + `aria-label`). Eran 17 botones en el código.

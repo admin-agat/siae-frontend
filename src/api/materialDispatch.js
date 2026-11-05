@@ -29,3 +29,8 @@ export const anularDespacho = (id) =>
 // semana y marca: [{ producer_quota_id, week, year, status, brand_code, brand_name, cajas }]
 export const getCuposAsignados = (thirdPartyId) =>
   axios.get(`/material-dispatch/quotas/${thirdPartyId}`).then((res) => res.data);
+// 05/11/2026: bandeja "Por despachar" — compras de Comercial sin liquidar y lo que falta entregar:
+// [{ producer_quota_id, third_party_id, producer_name, farms, week, year, brand_code, brand_name, cajas,
+//    warehouse_id, warehouse_name, estado: PENDIENTE|PARCIAL|COMPLETO|SIN_RECETA, avance, retiros, ultimo_retiro }]
+export const getPorDespachar = (params = {}) =>
+  axios.get('/material-dispatch/pending', { params }).then((res) => res.data);

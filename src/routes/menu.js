@@ -8,7 +8,7 @@ import {
     ArrowLeftRight, ClipboardList, FileText, ShoppingCart,
     FileSignature, Tag, Ship, Container,
     CircleDollarSign, History, ClipboardCheck, HandCoins, Calculator,
-    MapPin, CheckCircle2, Truck, Anchor, ShoppingBasket, UserCog, Landmark, Receipt, ScrollText, ShieldCheck, PackageCheck, ListOrdered, Wallet, TrendingUp
+    MapPin, CheckCircle2, Truck, Anchor, ShoppingBasket, UserCog, Landmark, Receipt, ScrollText, ShieldCheck, PackageCheck, ListOrdered, Wallet, TrendingUp, Inbox
 } from "lucide-react";
 
 export const menuItems = [
@@ -46,6 +46,8 @@ export const menuItems = [
     {
         seccion: "INVENTARIO",
         items: [
+            // 05/11/2026: primera del bodeguero al entrar: compras de Comercial y lo que falta entregar
+            { label: "Por despachar", ruta: "/despacho-materiales/pendientes", icono: Inbox, pantalla: "despacho" },
             { label: "Bodegas", ruta: "/bodegas", icono: Warehouse, pantalla: "bodegas" },
             { label: "Insumos por Categoría", ruta: "/insumos-categorias", icono: Boxes, pantalla: "insumos" },
             { label: "Motivos de Movimiento", ruta: "/motivos-movimiento", icono: ArrowLeftRight, pantalla: "motivos" },

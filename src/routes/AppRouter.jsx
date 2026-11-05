@@ -66,6 +66,8 @@ const SettlementHistoryPage = lazy(PAGINAS.SettlementHistoryPage);
 const MaterialDispatchPage = lazy(PAGINAS.MaterialDispatchPage);
 // Historial de despachos (quién retiró, valor a descontar, reimprimir guía, anular)
 const MaterialDispatchHistoryPage = lazy(PAGINAS.MaterialDispatchHistoryPage);
+// 05/11/2026: bandeja "Por despachar" (compras de Comercial y lo que falta entregar)
+const DispatchPendingPage = lazy(PAGINAS.DispatchPendingPage);
 
 //ordenes de compras
 const PurchaseOrdersPage = lazy(PAGINAS.PurchaseOrdersPage);
@@ -189,6 +191,7 @@ export default function AppRouter() {
           <Route path="/movimientos" element={P('movimientos', <InventoryMovementsPage />)} />
           <Route path="/inventory-movements/:id/recibo" element={P(['nuevo_movimiento', 'despacho', 'historial_despachos', 'stock', 'movimientos'], <InventoryMovementReceiptPage />)} />
           <Route path="/despacho-materiales" element={P('despacho', <MaterialDispatchPage />)} />
+          <Route path="/despacho-materiales/pendientes" element={P('despacho', <DispatchPendingPage />)} />
           {/* Historial — el backend le filtra al BODEGUERO solo su bodega */}
           <Route path="/despacho-materiales/historial" element={P('historial_despachos', <MaterialDispatchHistoryPage />)} />
 

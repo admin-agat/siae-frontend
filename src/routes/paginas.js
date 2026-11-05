@@ -15,6 +15,7 @@ export const PAGINAS = {
   InventoryMovementFormPage: () => import("../pages/inventario/InventoryMovementFormPage"),
   InventoryMovementsPage: () => import("../pages/inventario/InventoryMovementsPage"),
   InventoryMovementReceiptPage: () => import("../pages/inventario/InventoryMovementReceiptPage"),
+  DispatchPendingPage: () => import("../pages/inventario/DispatchPendingPage"),
   SuppliesMasterDetailPage: () => import("../pages/inventario/SuppliesMasterDetailPage"),
   PurchaseOrderFormPage: () => import("../pages/inventario/PurchaseOrderFormPage"),
   PurchaseOrderDetailPage: () => import("../pages/inventario/PurchaseOrderDetailPage"),

@@ -14,7 +14,7 @@
 // el permiso "Ver costos y valores"; se quitó el campo Motivo (siempre ENTREGA A PRODUCTOR).
 import { useState, useEffect, useMemo } from 'react';
 import { Calculator, AlertTriangle, CheckCircle, Save, Info, X, Lock } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { puede, bodegasPermitidas } from '../../routes/menu';
 import { calcularDespacho, guardarDespacho, getCuposAsignados } from '../../api/materialDispatch';
@@ -48,13 +48,15 @@ const comoLista = (res) => (Array.isArray(res?.data) ? res.data : []);
 
 export default function MaterialDispatchPage() {
     const navigate = useNavigate();
+    // 05/11/2026: desde la bandeja "Por despachar" llega { warehouse_id, third_party_id, producer_quota_id, brand_code }
+    const desdeBandeja = useLocation().state || null;
     const { user } = useAuth();
     const esBodeguero = user?.role === 'BODEGUERO';
     const verCostos = puede(user, 'ver_costos');
 
     // ---- Cabecera ----
-    const [warehouseId, setWarehouseId] = useState('');
-    const [thirdPartyId, setThirdPartyId] = useState('');
+    const [warehouseId, setWarehouseId] = useState(desdeBandeja?.warehouse_id ? String(desdeBandeja.warehouse_id) : '');
+    const [thirdPartyId, setThirdPartyId] = useState(desdeBandeja?.third_party_id ? String(desdeBandeja.third_party_id) : '');
     const [vapor, setVapor] = useState('');
     const [deliveryNote, setDeliveryNote] = useState('');
 
@@ -115,7 +117,12 @@ export default function MaterialDispatchPage() {
             .then((lista) => {
                 const cupos = Array.isArray(lista) ? lista : [];
                 setCuposComercial(cupos);
-                const primero = cupos.find((c) => retiraAqui(c));
+                // Desde la bandeja se elige justo la compra de esa fila; si no, la primera de esta bodega
+                const pedido = desdeBandeja && String(desdeBandeja.third_party_id) === String(thirdPartyId)
+                    ? cupos.find((c) => c.producer_quota_id === desdeBandeja.producer_quota_id && c.brand_code === desdeBandeja.brand_code
+                        && String(c.warehouse_id ?? '') === String(desdeBandeja.warehouse_id ?? ''))
+                    : null;
+                const primero = pedido || cupos.find((c) => retiraAqui(c));
                 if (primero) elegirCupo(primero);
             })
             .catch(() => setCuposComercial([]));
