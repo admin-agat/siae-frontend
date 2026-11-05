@@ -28,7 +28,6 @@ const PurchaseOrderFormPage = lazy(PAGINAS.PurchaseOrderFormPage);
 const PurchaseOrderDetailPage = lazy(PAGINAS.PurchaseOrderDetailPage);
 const PendingTransfersPage = lazy(PAGINAS.PendingTransfersPage);
 const ShippingLinesPage = lazy(PAGINAS.ShippingLinesPage);
-const BookingsPage = lazy(PAGINAS.BookingsPage);
 const PortsMasterDetailPage = lazy(PAGINAS.PortsMasterDetailPage);
 const DestinationsPage = lazy(PAGINAS.DestinationsPage);
 // Contratos de CLIENTES — vigencia y precio por caja (no confundir con contratos MAGAP de productores)
@@ -174,7 +173,6 @@ export default function AppRouter() {
           <Route path="/liquidacion/cupo/:quotaId" element={P('liquidar', <SettlementFormPage />)} />
           <Route path="/liquidacion/:id" element={P(LIQ, <SettlementDetailPage />)} />
           <Route path="navieras" element={P('navieras', <ShippingLinesPage />)} />
-          <Route path="bookings" element={P('bookings', <BookingsPage />)} />
           {/* 29/10/2026: Puertos pasó a CONFIGURACIÓN → RutaSoloAdmin */}
           <Route path="/exportaciones/puertos" element={P('puertos', <PortsMasterDetailPage />)} />
 

@@ -6,7 +6,7 @@
 import {
     LayoutDashboard, Users, Sprout, Warehouse, Boxes,
     ArrowLeftRight, ClipboardList, FileText, ShoppingCart,
-    FileSignature, Clock, Tag, Ship, Container,
+    FileSignature, Tag, Ship, Container,
     CircleDollarSign, History, ClipboardCheck, HandCoins, Calculator,
     MapPin, CheckCircle2, Truck, Anchor, ShoppingBasket, UserCog, Landmark, Receipt, ScrollText, ShieldCheck, PackageCheck, ListOrdered, Wallet, TrendingUp
 } from "lucide-react";
@@ -29,7 +29,7 @@ export const menuItems = [
             // 29/10/2026: lo realmente embarcado por booking (DAE, B/L, tarja del puerto)
             { label: "Cierre de embarque", ruta: "/exportaciones/cierre", icono: ClipboardCheck, pantalla: "cierre_embarque" },
             { label: "Navieras", ruta: "/navieras", icono: Ship, pantalla: "navieras" },
-            { label: "Bookings", ruta: "/bookings", icono: Clock, pantalla: "bookings" },
+            // 05/11/2026: se quitó "Bookings" (tabla suelta, repetía Distribución en barcos + Cierre de embarque)
             { label: "Marca BL", ruta: null, icono: FileSignature, proximamente: true },
             { label: "Invoice", ruta: null, icono: CircleDollarSign, proximamente: true },
         ],

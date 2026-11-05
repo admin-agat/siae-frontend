@@ -20,7 +20,6 @@ export const PAGINAS = {
   PurchaseOrderDetailPage: () => import("../pages/inventario/PurchaseOrderDetailPage"),
   PendingTransfersPage: () => import("../pages/inventario/PendingTransfersPage"),
   ShippingLinesPage: () => import("../pages/exportaciones/ShippingLinesPage"),
-  BookingsPage: () => import("../pages/exportaciones/BookingsPage"),
   PortsMasterDetailPage: () => import("../pages/exportaciones/PortsMasterDetailPage"),
   DestinationsPage: () => import("../pages/exportaciones/DestinationsPage"),
   CustomerContractsPage: () => import("../pages/exportaciones/CustomerContractsPage"),

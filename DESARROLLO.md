@@ -116,7 +116,7 @@ Leyenda: ✅ terminado · 🟡 parcial · ⏳ pendiente
 |---|---|---|
 | **Pedido semanal** | ✅ | Nuevo 28/10/2026. Ver [sección 4](#4-flujo-de-negocio-pedido-semanal). |
 | Navieras | ✅ | |
-| Bookings | 🟡 | Funciona; pendiente migrar a componentes comunes. |
+| Bookings | — | **Quitada 05/11/2026**: tabla suelta que repetía Distribución en barcos (barco, viaje, ETA) + Cierre de embarque (N° de booking). La tabla `bookings` queda en la base (0 registros en producción). |
 | Puertos | ✅ | Tipo **SALIDA** (Guayaquil, Puerto Bolívar) / **DESTINO**. |
 | **Distribución en barcos** | ✅ | Nuevo 28/10/2026 (Fase 2). Barcos de la semana + hoja líneas × barcos. |
 | **Cierre de embarque** | ✅ | Nuevo 29/10/2026. Por barco: ventana de carga, zarpe y bookings con lo REALMENTE embarcado + DAE, B/L, AUCP, orden, consignee/notify, pesos, ingreso (tarja del puerto). Imprime la "Asignación de carga". |
@@ -262,6 +262,11 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 ---
 
 ## 7. Historial de cambios
+
+### 05/11/2026 — Se quita la pantalla Bookings
+- Revisión: **Bookings** guardaba naviera, barco, viaje, ETA, destino y N° de booking sin ligarse al pedido. Eso ya está en **Distribución en barcos** (el plan, por barco) y en **Cierre de embarque** (lo real, un booking por cliente y marca). Distribución y Cierre NO se repiten: plan contra embarcado.
+- Se quitó del menú, de las rutas y del catálogo de permisos (`config/pantallas.php`). Los perfiles que la tenían la pierden solos (las claves viejas se ignoran). Las rutas `/api/bookings` quedan solo para ADMIN.
+- Producción: 0 registros en `bookings` (11 en `shipment_bookings`, el Cierre). La tabla no se borra todavía.
 
 ### 03/11/2026 — Bodegas por usuario (D2), cédula/RUC obligatoria (D4) y revisión de seguridad
 - **Bodegas que opera cada usuario** (tabla `user_warehouses`, se asignan en Usuarios; sin ninguna = todas). El BODEGUERO sigue con su bodega (`responsible_user_id`) y el ADMIN con todas. `User::bodegasPermitidas()` / `puedeBodega()` se aplican en el servidor a: registrar, corregir, ver y listar movimientos, kárdex, stock general, transferencias, calcular/guardar/ver/listar despachos. El login y `/me` envían `bodegas` y las pantallas solo muestran esas (`bodegasPermitidas()` en `routes/menu.js`). Las órdenes de compra no se limitan por bodega. Cambios de bodegas quedan en la bitácora (`BODEGAS_USUARIO`).
@@ -569,7 +574,7 @@ Menú **LIQUIDACIÓN** (solo ADMIN): *Tarjas*, *Anticipos y préstamos*, *Liquid
 - [ ] **Subir a producción** en el VPS (faltan los datos de acceso): ver [Checklist](#9-checklist-para-producción).
 - [ ] Crear los usuarios reales de Exportaciones y Comercial en CONFIGURACIÓN → Usuarios.
 - [ ] Confirmar qué significa el estado "21" de la DAE (el usuario lo va a preguntar).
-- [ ] Pantalla **Bookings** antigua (tabla `bookings`, vacía): con el Cierre de embarque queda duplicada; decidir si se quita del menú.
+- [x] Pantalla **Bookings** antigua: quitada del menú y de los permisos el 05/11/2026. Falta borrar el código viejo (`BookingsPage`, `BookingModal`, `api/bookings.js`, `BookingController`) y la tabla cuando nadie la extrañe.
 - [ ] Liquidación de cupos **manuales** (despachos sin compra de Comercial): hoy no se liquidan porque no tienen precio real ni tarjas.
 - [ ] Probar la Liquidación en el navegador con datos reales (el backend está probado; las pantallas compilan).
 - [ ] Dashboard: reemplazar los datos de ejemplo por un endpoint `/dashboard` con datos reales.
