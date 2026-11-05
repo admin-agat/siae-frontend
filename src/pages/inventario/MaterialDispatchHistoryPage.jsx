@@ -119,10 +119,10 @@ export default function MaterialDispatchHistoryPage() {
     const valorTotal = despachos.reduce((suma, d) => suma + Number(d.valor_total || 0), 0);
 
     return (
-        <div className="p-6 max-w-7xl mx-auto space-y-6">
+        <div className="p-6 space-y-6">
             <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-800">HISTORIAL DE DESPACHOS</h1>
+                    <h1 className="text-2xl font-bold text-gray-800">Historial de despachos</h1>
                     <p className="text-gray-500 text-sm">Materiales entregados a productores, quién retiró y valor a descontar</p>
                 </div>
                 <button

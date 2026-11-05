@@ -214,16 +214,16 @@ export default function BrandsPage() {
                         />
                     </div>
 
-                    <div className="flex gap-1 mb-3 bg-slate-200/60 rounded-lg p-1">
+                    <div className="flex gap-1 mb-3 bg-white border rounded-lg p-1">
                         {['ACTIVOS', 'INACTIVOS', 'TODOS'].map((opcion) => (
                             <button
                                 key={opcion}
                                 onClick={() => setFiltroEstadoMarca(opcion)}
                                 className={`flex-1 text-xs font-semibold py-1.5 rounded-md transition ${
-                                    filtroEstadoMarca === opcion ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                                    filtroEstadoMarca === opcion ? 'bg-primario text-white' : 'text-gray-600 hover:bg-gray-100'
                                 }`}
                             >
-                                {opcion === 'ACTIVOS' ? 'Activos' : opcion === 'INACTIVOS' ? 'Inactivos' : 'Todos'}
+                                {opcion}
                             </button>
                         ))}
                     </div>
@@ -257,12 +257,16 @@ export default function BrandsPage() {
                                         </span>
                                         <button
                                             onClick={(e) => { e.stopPropagation(); setMarcaEdit(m); setShowMarcaModal(true); }}
+                                            title="Editar"
+                                            aria-label="Editar"
                                             className="bg-green-600 hover:bg-green-700 text-white p-1 rounded-lg transition">
                                             <Pencil size={14} />
                                         </button>
                                         {m.status ? (
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); pedirConfirmacion('marca', m, 'desactivar'); }}
+                                                title="Desactivar"
+                                                aria-label="Desactivar"
                                                 className="bg-red-600 hover:bg-red-700 text-white p-1 rounded-lg transition">
                                                 <Ban size={14} />
                                             </button>
@@ -327,16 +331,16 @@ export default function BrandsPage() {
                                 onChange={(e) => setBusquedaReceta(e.target.value.toUpperCase())}
                             />
                         </div>
-                        <div className="flex gap-1 bg-primario/10 rounded-lg p-1 shrink-0">
+                        <div className="flex gap-1 bg-white border rounded-lg p-1 shrink-0">
                             {['ACTIVOS', 'INACTIVOS', 'TODOS'].map((opcion) => (
                                 <button
                                     key={opcion}
                                     onClick={() => setFiltroEstadoReceta(opcion)}
                                     className={`text-xs font-semibold px-3 py-1.5 rounded-md transition whitespace-nowrap ${
-                                        filtroEstadoReceta === opcion ? 'bg-white text-primario shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                                        filtroEstadoReceta === opcion ? 'bg-primario text-white' : 'text-gray-600 hover:bg-gray-100'
                                     }`}
                                 >
-                                    {opcion === 'ACTIVOS' ? 'Activos' : opcion === 'INACTIVOS' ? 'Inactivos' : 'Todos'}
+                                    {opcion}
                                 </button>
                             ))}
                         </div>
@@ -384,10 +388,10 @@ export default function BrandsPage() {
                                             <td className="px-4 py-3 flex gap-2" onClick={(e) => e.stopPropagation()}>
                                                 {r.status ? (
                                                     <>
-                                                        <button onClick={() => { setRecetaEdit(r); setShowRecetaModal(true); }} className="bg-green-600 hover:bg-green-700 text-white p-1 rounded-lg transition">
+                                                        <button onClick={() => { setRecetaEdit(r); setShowRecetaModal(true); }} className="bg-green-600 hover:bg-green-700 text-white p-1 rounded-lg transition" title="Editar" aria-label="Editar">
                                                             <Pencil size={14} />
                                                         </button>
-                                                        <button onClick={() => pedirConfirmacion('receta', r, 'desactivar')} className="bg-red-600 hover:bg-red-700 text-white p-1 rounded-lg transition">
+                                                        <button onClick={() => pedirConfirmacion('receta', r, 'desactivar')} className="bg-red-600 hover:bg-red-700 text-white p-1 rounded-lg transition" title="Desactivar" aria-label="Desactivar">
                                                             <Ban size={14} />
                                                         </button>
                                                     </>

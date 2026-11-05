@@ -171,7 +171,7 @@ export default function ShippingLinesPage() {
 
             <div className="mb-6">
                 <h1 className="text-2xl font-bold text-gray-800">Navieras</h1>
-                <p className="text-gray-500 text-sm">Seleccioná una naviera para ver y gestionar sus barcos</p>
+                <p className="text-gray-500 text-sm">Selecciona una naviera para ver y gestionar sus barcos</p>
             </div>
 
             <div className="grid grid-cols-3 gap-6">
@@ -203,18 +203,18 @@ export default function ShippingLinesPage() {
                         />
                     </div>
 
-                    <div className="flex gap-1 mb-3 bg-slate-200/60 rounded-lg p-1">
+                    <div className="flex gap-1 mb-3 bg-white border rounded-lg p-1">
                         {['ACTIVOS', 'INACTIVOS', 'TODOS'].map((opcion) => (
                             <button
                                 key={opcion}
                                 onClick={() => setFiltroEstadoNaviera(opcion)}
                                 className={`flex-1 text-xs font-semibold py-1.5 rounded-md transition ${
                                     filtroEstadoNaviera === opcion
-                                        ? 'bg-white text-slate-700 shadow-sm'
-                                        : 'text-slate-500 hover:text-slate-700'
+                                        ? 'bg-primario text-white'
+                                        : 'text-gray-600 hover:bg-gray-100'
                                 }`}
                             >
-                                {opcion === 'ACTIVOS' ? 'Activos' : opcion === 'INACTIVOS' ? 'Inactivos' : 'Todos'}
+                                {opcion}
                             </button>
                         ))}
                     </div>
@@ -246,12 +246,16 @@ export default function ShippingLinesPage() {
                                         </span>
                                         <button
                                             onClick={(e) => { e.stopPropagation(); setNavieraEdit(n); setShowNavieraModal(true); }}
+                                            title="Editar"
+                                            aria-label="Editar"
                                             className="bg-green-600 hover:bg-green-700 text-white p-1 rounded-lg transition">
                                             <Pencil size={14} />
                                         </button>
                                         {n.status ? (
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); pedirConfirmacion('naviera', n, 'desactivar'); }}
+                                                title="Desactivar"
+                                                aria-label="Desactivar"
                                                 className="bg-red-600 hover:bg-red-700 text-white p-1 rounded-lg transition">
                                                 <Ban size={14} />
                                             </button>
@@ -303,7 +307,7 @@ export default function ShippingLinesPage() {
                             <h2 className="font-semibold text-gray-800">
                                 {navieraSeleccionada
                                     ? `Barcos de ${navieraSeleccionada.name}`
-                                    : 'Seleccioná una naviera'}
+                                    : 'Selecciona una naviera'}
                             </h2>
                         </div>
                         <button
@@ -328,18 +332,18 @@ export default function ShippingLinesPage() {
                             />
                         </div>
 
-                        <div className="flex gap-1 bg-primario/10 rounded-lg p-1 shrink-0">
+                        <div className="flex gap-1 bg-white border rounded-lg p-1 shrink-0">
                             {['ACTIVOS', 'INACTIVOS', 'TODOS'].map((opcion) => (
                                 <button
                                     key={opcion}
                                     onClick={() => setFiltroEstadoBarco(opcion)}
                                     className={`text-xs font-semibold px-3 py-1.5 rounded-md transition whitespace-nowrap ${
                                         filtroEstadoBarco === opcion
-                                            ? 'bg-white text-primario shadow-sm'
-                                            : 'text-gray-500 hover:text-gray-700'
+                                            ? 'bg-primario text-white'
+                                            : 'text-gray-600 hover:bg-gray-100'
                                     }`}
                                 >
-                                    {opcion === 'ACTIVOS' ? 'Activos' : opcion === 'INACTIVOS' ? 'Inactivos' : 'Todos'}
+                                    {opcion}
                                 </button>
                             ))}
                         </div>
@@ -358,7 +362,7 @@ export default function ShippingLinesPage() {
                                 {!navieraSeleccionada ? (
                                     <tr>
                                         <td colSpan="3" className="text-center py-8 text-gray-400">
-                                            Elegí una naviera de la izquierda
+                                            Elige una naviera de la izquierda
                                         </td>
                                     </tr>
                                 ) : loadingBarcos ? (
@@ -395,11 +399,13 @@ export default function ShippingLinesPage() {
                                             <td className="px-4 py-3 flex gap-2" onClick={(e) => e.stopPropagation()}>
                                                 {v.status ? (
                                                     <>
-                                                        <button onClick={() => { setBarcoEdit(v); setShowBarcoModal(true); }} className="bg-green-600 hover:bg-green-700 text-white p-1 rounded-lg transition">
+                                                        <button onClick={() => { setBarcoEdit(v); setShowBarcoModal(true); }} className="bg-green-600 hover:bg-green-700 text-white p-1 rounded-lg transition" title="Editar" aria-label="Editar">
                                                             <Pencil size={14} />
                                                         </button>
                                                         <button
                                                             onClick={() => pedirConfirmacion('barco', v, 'desactivar')}
+                                                            title="Desactivar"
+                                                            aria-label="Desactivar"
                                                             className="bg-red-600 hover:bg-red-700 text-white p-1 rounded-lg transition">
                                                             <Ban size={14} />
                                                         </button>

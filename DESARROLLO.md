@@ -259,10 +259,41 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 - **Pantalla nueva** (permisos por persona): agregar su clave en `siae-backend/config/pantallas.php`, la misma `pantalla` en [menu.js](src/routes/menu.js), la ruta con `P('clave', <Pagina />)` en AppRouter y proteger su API con `->middleware('pantalla:clave')`. No usar `rol:` para dar acceso a una pantalla (solo para acciones internas que dependen del tipo base).
 - **No usar `<select>` nativo**: usar `SelectBuscable` (mismas props y `<option>`/`<optgroup>`), que permite escribir para buscar.
 - **No usar `<input type="number">`**: usar `CampoNumero` (`decimales={0}` para cajas y cantidades por pieza, `2` para dinero; `max` opcional). El tipo number del navegador deja pasar letras y convierte lo inválido en vacío (se guardaba 0).
+- **Montos en pantalla:** `dinero()` de `utils/formato.js` (formato es-EC, 1.234,56), no `toFixed(2)`. **Fechas en pantalla:** dd/mm/aaaa.
+- **Botones de solo icono:** siempre con `title` y `aria-label`. **Cancelar / Cerrar:** `bg-cancelar` (gris); el rojo solo para desactivar o anular.
+- **Textos:** español de Ecuador (tú): "Selecciona", "Elige", no "Seleccioná", "Elegí".
 
 ---
 
 ## 7. Historial de cambios
+
+### 05/11/2026 — Ajustes de interfaz (grupo A del análisis de experiencia de usuario)
+Solo presentación: no toca datos, base ni backend.
+- **Botones de solo icono con nombre:** el lápiz y el de desactivar en Navieras, Bodegas, Insumos, Marcas y Motivos muestran "Editar" / "Desactivar" al pasar el mouse (`title` + `aria-label`). Eran 17 botones en el código.
+- **Cancelar en gris:** el token `--color-cancelar` (`index.css`) pasó de rojo a gris (gray-200, texto gray-800). Cambia en los 14 lugares que lo usan (Cancelar, Cerrar, Limpiar). El rojo queda para acciones de peligro: desactivar, anular.
+- **Fechas dd/mm/aaaa** en Movimientos y kárdex (antes `2026-09-18`). `fechaVer` muestra la fecha; `fechaCorta` sigue llenando el campo de fecha al corregir.
+- **Montos con formato de Ecuador (1.234,56):**
+  - Nuevo `utils/formato.js` → `dinero(valor, decimales = 2)`.
+  - Se usa en Nuevo movimiento, Orden de compra (formulario y detalle), Precios MAG, Contratos de clientes e historial de tarifas de Puertos.
+  - El Dashboard (datos de ejemplo) queda para cuando se conecte a datos reales.
+- **Textos:**
+  - "Seleccioná / Registrá / Elegí" → "Selecciona / Registra / Elige".
+  - Títulos de Despacho e Historial de despachos en minúsculas como el resto.
+  - Despacho de materiales usa todo el ancho, como las demás pantallas.
+- **Filtros Activos/Inactivos/Todos:** Navieras, Insumos y Marcas usan el mismo estilo de `TablaEstandar` (botón azul, mayúsculas).
+- **Login:**
+  - Se quitó el selector de idioma, que no hacía nada.
+  - Los ejemplos de los campos ahora dicen "Tu correo o usuario" y "Tu contraseña". Antes mostraban el correo del administrador y unos puntos que parecían una contraseña ya escrita.
+  - Etiquetas ligadas a los campos, `autoComplete` y cursor en el usuario al abrir.
+- **Menú:** "Marca BL" e "Invoice" (Próximamente) ya no se muestran (`menuDe` filtra `proximamente`). Siguen en `menu.js` para cuando existan.
+- **Celular:**
+  - La barra azul muestra "SIAE · SEM 45" y el botón de salir queda solo con su icono, en una sola línea.
+  - En PC la barra no cambia.
+- Pruebas:
+  - Chrome (`ux_grupoA.mjs`) 32 OK + menú (`ux_menu.mjs`) OK.
+  - Inactividad (`ui_inactividad.mjs`) 15 OK.
+  - Build OK.
+  - Lint: los mismos 82 avisos de React hooks que antes del cambio, ninguno nuevo.
 
 ### 05/11/2026 — Cierre de sesión por inactividad y semana bananera en la barra
 - **Inactividad (60 min):** `components/common/AvisoInactividad.jsx` (en `Layout`). Cuenta como actividad mover el mouse, escribir, hacer clic, la rueda o tocar; la última se guarda en `localStorage.ultimaActividad`, así varias pestañas cuentan como una. A los 58 min sale **"¿Sigues ahí?"** con cuenta regresiva, **Seguir conectado** y **Cerrar sesión**; a los 60 cierra y va a `/login?inactividad=1`, que explica el motivo.

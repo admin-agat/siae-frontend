@@ -14,6 +14,7 @@ import AccionesFila from '../../components/common/AccionesFila';
 import DialogoConfirmacion from '../../components/common/DialogoConfirmacion';
 import ToastFlotante from '../../components/common/ToastFlotante';
 import { marcaConPresentacion } from '../../utils/presentaciones';
+import { dinero } from '../../utils/formato';
 
 // Calcula si el contrato está VIGENTE, VENCIDO o FUTURO según la fecha de hoy
 const estadoVigencia = (c) => {
@@ -82,7 +83,7 @@ export default function CustomerContractsPage() {
                 <div className="space-y-0.5 text-xs whitespace-nowrap">
                     {(c.prices || []).map((p) => (
                         <div key={p.id}>
-                            {marcaConPresentacion(p.brand?.name, p.presentation)}: <span className="font-semibold">${Number(p.box_price).toFixed(2)}</span>
+                            {marcaConPresentacion(p.brand?.name, p.presentation)}: <span className="font-semibold">${dinero(p.box_price)}</span>
                         </div>
                     ))}
                 </div>

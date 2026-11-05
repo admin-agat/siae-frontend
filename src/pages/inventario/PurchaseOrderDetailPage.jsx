@@ -11,6 +11,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { getPurchaseOrder } from '../../api/purchaseOrders';
+import { dinero } from '../../utils/formato';
 
 const ESTADO_ESTILOS = {
     PENDIENTE: 'bg-amber-100 text-amber-800',
@@ -198,12 +199,12 @@ export default function PurchaseOrderDetailPage() {
                                             <span className="text-gray-400">0</span>
                                         )}
                                     </td>
-                                    <td className="px-2 py-1.5 print:py-0.5 text-right">${parseFloat(linea.unit_price).toFixed(4)}</td>
+                                    <td className="px-2 py-1.5 print:py-0.5 text-right">${dinero(linea.unit_price, 4)}</td>
                                     <td className="px-2 py-1.5 print:py-0.5 text-center">{linea.tax_rate}%</td>
                                     <td className="px-2 py-1.5 print:py-0.5 text-center">{linea.discount_percent}%</td>
                                     <td className="px-2 py-1.5 print:py-0.5 text-center">{linea.retention_rate}%</td>
-                                    <td className="px-2 py-1.5 print:py-0.5 text-right">${parseFloat(linea.subtotal).toFixed(2)}</td>
-                                    <td className="px-2 py-1.5 print:py-0.5 text-right font-medium">${parseFloat(linea.total).toFixed(2)}</td>
+                                    <td className="px-2 py-1.5 print:py-0.5 text-right">${dinero(linea.subtotal)}</td>
+                                    <td className="px-2 py-1.5 print:py-0.5 text-right font-medium">${dinero(linea.total)}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -218,31 +219,31 @@ export default function PurchaseOrderDetailPage() {
                     <div className="w-full max-w-xs space-y-1 print:space-y-0 text-sm print:text-xs">
                         <div className="flex justify-between text-gray-600">
                             <span>Subtotal 15%</span>
-                            <span>${parseFloat(orden.subtotal_15).toFixed(2)}</span>
+                            <span>${dinero(orden.subtotal_15)}</span>
                         </div>
                         <div className="flex justify-between text-gray-600">
                             <span>Subtotal 5%</span>
-                            <span>${parseFloat(orden.subtotal_5).toFixed(2)}</span>
+                            <span>${dinero(orden.subtotal_5)}</span>
                         </div>
                         <div className="flex justify-between text-gray-600">
                             <span>Subtotal 0%</span>
-                            <span>${parseFloat(orden.subtotal_0).toFixed(2)}</span>
+                            <span>${dinero(orden.subtotal_0)}</span>
                         </div>
                         <div className="flex justify-between text-gray-600">
                             <span>IVA 15%</span>
-                            <span>${parseFloat(orden.iva_15).toFixed(2)}</span>
+                            <span>${dinero(orden.iva_15)}</span>
                         </div>
                         <div className="flex justify-between text-gray-600">
                             <span>IVA 5%</span>
-                            <span>${parseFloat(orden.iva_5).toFixed(2)}</span>
+                            <span>${dinero(orden.iva_5)}</span>
                         </div>
                         <div className="flex justify-between text-gray-600">
                             <span>Retención IR</span>
-                            <span>-${parseFloat(orden.retencion_total).toFixed(2)}</span>
+                            <span>-${dinero(orden.retencion_total)}</span>
                         </div>
                         <div className="flex justify-between font-bold text-primario print:text-gray-900 text-base print:text-xs pt-2 print:pt-1 border-t">
                             <span>Total</span>
-                            <span>${parseFloat(orden.total).toFixed(2)}</span>
+                            <span>${dinero(orden.total)}</span>
                         </div>
                     </div>
                 </div>

@@ -190,12 +190,12 @@ export default function MovementReasonsPage() {
                                     <td className="px-4 py-3 flex gap-2" onClick={(e) => e.stopPropagation()}>
                                         {r.status ? (
                                             <>
-                                                <button onClick={() => handleEditar(r)} className="bg-green-600 hover:bg-green-700 text-white p-1 rounded-lg transition">
+                                                <button onClick={() => handleEditar(r)} className="bg-green-600 hover:bg-green-700 text-white p-1 rounded-lg transition" title="Editar" aria-label="Editar">
                                                     <Pencil size={16} />
                                                 </button>
                                                 {/* Ban en vez de Trash2: el motivo se desactiva (reversible), no
                                                     se borra permanentemente — mismo ícono que Bodegas/Insumos */}
-                                                <button onClick={() => pedirConfirmacion(r, 'desactivar')} className="bg-red-600 hover:bg-red-700 text-white p-1 rounded-lg transition">
+                                                <button onClick={() => pedirConfirmacion(r, 'desactivar')} className="bg-red-600 hover:bg-red-700 text-white p-1 rounded-lg transition" title="Desactivar" aria-label="Desactivar">
                                                     <Ban size={16} />
                                                 </button>
                                             </>

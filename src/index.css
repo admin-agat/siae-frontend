@@ -10,15 +10,16 @@
   --color-primario: #3B5BDB;
   --color-primario-hover: #2F49B8;
   --color-primario-claro: #EDF2FF;
-  /* Botones del formulario = mismos colores que los botones de ACCIONES de las tablas:
+  /* Botones del formulario:
      GUARDAR  (verde del lápiz Editar, green-600)  → bg-guardar hover:bg-guardar-hover text-guardar-texto
-     CANCELAR (rojo de Desactivar, red-600)        → bg-cancelar hover:bg-cancelar-hover text-cancelar-texto */
+     CANCELAR / Cerrar / Limpiar (gris, gray-200)  → bg-cancelar hover:bg-cancelar-hover text-cancelar-texto
+     05/11/2026: Cancelar pasó de rojo a gris; el rojo queda solo para acciones de peligro (desactivar, anular) */
   --color-guardar: var(--color-green-600);
   --color-guardar-hover: var(--color-green-700);
   --color-guardar-texto: #FFFFFF;
-  --color-cancelar: var(--color-red-600);
-  --color-cancelar-hover: var(--color-red-700);
-  --color-cancelar-texto: #FFFFFF;
+  --color-cancelar: var(--color-gray-200);
+  --color-cancelar-hover: var(--color-gray-300);
+  --color-cancelar-texto: var(--color-gray-800);
 }
 
 @media print {

@@ -204,7 +204,7 @@ export default function SuppliesMasterDetailPage() {
 
             <div className="mb-6">
                 <h1 className="text-2xl font-bold text-gray-800">Insumos por Categoría</h1>
-                <p className="text-gray-500 text-sm">Seleccioná una categoría para ver y gestionar sus insumos</p>
+                <p className="text-gray-500 text-sm">Selecciona una categoría para ver y gestionar sus insumos</p>
             </div>
 
                        <div className="grid grid-cols-3 gap-6">
@@ -238,18 +238,18 @@ export default function SuppliesMasterDetailPage() {
                     </div>
 
                     {/* Filtro de estado: Activos / Inactivos / Todos */}
-                    <div className="flex gap-1 mb-3 bg-slate-200/60 rounded-lg p-1">
+                    <div className="flex gap-1 mb-3 bg-white border rounded-lg p-1">
                         {['ACTIVOS', 'INACTIVOS', 'TODOS'].map((opcion) => (
                             <button
                                 key={opcion}
                                 onClick={() => setFiltroEstadoCategoria(opcion)}
                                 className={`flex-1 text-xs font-semibold py-1.5 rounded-md transition ${
                                     filtroEstadoCategoria === opcion
-                                        ? 'bg-white text-slate-700 shadow-sm'
-                                        : 'text-slate-500 hover:text-slate-700'
+                                        ? 'bg-primario text-white'
+                                        : 'text-gray-600 hover:bg-gray-100'
                                 }`}
                             >
-                                {opcion === 'ACTIVOS' ? 'Activos' : opcion === 'INACTIVOS' ? 'Inactivos' : 'Todos'}
+                                {opcion}
                             </button>
                         ))}
                     </div>
@@ -282,12 +282,16 @@ export default function SuppliesMasterDetailPage() {
                                         </span>
                                         <button
                                             onClick={(e) => { e.stopPropagation(); setCategoriaEdit(c); setShowCategoriaModal(true); }}
+                                            title="Editar"
+                                            aria-label="Editar"
                                             className="bg-green-600 hover:bg-green-700 text-white p-1 rounded-lg transition">
     <Pencil size={14} />
                                         </button>
                                         {c.status ? (
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); pedirConfirmacion('categoria', c, 'desactivar'); }}
+                                               title="Desactivar"
+                                               aria-label="Desactivar"
                                                className="bg-red-600 hover:bg-red-700 text-white p-1 rounded-lg transition">
     <Ban size={14} />
                                             </button>
@@ -341,7 +345,7 @@ export default function SuppliesMasterDetailPage() {
                             <h2 className="font-semibold text-gray-800">
                                 {categoriaSeleccionada
                                     ? `Insumos de ${categoriaSeleccionada.name}`
-                                    : 'Seleccioná una categoría'}
+                                    : 'Selecciona una categoría'}
                             </h2>
                         </div>
                         <button
@@ -367,18 +371,18 @@ export default function SuppliesMasterDetailPage() {
                         </div>
 
                         {/* Filtro de estado: Activos / Inactivos / Todos */}
-                        <div className="flex gap-1 bg-primario/10 rounded-lg p-1 shrink-0">
+                        <div className="flex gap-1 bg-white border rounded-lg p-1 shrink-0">
                             {['ACTIVOS', 'INACTIVOS', 'TODOS'].map((opcion) => (
                                 <button
                                     key={opcion}
                                     onClick={() => setFiltroEstadoInsumo(opcion)}
                                     className={`text-xs font-semibold px-3 py-1.5 rounded-md transition whitespace-nowrap ${
                                         filtroEstadoInsumo === opcion
-                                            ? 'bg-white text-primario shadow-sm'
-                                            : 'text-gray-500 hover:text-gray-700'
+                                            ? 'bg-primario text-white'
+                                            : 'text-gray-600 hover:bg-gray-100'
                                     }`}
                                 >
-                                    {opcion === 'ACTIVOS' ? 'Activos' : opcion === 'INACTIVOS' ? 'Inactivos' : 'Todos'}
+                                    {opcion}
                                 </button>
                             ))}
                         </div>
@@ -400,7 +404,7 @@ export default function SuppliesMasterDetailPage() {
                                 {!categoriaSeleccionada ? (
                                     <tr>
                                         <td colSpan="6" className="text-center py-8 text-gray-400">
-                                            Elegí una categoría de la izquierda
+                                            Elige una categoría de la izquierda
                                         </td>
                                     </tr>
                                 ) : loadingInsumos ? (
@@ -440,12 +444,14 @@ export default function SuppliesMasterDetailPage() {
                                             <td className="px-4 py-3 flex gap-2" onClick={(e) => e.stopPropagation()}>
                                                 {i.status ? (
                                                     <>
-                                                        <button onClick={() => { setInsumoEdit(i); setShowInsumoModal(true); }} className="bg-green-600 hover:bg-green-700 text-white p-1 rounded-lg transition">
+                                                        <button onClick={() => { setInsumoEdit(i); setShowInsumoModal(true); }} className="bg-green-600 hover:bg-green-700 text-white p-1 rounded-lg transition" title="Editar" aria-label="Editar">
     <Pencil size={14} />
 
                                                         </button>
                                                         <button
                                                             onClick={() => pedirConfirmacion('insumo', i, 'desactivar')}
+                                                            title="Desactivar"
+                                                            aria-label="Desactivar"
                                                             className="bg-red-600 hover:bg-red-700 text-white p-1 rounded-lg transition">
     <Ban size={14} />
 

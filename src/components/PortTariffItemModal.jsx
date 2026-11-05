@@ -6,6 +6,7 @@ import { createPortTariffItem, updatePortTariffItem, getPortTariffItemPriceHisto
 import { getMensajeExito, getMensajeError } from '../utils/toastMessages';
 import ModalShell from './common/ModalShell';
 import CampoNumero from './common/CampoNumero';
+import { dinero } from '../utils/formato';
 
 export default function PortTariffItemModal({ item, portId, onClose, onGuardado }) {
     const esEdicion = Boolean(item?.id);
@@ -174,8 +175,8 @@ export default function PortTariffItemModal({ item, portId, onClose, onGuardado 
                                         {historial.map((h) => (
                                             <tr key={h.id} className="border-t border-gray-200">
                                                 <td className="py-1">{new Date(h.changed_at).toLocaleDateString()}</td>
-                                                <td className="py-1">${Number(h.old_amount).toFixed(2)}</td>
-                                                <td className="py-1">${Number(h.new_amount).toFixed(2)}</td>
+                                                <td className="py-1">${dinero(h.old_amount)}</td>
+                                                <td className="py-1">${dinero(h.new_amount)}</td>
                                                 <td className="py-1">{h.changedByUser?.name || '—'}</td>
                                             </tr>
                                         ))}

@@ -19,6 +19,7 @@ import ModalShell from '../../components/common/ModalShell';
 import SelectBuscable from '../../components/common/SelectBuscable';
 import { getMensajeExito, getMensajeError } from '../../utils/toastMessages';
 import CampoNumero from '../../components/common/CampoNumero';
+import { dinero } from '../../utils/formato';
 
 const fecha = (f) => (f ? f.split('-').reverse().join('/') : '');
 const hoy = () => new Date().toISOString().slice(0, 10);
@@ -154,7 +155,7 @@ export default function OfficialPricesPage() {
 
   const columnas = [
     { titulo: 'Tipo de caja', render: (p) => p.box_type?.name, className: 'font-medium' },
-    { titulo: 'Precio', render: (p) => <span className="font-semibold">$ {Number(p.price).toFixed(2)}</span> },
+    { titulo: 'Precio', render: (p) => <span className="font-semibold">$ {dinero(p.price)}</span> },
     { titulo: 'Desde', render: (p) => fecha(p.valid_from) },
     { titulo: 'Hasta', render: (p) => (p.valid_to ? fecha(p.valid_to) : <span className="text-gray-400">SIN FECHA DE FIN</span>) },
     { titulo: 'Acuerdo ministerial', render: (p) => p.agreement_number || <span className="text-gray-400">—</span> },
@@ -206,7 +207,7 @@ export default function OfficialPricesPage() {
           onCancelar={() => setConfirmacion(null)}
           onAceptar={handleConfirmarAccion}
         >
-          ¿Estás seguro de {esDesactivar ? 'desactivar' : 'reactivar'} el precio de <strong>{confirmacion.precio.box_type?.name} $ {Number(confirmacion.precio.price).toFixed(2)}</strong>?
+          ¿Estás seguro de {esDesactivar ? 'desactivar' : 'reactivar'} el precio de <strong>{confirmacion.precio.box_type?.name} $ {dinero(confirmacion.precio.price)}</strong>?
           {esDesactivar && ' Las compras nuevas ya no lo propondrán.'}
         </DialogoConfirmacion>
       )}

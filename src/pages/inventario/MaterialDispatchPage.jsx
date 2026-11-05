@@ -325,9 +325,9 @@ export default function MaterialDispatchPage() {
     };
 
     return (
-        <div className="p-6 max-w-6xl mx-auto space-y-6">
+        <div className="p-6 space-y-6">
             <div>
-                <h1 className="text-2xl font-bold text-gray-800">DESPACHO DE MATERIALES</h1>
+                <h1 className="text-2xl font-bold text-gray-800">Despacho de materiales</h1>
                 <p className="text-gray-500 text-sm">
                     Elige la marca y las cajas, calcula el material recomendado y ajusta lo que realmente se entrega
                 </p>
@@ -347,7 +347,7 @@ export default function MaterialDispatchPage() {
 
             {/* ===== 1. DATOS DEL DESPACHO ===== */}
             <div className="bg-white rounded-2xl shadow p-6">
-                <h2 className="font-semibold mb-4">DATOS DEL DESPACHO</h2>
+                <h2 className="font-semibold mb-4">Datos del despacho</h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                         <label className={LABEL}>Bodega * {esBodeguero && <Lock size={12} className="inline ml-1 text-gray-400" />}</label>
@@ -404,7 +404,7 @@ export default function MaterialDispatchPage() {
 
             {/* ===== 2. CUPO DEL RETIRO: UNA MARCA + CAJAS ===== */}
             <div className="bg-white rounded-2xl shadow p-6">
-                <h2 className="font-semibold mb-1">CUPO DEL RETIRO</h2>
+                <h2 className="font-semibold mb-1">Cupo del retiro</h2>
                 <p className="text-xs text-gray-400 mb-4">
                     Un retiro es de una sola marca. Si el productor lleva dos marcas, registra dos retiros.
                 </p>
@@ -513,7 +513,7 @@ export default function MaterialDispatchPage() {
                 <div className="bg-white rounded-2xl shadow p-6 space-y-6">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                         <h2 className="font-semibold">
-                            MATERIALES A DESPACHAR — {nombreMarca(marcaCode)} · {cajasNum.toLocaleString('es-EC')} CAJAS
+                            Materiales a despachar — {nombreMarca(marcaCode)} · {cajasNum.toLocaleString('es-EC')} cajas
                         </h2>
                         {cantAjustados > 0 && (
                             <button

@@ -191,10 +191,10 @@ export default function WarehousesPage() {
                                                                        <td className="px-4 py-3 flex gap-2" onClick={(e) => e.stopPropagation()}>
                                         {b.status ? (
                                             <>
-                                                <button onClick={() => handleEditar(b)} className="bg-green-600 hover:bg-green-700 text-white p-1 rounded-lg transition">
+                                                <button onClick={() => handleEditar(b)} className="bg-green-600 hover:bg-green-700 text-white p-1 rounded-lg transition" title="Editar" aria-label="Editar">
                                                     <Pencil size={16} />
                                                 </button>
-                                                <button onClick={() => pedirConfirmacion(b, 'desactivar')} className="bg-red-600 hover:bg-red-700 text-white p-1 rounded-lg transition">
+                                                <button onClick={() => pedirConfirmacion(b, 'desactivar')} className="bg-red-600 hover:bg-red-700 text-white p-1 rounded-lg transition" title="Desactivar" aria-label="Desactivar">
                                                     <Ban size={16} />
                                                 </button>
                                             </>

@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../api/axios";
 import { inicioDe } from "../../routes/menu";
-import SelectBuscable from '../../components/common/SelectBuscable';
 
 export default function LoginPage() {
     const { login } = useAuth();
@@ -19,8 +18,6 @@ export default function LoginPage() {
         return params.has("expirada") ? "Tu sesión expiró. Vuelve a iniciar sesión." : "";
     });
     const [loading, setLoading] = useState(false);
-
-    const [idioma, setIdioma] = useState("ES");
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -46,19 +43,7 @@ export default function LoginPage() {
         <div className="min-h-screen flex items-center justify-center bg-primario">
             <div className="bg-white rounded-2xl shadow-2xl p-10 w-full max-w-md">
 
-                {/* Selector de idioma (visual, en desarrollo) */}
-                <div className="flex justify-end mb-2">
-                    <SelectBuscable
-                        value={idioma}
-                        onChange={(e) => setIdioma(e.target.value)}
-                        title="Selector de idioma (próximamente)"
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition outline-none cursor-pointer"
-                    >
-                        <option value="ES">🇪🇨 ES</option>
-                        <option value="RU">🇷🇺 RU</option>
-                    </SelectBuscable>
-                </div>
-
+                {/* 05/11/2026: se quitó el selector de idioma (no hacía nada todavía) */}
 
                 {/* Ícono */}
                 <div className="flex justify-center mb-4">
@@ -78,21 +63,23 @@ export default function LoginPage() {
                 {/* Formulario */}
                 <form onSubmit={handleLogin} className="space-y-4">
                     <div>
-                        <label className="text-sm font-medium text-gray-600">Usuario</label>
-                        <input type="text" value={email}
+                        <label htmlFor="login-usuario" className="text-sm font-medium text-gray-600">Usuario</label>
+                        <input id="login-usuario" type="text" value={email} autoComplete="username" autoFocus
                             onChange={(e) => setEmail(e.target.value)}
-                            placeholder="admin@agat-ecuagreen.com o usuario"
+                            placeholder="Tu correo o usuario"
                             className="w-full mt-1 px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primario text-gray-800"
                         />
                     </div>
 
                     <div>
-                        <label className="text-sm font-medium text-gray-600">Contraseña</label>
+                        <label htmlFor="login-clave" className="text-sm font-medium text-gray-600">Contraseña</label>
                         <input
+                            id="login-clave"
                             type="password"
                             value={password}
+                            autoComplete="current-password"
                             onChange={(e) => setPassword(e.target.value)}
-                            placeholder="••••••••"
+                            placeholder="Tu contraseña"
                             className="w-full mt-1 px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primario text-gray-800"
                         />
                     </div>

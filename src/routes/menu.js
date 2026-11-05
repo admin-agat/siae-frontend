@@ -118,13 +118,11 @@ export const puede = (user, ...pantallas) =>
 // Un ítem del menú es visible si: es soloAdmin y el usuario es ADMIN, o tiene su pantalla
 const itemVisible = (user, item) => (item.soloAdmin ? esAdmin(user) : puede(user, item.pantalla));
 
-// Menú filtrado para el usuario: sin secciones vacías; los "Próximamente" solo en secciones que ya ve
+// Menú filtrado para el usuario: sin secciones vacías.
+// 05/11/2026: los "Próximamente" (Marca BL, Invoice) ya no se muestran; vuelven al quitarles proximamente
 export const menuDe = (user) =>
     menuItems
-        .map((grupo) => {
-            const reales = grupo.items.filter((item) => !item.proximamente && itemVisible(user, item));
-            return { ...grupo, items: reales.length ? grupo.items.filter((item) => item.proximamente || reales.includes(item)) : [] };
-        })
+        .map((grupo) => ({ ...grupo, items: grupo.items.filter((item) => !item.proximamente && itemVisible(user, item)) }))
         .filter((grupo) => grupo.items.length > 0);
 
 // Pantalla de inicio: la primera del menú que puede abrir (sin ninguna: /sin-acceso)

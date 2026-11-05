@@ -44,6 +44,8 @@ const num = (v, dec = 2) => Number(v || 0).toLocaleString('es-EC', { minimumFrac
 // null = sin costo conocido (el insumo aún no tiene compras)
 const dinero = (v, dec = 2) => (v == null ? '—' : '$' + num(v, dec));
 const fechaCorta = (f) => (f ? String(f).slice(0, 10) : '');
+// 05/11/2026: en pantalla la fecha va dd/mm/aaaa como en el resto del sistema (fechaCorta queda para los campos de fecha)
+const fechaVer = (f) => (f ? fechaCorta(f).split('-').reverse().join('/') : '');
 
 // Semana ISO (lunes-domingo), la misma "semana bananera" del formulario de movimientos
 function getISOWeek(fecha) {
@@ -175,7 +177,7 @@ export default function InventoryMovementsPage() {
 
     const columnas = [
         { titulo: '#', render: (m) => m.id, className: 'font-mono text-gray-500' },
-        { titulo: 'Fecha', render: (m) => fechaCorta(m.date), className: 'whitespace-nowrap' },
+        { titulo: 'Fecha', render: (m) => fechaVer(m.date), className: 'whitespace-nowrap' },
         { titulo: 'Tipo', render: (m) => <TipoBadge tipo={m.type} /> },
         { titulo: 'Motivo', render: (m) => m.reason?.name, className: 'text-xs' },
         { titulo: 'Bodega', render: bodegaDe },
@@ -386,7 +388,7 @@ export default function InventoryMovementsPage() {
                                     )}
                                     {kardex.filas.map((f, i) => (
                                         <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                                            <td className="px-4 py-2 whitespace-nowrap">{fechaCorta(f.date)}</td>
+                                            <td className="px-4 py-2 whitespace-nowrap">{fechaVer(f.date)}</td>
                                             <td className="px-4 py-2">
                                                 <button type="button" onClick={() => navigate(`/inventory-movements/${f.movement_id}/recibo`, { state: { volver: '/movimientos' } })} className="font-mono text-primario hover:underline">
                                                     {f.movement_id}
@@ -439,7 +441,7 @@ export default function InventoryMovementsPage() {
                     onCancelar={() => setAnular(null)}
                     onAceptar={ejecutarAnulacion}
                 >
-                    {anular.type} de <strong>{anular.warehouse?.name}</strong> del {fechaCorta(anular.date)} ({anular.reason?.name}).
+                    {anular.type} de <strong>{anular.warehouse?.name}</strong> del {fechaVer(anular.date)} ({anular.reason?.name}).
                     {' '}Su efecto en el stock se revierte{anular.purchase_order ? ` y lo recibido vuelve a quedar pendiente en la ${anular.purchase_order.code}` : ''}.
                 </DialogoConfirmacion>
             )}

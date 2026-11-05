@@ -18,11 +18,15 @@ function RelojSemana() {
   const { semana } = semanaISO(ahora);
   const dia = ahora.toLocaleDateString('es-EC', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
   const hora = ahora.toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit', hour12: false });
+  // 05/11/2026: en celular solo "SEM 45" (sin día ni hora) para que la barra no se apriete
   return (
-    <div className="hidden md:flex items-center gap-3 text-white text-sm" title="Semana bananera (ISO): de lunes a domingo">
-      <span className="font-bold bg-white/15 rounded-md px-2 py-0.5">SEMANA {semana}</span>
-      <span className="capitalize opacity-90">{dia}</span>
-      <span className="font-semibold tabular-nums">{hora}</span>
+    <div className="flex items-center gap-3 text-white text-sm" title="Semana bananera (ISO): de lunes a domingo">
+      <span className="font-bold bg-white/15 rounded-md px-2 py-0.5 whitespace-nowrap">
+        <span className="md:hidden">SEM {semana}</span>
+        <span className="hidden md:inline">SEMANA {semana}</span>
+      </span>
+      <span className="hidden md:inline capitalize opacity-90">{dia}</span>
+      <span className="hidden md:inline font-semibold tabular-nums">{hora}</span>
     </div>
   );
 }
@@ -66,13 +70,14 @@ export default function Layout() {
       <div className="flex-1 flex flex-col min-w-0">
 
         {/* Navbar superior. 02/11/2026: usuario, perfil y "Cerrar sesión" arriba a la derecha (antes al pie del menú) */}
-        <header className="px-6 py-3 flex items-center justify-between gap-4 shadow-sm bg-primario">
-          <span className="text-white font-semibold text-sm">
-            Sistema Integral AGAT-ECUAGREEN <span className="font-normal opacity-70">v1.0</span>
+        <header className="px-4 sm:px-6 py-3 flex items-center justify-between gap-3 sm:gap-4 shadow-sm bg-primario">
+          <span className="text-white font-semibold text-sm whitespace-nowrap">
+            <span className="sm:hidden">SIAE</span>
+            <span className="hidden sm:inline">Sistema Integral AGAT-ECUAGREEN <span className="font-normal opacity-70">v1.0</span></span>
           </span>
           <RelojSemana />
-          <div className="flex items-center gap-4">
-            <div className="text-right leading-tight">
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+            <div className="text-right leading-tight min-w-0 truncate">
               <p className="text-white text-sm font-semibold">{user?.name || 'Usuario'}</p>
               <p className="text-white text-[11px] opacity-80">{user?.profile_name || user?.role?.replace('_', ' ')}</p>
             </div>
@@ -80,10 +85,11 @@ export default function Layout() {
               type="button"
               onClick={cerrarSesion}
               title={user?.email ? `Salir de ${user.email}` : 'Cerrar sesión'}
-              className="flex items-center gap-2 text-sm font-semibold text-white border border-white/50 rounded-lg px-3 py-1.5 hover:bg-white hover:text-primario transition"
+              aria-label="Cerrar sesión"
+              className="flex items-center gap-2 text-sm font-semibold text-white border border-white/50 rounded-lg px-2.5 sm:px-3 py-1.5 hover:bg-white hover:text-primario transition shrink-0"
             >
               <LogOut size={15} />
-              Cerrar sesión
+              <span className="hidden sm:inline">Cerrar sesión</span>
             </button>
           </div>
         </header>

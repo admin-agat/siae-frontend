@@ -26,6 +26,7 @@ import api from '../../api/axios';
 import SelectBuscable from '../../components/common/SelectBuscable';
 import { bodegasPermitidas } from '../../routes/menu';
 import CampoNumero from '../../components/common/CampoNumero';
+import { dinero } from '../../utils/formato';
 
 // Una línea vacía nueva, para el botón "Agregar insumo".
 const lineaVacia = () => ({
@@ -504,7 +505,7 @@ export default function InventoryMovementFormPage() {
         <div className="max-w-full mx-auto p-6 space-y-6">
             <div className="mb-6">
                 <h1 className="text-2xl font-bold text-gray-800">Nuevo Movimiento de Inventario</h1>
-                <p className="text-gray-500 text-sm">Registrá un Ingreso o Egreso con sus insumos</p>
+                <p className="text-gray-500 text-sm">Registra un Ingreso o Egreso con sus insumos</p>
             </div>
 
             {error && (
@@ -619,7 +620,7 @@ export default function InventoryMovementFormPage() {
                                 >
                                     <option value="">
                                         {!warehouseId
-                                            ? 'Elegí una bodega primero...'
+                                            ? 'Elige una bodega primero...'
                                             : cargandoOrdenes
                                             ? 'Cargando órdenes...'
                                             : ordenesCompra.length === 0
@@ -885,7 +886,7 @@ export default function InventoryMovementFormPage() {
                             />
                         </td>
                         <td className="px-4 py-2 text-right font-medium">
-                            ${totalLinea(linea).toFixed(2)}
+                            ${dinero(totalLinea(linea))}
                         </td>
                     </>
                 )}
@@ -932,7 +933,7 @@ export default function InventoryMovementFormPage() {
                     Total general
                 </td>
                 <td className="px-4 py-3 text-right font-bold text-primario">
-                    ${totalGeneral.toFixed(2)}
+                    ${dinero(totalGeneral)}
                 </td>
                 <td></td>
             </tr>

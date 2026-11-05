@@ -12,6 +12,7 @@ import { getThirdParties } from '../../api/thirdParties';
 import { getSupplies } from '../../api/supplies';
 import SelectBuscable from '../../components/common/SelectBuscable';
 import CampoNumero from '../../components/common/CampoNumero';
+import { dinero } from '../../utils/formato';
 
 // Una línea vacía nueva, para el botón "Agregar insumo".
 // tax_rate arranca en 15 (el IVA más común); discount_percent y retention_rate en 0.
@@ -286,7 +287,7 @@ export default function PurchaseOrderFormPage() {
             <div className="mb-6">
                 <h1 className="text-2xl font-bold text-gray-800">Nueva Orden de Compra</h1>
                 <p className="text-gray-500 text-sm">
-                    Registrá lo pedido a un proveedor — el código se genera automáticamente
+                    Registra lo pedido a un proveedor — el código se genera automáticamente
                 </p>
             </div>
 
@@ -404,7 +405,7 @@ export default function PurchaseOrderFormPage() {
 
                     {!thirdPartyId && (
                         <div className="px-4 py-3 text-sm text-gray-500 bg-yellow-50 border-b border-yellow-100">
-                            Elegí un proveedor arriba para ver los insumos que vende.
+                            Elige un proveedor arriba para ver los insumos que vende.
                         </div>
                     )}
 
@@ -503,7 +504,7 @@ export default function PurchaseOrderFormPage() {
                                                 />
                                             </td>
                                             <td className="px-3 py-2 text-right font-medium whitespace-nowrap">
-                                                ${calculo.subtotal.toFixed(2)}
+                                                ${dinero(calculo.subtotal)}
                                             </td>
                                             <td className="px-3 py-2 text-center">
                                                 {lineas.length > 1 && (
@@ -531,31 +532,31 @@ export default function PurchaseOrderFormPage() {
                         <div className="w-full max-w-xs space-y-1 text-sm">
                             <div className="flex justify-between text-gray-600">
                                 <span>Subtotal 15%</span>
-                                <span>${subtotal15.toFixed(2)}</span>
+                                <span>${dinero(subtotal15)}</span>
                             </div>
                             <div className="flex justify-between text-gray-600">
                                 <span>Subtotal 5%</span>
-                                <span>${subtotal5.toFixed(2)}</span>
+                                <span>${dinero(subtotal5)}</span>
                             </div>
                             <div className="flex justify-between text-gray-600">
                                 <span>Subtotal 0%</span>
-                                <span>${subtotal0.toFixed(2)}</span>
+                                <span>${dinero(subtotal0)}</span>
                             </div>
                             <div className="flex justify-between text-gray-600">
                                 <span>IVA 15%</span>
-                                <span>${iva15.toFixed(2)}</span>
+                                <span>${dinero(iva15)}</span>
                             </div>
                             <div className="flex justify-between text-gray-600">
                                 <span>IVA 5%</span>
-                                <span>${iva5.toFixed(2)}</span>
+                                <span>${dinero(iva5)}</span>
                             </div>
                             <div className="flex justify-between text-gray-600">
                                 <span>Retención IR</span>
-                                <span>-${retencionTotal.toFixed(2)}</span>
+                                <span>-${dinero(retencionTotal)}</span>
                             </div>
                             <div className="flex justify-between font-bold text-primario text-base pt-2 border-t">
                                 <span>Total</span>
-                                <span>${totalGeneral.toFixed(2)}</span>
+                                <span>${dinero(totalGeneral)}</span>
                             </div>
                         </div>
                     </div>
