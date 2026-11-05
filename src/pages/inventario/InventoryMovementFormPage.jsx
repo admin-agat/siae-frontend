@@ -27,6 +27,7 @@ import SelectBuscable from '../../components/common/SelectBuscable';
 import { bodegasPermitidas } from '../../routes/menu';
 import CampoNumero from '../../components/common/CampoNumero';
 import { dinero } from '../../utils/formato';
+import { hoyISO } from '../../utils/fecha';
 
 // Una línea vacía nueva, para el botón "Agregar insumo".
 const lineaVacia = () => ({
@@ -75,7 +76,7 @@ export default function InventoryMovementFormPage() {
     const [warehouseId, setWarehouseId] = useState('');
     const [thirdPartyId, setThirdPartyId] = useState('');
     const [movementReasonId, setMovementReasonId] = useState('');
-    const [fecha, setFecha] = useState(new Date().toISOString().slice(0, 10));
+    const [fecha, setFecha] = useState(hoyISO());
     // Antes era un input de texto libre (purchaseOrder). Ahora es el ID real
     // de la OC seleccionada, para que sí quede vinculada por purchase_order_id.
     const [purchaseOrderId, setPurchaseOrderId] = useState('');
@@ -150,7 +151,7 @@ export default function InventoryMovementFormPage() {
     // Al cargar el formulario, fija la fecha a hoy y calcula semana/año automáticamente — no editable
     useEffect(() => {
         const hoy = new Date();
-        setFecha(hoy.toISOString().split('T')[0]); // formato YYYY-MM-DD
+        setFecha(hoyISO(hoy)); // formato YYYY-MM-DD, fecha de Ecuador (no UTC)
         setWeek(getISOWeek(hoy));
         setYear(hoy.getFullYear());
     }, []);

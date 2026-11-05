@@ -15,9 +15,10 @@ import DialogoConfirmacion from '../../components/common/DialogoConfirmacion';
 import ToastFlotante from '../../components/common/ToastFlotante';
 import SelectBuscable from '../../components/common/SelectBuscable';
 import CampoNumero from '../../components/common/CampoNumero';
+import { hoyISO } from '../../utils/fecha';
 
 const formatoCajas = (n) => Number(n || 0).toLocaleString('es-EC');
-const hoy = () => new Date().toISOString().slice(0, 10);
+const hoy = () => hoyISO();
 
 let contador = 0;
 const nuevaClave = () => `tarja-${++contador}`;

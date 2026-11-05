@@ -20,9 +20,10 @@ import SelectBuscable from '../../components/common/SelectBuscable';
 import { getMensajeExito, getMensajeError } from '../../utils/toastMessages';
 import CampoNumero from '../../components/common/CampoNumero';
 import { dinero } from '../../utils/formato';
+import { hoyISO } from '../../utils/fecha';
 
 const fecha = (f) => (f ? f.split('-').reverse().join('/') : '');
-const hoy = () => new Date().toISOString().slice(0, 10);
+const hoy = () => hoyISO();
 
 function PrecioModal({ precio, tiposCaja, onClose, onGuardado }) {
   const esEdicion = Boolean(precio?.id);

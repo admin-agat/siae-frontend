@@ -15,10 +15,11 @@ import DialogoConfirmacion from '../../components/common/DialogoConfirmacion';
 import ToastFlotante from '../../components/common/ToastFlotante';
 import { marcaConPresentacion } from '../../utils/presentaciones';
 import { dinero } from '../../utils/formato';
+import { hoyISO } from '../../utils/fecha';
 
 // Calcula si el contrato está VIGENTE, VENCIDO o FUTURO según la fecha de hoy
 const estadoVigencia = (c) => {
-    const hoy = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+    const hoy = hoyISO(); // "YYYY-MM-DD"
     if (c.end_date < hoy) return { texto: 'VENCIDO', clase: 'bg-gray-100 text-gray-600' };
     if (c.start_date > hoy) return { texto: 'FUTURO', clase: 'bg-amber-100 text-amber-700' };
     return { texto: 'VIGENTE', clase: 'bg-green-100 text-green-700' };

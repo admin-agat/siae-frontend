@@ -14,13 +14,14 @@ import { ArrowLeft, Calculator, X, AlertTriangle } from 'lucide-react';
 import { getSettlementPreview, createSettlement } from '../../api/settlements';
 import DialogoConfirmacion from '../../components/common/DialogoConfirmacion';
 import CampoNumero from '../../components/common/CampoNumero';
+import { hoyISO } from '../../utils/fecha';
 
 const formatoCajas = (n) => Number(n || 0).toLocaleString('es-EC');
 const formatoDinero = (n) => Number(n || 0).toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const formatoCantidad = (n) => Number(n || 0).toLocaleString('es-EC', { maximumFractionDigits: 2 });
 const formatoFecha = (f) => (f ? f.split('-').reverse().join('/') : '—');
 const r2 = (n) => Math.round(n * 100) / 100;
-const hoy = () => new Date().toISOString().slice(0, 10);
+const hoy = () => hoyISO();
 
 const ESQUEMA = { 100: 'PAGO 100 %', '80_20': 'PAGO 80 / 20' };
 

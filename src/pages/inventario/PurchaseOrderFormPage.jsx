@@ -13,6 +13,7 @@ import { getSupplies } from '../../api/supplies';
 import SelectBuscable from '../../components/common/SelectBuscable';
 import CampoNumero from '../../components/common/CampoNumero';
 import { dinero } from '../../utils/formato';
+import { hoyISO } from '../../utils/fecha';
 
 // Una línea vacía nueva, para el botón "Agregar insumo".
 // tax_rate arranca en 15 (el IVA más común); discount_percent y retention_rate en 0.
@@ -77,7 +78,7 @@ export default function PurchaseOrderFormPage() {
     // Cabecera de la OC
     const [thirdPartyId, setThirdPartyId] = useState('');
     const [warehouseId, setWarehouseId] = useState('');
-    const [fecha, setFecha] = useState(new Date().toISOString().slice(0, 10));
+    const [fecha, setFecha] = useState(hoyISO());
     const [reference, setReference] = useState('');
     const [week, setWeek] = useState('');
     const [previewCode, setPreviewCode] = useState('');

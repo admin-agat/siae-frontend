@@ -260,12 +260,34 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 - **No usar `<select>` nativo**: usar `SelectBuscable` (mismas props y `<option>`/`<optgroup>`), que permite escribir para buscar.
 - **No usar `<input type="number">`**: usar `CampoNumero` (`decimales={0}` para cajas y cantidades por pieza, `2` para dinero; `max` opcional). El tipo number del navegador deja pasar letras y convierte lo inválido en vacío (se guardaba 0).
 - **Montos en pantalla:** `dinero()` de `utils/formato.js` (formato es-EC, 1.234,56), no `toFixed(2)`. **Fechas en pantalla:** dd/mm/aaaa.
+- **Fecha de hoy:** `hoyISO()` de `utils/fecha.js`, nunca `new Date().toISOString()` (es UTC: desde las 19:00 da mañana).
 - **Botones de solo icono:** siempre con `title` y `aria-label`. **Cancelar / Cerrar:** `bg-cancelar` (gris); el rojo solo para desactivar o anular.
 - **Textos:** español de Ecuador (tú): "Selecciona", "Elige", no "Seleccioná", "Elegí".
 
 ---
 
 ## 7. Historial de cambios
+
+### 05/11/2026 — Fecha de "hoy" en hora de Ecuador (antes, desde las 19:00 salía la de mañana)
+- **Problema:** varios formularios proponían "hoy" con `new Date().toISOString()`, que es la fecha en **UTC**. Ecuador es UTC−5, así que desde las 19:00 la fecha propuesta era la de **mañana**. El servidor también está en UTC (`app.timezone`), con el mismo efecto en lo que fecha él.
+  - Un despacho hecho el domingo después de las 19:00 quedaba en la **semana siguiente**.
+  - Un contrato que vence hoy salía como vencido desde las 19:00.
+- **Frontend:** nuevo `utils/fecha.js` → `hoyISO(d = new Date())`, fecha local "AAAA-MM-DD". Reemplaza a `toISOString().slice(0, 10)` en 10 lugares:
+  - Nuevo movimiento (2), Orden de compra, Pedido semanal (recibido), Contratos de clientes (vigencia).
+  - Precios MAG, Anticipos, Tarjas, Liquidar y Detalle de liquidación (pagos).
+  - Los cálculos de "lunes de la semana ISO" usan UTC de principio a fin y están bien; no se tocaron.
+- **Backend:** nuevo `config('app.zona_operacion')` (`APP_ZONA_OPERACION`, por defecto `America/Guayaquil`). Se usa en `now(config('app.zona_operacion'))` en 9 lugares:
+  - Fecha y semana del despacho, y cupo de la semana.
+  - Fecha del INGRESO y de la MERMA al recibir una transferencia.
+  - Fecha de registro del embarque (Distribución en barcos).
+  - Contrato vigente hoy (Clientes) y año del código de la OC.
+- **`app.timezone` sigue en UTC a propósito.** Si se cambia, las horas ya guardadas (created_at, Bitácora, tokens) quedarían corridas 5 h respecto de las nuevas.
+- **Regla:** fechas de negocio en el servidor → `now(config('app.zona_operacion'))`; en la pantalla → `hoyISO()`. Nunca `toISOString()` para "hoy".
+- Pruebas:
+  - Servidor 5 OK con el reloj simulado: jueves 21:30 → 05/11; domingo 20:00 → semana 45, no 46; 31/12 22:00 → 2026-12-31; de día sin cambios; `created_at` sigue en UTC.
+  - `hoyISO` 5 OK (21:30 y 23:59 → mismo día; 00:01 → día siguiente; 31/12 22:00).
+  - Seguridad 80, permisos 50, Por despachar 18, sin cambios.
+  - Build OK. Lint: los mismos 82 avisos de antes.
 
 ### 05/11/2026 — Bandeja "Por despachar" (grupo B del análisis de experiencia de usuario)
 - **Pantalla nueva:** Inventario → **Por despachar** (`/despacho-materiales/pendientes`, `pages/inventario/DispatchPendingPage.jsx`). Usa el permiso de **Despacho** (`pantalla:despacho`), sin cambios en perfiles.

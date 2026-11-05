@@ -24,6 +24,7 @@ import { getMensajeExito, getMensajeError } from '../../utils/toastMessages';
 import SelectBuscable from '../../components/common/SelectBuscable';
 import { PRESENTACIONES } from '../../utils/presentaciones';
 import CampoNumero from '../../components/common/CampoNumero';
+import { hoyISO } from '../../utils/fecha';
 
 const INCOTERMS = ['FOB', 'CFR', 'CIF'];
 
@@ -119,7 +120,7 @@ export default function CustomerOrderFormPage() {
     year: String(actual.anio),
     // Total de cajas que pide Rusia para la semana: las líneas deben sumar exactamente esto
     expected_boxes: '',
-    received_at: new Date().toISOString().slice(0, 10),
+    received_at: hoyISO(),
     comment: '',
   });
   const [lineas, setLineas] = useState([lineaVacia()]);

@@ -15,12 +15,13 @@ import DialogoConfirmacion from '../../components/common/DialogoConfirmacion';
 import ToastFlotante from '../../components/common/ToastFlotante';
 import { useAuth } from '../../context/AuthContext';
 import { puede } from '../../routes/menu';
+import { hoyISO } from '../../utils/fecha';
 
 const formatoCajas = (n) => Number(n || 0).toLocaleString('es-EC');
 const formatoDinero = (n) => Number(n || 0).toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const formatoCantidad = (n) => Number(n || 0).toLocaleString('es-EC', { maximumFractionDigits: 2 });
 const formatoFecha = (f) => (f ? String(f).slice(0, 10).split('-').reverse().join('/') : '—');
-const hoy = () => new Date().toISOString().slice(0, 10);
+const hoy = () => hoyISO();
 const ESQUEMA = { 100: '100 %', '80_20': '80 / 20' };
 
 export default function SettlementDetailPage() {

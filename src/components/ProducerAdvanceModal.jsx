@@ -9,8 +9,9 @@ import ModalShell from './common/ModalShell';
 import DialogoConfirmacion from './common/DialogoConfirmacion';
 import SelectBuscable from './common/SelectBuscable';
 import CampoNumero from './common/CampoNumero';
+import { hoyISO } from '../utils/fecha';
 
-const hoy = () => new Date().toISOString().slice(0, 10);
+const hoy = () => hoyISO();
 
 export default function ProducerAdvanceModal({ anticipo, onClose, onGuardado }) {
   const esEdicion = Boolean(anticipo?.id);
