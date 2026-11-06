@@ -271,7 +271,11 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
-### 06/11/2026 — Liquidación como el Excel, parte 1: datos base (solo en local)
+### 06/11/2026 — Liquidación como el Excel, parte 1: datos base (en producción desde 06/11/2026)
+- **Producción** (06/11/2026 13:23, a pedido del usuario en horario y sin modo mantenimiento):
+  - Respaldo `~/respaldos/siae_production_20261106_1823_antes_liquidacion_parte1.sql` y `frontend_dist_20261106_1823_antes_liquidacion_parte1.tgz` (hora del servidor, UTC).
+  - Migración en 0,05 s. Quedaron 24 asociaciones o cooperativas en NO RETENER, los 5 tramos de retención y el perfil LIQUIDACIONES. Las rutas nuevas responden 401 sin sesión.
+  - Falta crear el usuario de Liquidaciones y cargar los contratos (a mano, o desde el Excel si el usuario lo valida).
 - **Pedido:** el usuario mandó el Excel de Liquidaciones (WK41–43, "AUTOMATICO") y pidió que la liquidación se haga **tal como ese Excel**.
 - **Decisiones del 06/11, que reemplazan las del 29/10:**
   - Sí hay **retención IR único banano**.
