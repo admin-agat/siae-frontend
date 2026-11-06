@@ -271,6 +271,11 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 06/11/2026 — Barra azul fija arriba (en producción desde 06/11/2026)
+- **Pedido:** que la barra azul de arriba (semana, fecha, hora, usuario y Cerrar sesión) se quede fija al bajar en la página.
+- [Layout.jsx](src/components/Layout.jsx): el `header` lleva `sticky top-0 z-20`. Así queda debajo del menú desplegado (z-30/40) y de los modales (z-50 en adelante).
+- **Probado en Chrome, computadora y celular, 13/13:** la barra sigue arriba al bajar; el menú y los modales quedan encima; sin scroll lateral; sin errores.
+
 ### 06/11/2026 — Ícono del sistema: hojas verdes (en producción desde 06/11/2026)
 - También dentro del sistema:
   - En la barra de arriba, junto al nombre, en un círculo blanco para que se vea sobre el azul ([Layout.jsx](src/components/Layout.jsx)).

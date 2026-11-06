@@ -70,7 +70,9 @@ export default function Layout() {
       <div className="flex-1 flex flex-col min-w-0">
 
         {/* Navbar superior. 02/11/2026: usuario, perfil y "Cerrar sesión" arriba a la derecha (antes al pie del menú) */}
-        <header className="px-4 sm:px-6 py-3 flex items-center justify-between gap-3 sm:gap-4 shadow-sm bg-primario">
+        {/* 06/11/2026: fija arriba al bajar en la página (semana, fecha, hora y usuario siempre a la vista).
+            z-20: queda debajo del menú desplegado (z-30/40) y de los modales */}
+        <header className="sticky top-0 z-20 px-4 sm:px-6 py-3 flex items-center justify-between gap-3 sm:gap-4 shadow-sm bg-primario">
           <span className="text-white font-semibold text-sm whitespace-nowrap flex items-center gap-2">
             {/* 06/11/2026: ícono del sistema (hojas verdes) en un círculo blanco para que se vea sobre el azul */}
             <span className="w-8 h-8 rounded-full bg-white flex items-center justify-center shrink-0">
