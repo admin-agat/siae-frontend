@@ -47,11 +47,8 @@ export default function LoginPage() {
 
                 {/* Ícono */}
                 <div className="flex justify-center mb-4">
-                    <div className="w-16 h-16 rounded-full flex items-center justify-center bg-primario">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3C7 3 3 7.5 3 12c0 4 2.5 7.5 6 9 .5-2 1-4 3-6-2 1-4 1-5 0 1-3 4-5 7-5s6 2 7 5c-1 1-3 1-5 0 2 2 2.5 4 3 6 3.5-1.5 6-5 6-9 0-4.5-4-9-9-9z" />
-                        </svg>
-                    </div>
+                    {/* 06/11/2026: ícono del sistema (hojas verdes) */}
+                    <img src="/icono-192.png" alt="AGAT · SIAE" className="w-20 h-20" />
                 </div>
 
                 {/* Título */}

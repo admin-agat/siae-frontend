@@ -71,7 +71,11 @@ export default function Layout() {
 
         {/* Navbar superior. 02/11/2026: usuario, perfil y "Cerrar sesión" arriba a la derecha (antes al pie del menú) */}
         <header className="px-4 sm:px-6 py-3 flex items-center justify-between gap-3 sm:gap-4 shadow-sm bg-primario">
-          <span className="text-white font-semibold text-sm whitespace-nowrap">
+          <span className="text-white font-semibold text-sm whitespace-nowrap flex items-center gap-2">
+            {/* 06/11/2026: ícono del sistema (hojas verdes) en un círculo blanco para que se vea sobre el azul */}
+            <span className="w-8 h-8 rounded-full bg-white flex items-center justify-center shrink-0">
+              <img src="/icono-64.png" alt="" className="w-6 h-6" />
+            </span>
             <span className="sm:hidden">SIAE</span>
             <span className="hidden sm:inline">Sistema Integral AGAT-ECUAGREEN <span className="font-normal opacity-70">v1.0</span></span>
           </span>

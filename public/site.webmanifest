@@ -1,0 +1,12 @@
+{
+  "name": "Sistema Integral AGAT-ECUAGREEN",
+  "short_name": "SIAE",
+  "icons": [
+    { "src": "/icono-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icono-512.png", "sizes": "512x512", "type": "image/png" }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#3b5bdb",
+  "background_color": "#ffffff"
+}

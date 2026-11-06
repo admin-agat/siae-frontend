@@ -256,7 +256,10 @@ export default function Sidebar() {
                     <div className="fixed inset-0 z-30 bg-black/20" onClick={() => setPanel(null)} />
                     <div className="fixed top-0 left-16 z-40 h-screen w-72 flex flex-col bg-white shadow-2xl" style={{ borderRight: "1px solid #e5e7eb" }}>
                         <div className="h-14 px-4 flex items-center justify-between shrink-0" style={{ borderBottom: "1px solid #e5e7eb" }}>
-                            <span className="font-bold text-primario">{grupoPanel ? grupoPanel.seccion : "AGAT · SIAE"}</span>
+                            <span className="font-bold text-primario flex items-center gap-2">
+                                {!grupoPanel && <img src="/icono-64.png" alt="" className="w-6 h-6" />}
+                                {grupoPanel ? grupoPanel.seccion : "AGAT · SIAE"}
+                            </span>
                             <button type="button" onClick={() => setPanel(null)} aria-label="Cerrar menú" className="text-gray-400 hover:text-gray-700">
                                 <X size={18} />
                             </button>

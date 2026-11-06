@@ -271,6 +271,16 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 06/11/2026 — Ícono del sistema: hojas verdes (en producción desde 06/11/2026)
+- También dentro del sistema:
+  - En la barra de arriba, junto al nombre, en un círculo blanco para que se vea sobre el azul ([Layout.jsx](src/components/Layout.jsx)).
+  - En el inicio de sesión, en lugar del círculo azul ([LoginPage.jsx](src/pages/auth/LoginPage.jsx)).
+  - En el encabezado del menú completo ([Sidebar.jsx](src/components/Sidebar.jsx)).
+- Se revisó con capturas en computadora y celular: sin scroll lateral y sin errores.
+- **Pedido:** usar como ícono del sistema la imagen de dos hojas verdes que mandó el usuario.
+- Se le quitó el fondo gris claro (quedó transparente) y se dejó cuadrada, en 5 tamaños: `public/icono-32.png` y `icono-64.png` (pestaña del navegador), `icono-180.png` (acceso directo en iPhone) e `icono-192.png` / `icono-512.png` (Android, en `public/site.webmanifest`).
+- [index.html](index.html) ya no usa `platanos.png`. El archivo sigue en `public/` por si se quiere volver atrás.
+
 ### 06/11/2026 — Liquidación como el Excel, parte 1: datos base (en producción desde 06/11/2026)
 - **Producción** (06/11/2026 13:23, a pedido del usuario en horario y sin modo mantenimiento):
   - Respaldo `~/respaldos/siae_production_20261106_1823_antes_liquidacion_parte1.sql` y `frontend_dist_20261106_1823_antes_liquidacion_parte1.tgz` (hora del servidor, UTC).
