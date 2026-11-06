@@ -66,6 +66,7 @@ Respaldo del archivo original: `C:\php\php.ini.respaldo-2026-10-28`.
 | **COMERCIAL** | 0 (nuevo 29/10) | Compra de fruta (bloques, compras, precios, bodega de retiro) y Precios oficiales MAG. Lee pedido y barcos por la API, sin editarlos. |
 | **DEPARTAMENTO** | nuevo 05/11 | Un usuario por departamento (Compras, Sistemas, Logística…): llena sus órdenes de compra y ve solo las de su departamento. |
 | **CONTABILIDAD** | nuevo 05/11 | Aprueba (única) las OC de todos los departamentos, genera el TXT de pagos de Banco Pichincha y maneja las cuentas bancarias de proveedores. |
+| **LIQUIDACIONES** | nuevo 06/11 | Departamento de Liquidaciones: contratos y régimen de retención de productores, parámetros de la semana, tarjas, anticipos, liquidar, pagos y notas de crédito. |
 
 Los usuarios se crean en **CONFIGURACIÓN → Usuarios** (solo ADMIN). Desactivar un usuario le cierra la sesión al instante.
 
@@ -269,6 +270,62 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 ---
 
 ## 7. Historial de cambios
+
+### 06/11/2026 — Liquidación como el Excel, parte 1: datos base (solo en local)
+- **Pedido:** el usuario mandó el Excel de Liquidaciones (WK41–43, "AUTOMATICO") y pidió que la liquidación se haga **tal como ese Excel**.
+- **Decisiones del 06/11, que reemplazan las del 29/10:**
+  - Sí hay **retención IR único banano**.
+  - Solo se pagan las cajas **embarcadas**; las caídas ya no.
+  - El **anticipo 80 %** se paga antes de liquidar.
+  - El **mínimo oficial** es uno solo por semana.
+  - Los descuentos de evaluadores, estibas y comisión los ingresa el **equipo de validación**.
+  - Las liquidaciones las hace el **Departamento de Liquidaciones**.
+- **Plan en 4 partes:**
+  1. Datos base (esta entrega).
+  2. Validación de descuentos y anticipo 80 %.
+  3. Liquidación nueva: LQ por contrato y spot, más el documento LG.
+  4. Pagos (TXT Pichincha) y reportes (retenciones, cuadre).
+- **Parámetros de la semana** (LIQUIDACIÓN → Parámetros de la semana; equivale a la hoja PARAMETROS):
+  - Datos: mínimo oficial por caja, tipo de caja, tasa BPA y reconocimiento por caja en Pto. Bolívar.
+  - La semana nueva propone los valores de la última.
+  - Tabla `settlement_week_parameters`, con una sola fila por año y semana.
+- **Tabla de retención** (pestaña de la misma pantalla; equivale a la hoja CALCULADORA BANANERA):
+  - Tramos ≤1.000 1 %, ≤5.000 1,25 %, ≤20.000 1,5 %, ≤50.000 1,75 % y más de 50.000 2 %. Se pueden editar si cambia la ley.
+  - Validación: los tramos van seguidos y solo el último queda "en adelante".
+  - Incluye un simulador.
+  - Regla en [RetencionBanano.php](../siae-backend/app/Services/RetencionBanano.php):
+    - Tasa efectiva por las cajas de cada liquidación, redondeada a 2 decimales; retención = total × tasa.
+    - BPA paga la tasa fija de la semana; NO_RETENER paga 0.
+- **Contratos y retención** (LIQUIDACIÓN → Contratos y retención; equivale a la hoja Base Productores):
+  - Por productor o comercializadora: régimen (`third_parties.retention_regime`: NORMAL, BPA o NO_RETENER) y nombre corto para la referencia de pago.
+  - La migración dejó las asociaciones y cooperativas en NO RETENER, detectadas por el nombre.
+  - Contratos en la tabla `contracts` (MAGAP), que estaba vacía y sin pantalla. Cada contrato tiene:
+    - N° (1, 2…), cupo semanal, precio y condición;
+    - Sí/No de transferencia, evaluadores, materiales y transporte;
+    - vigencia, N° MAGAP y observación.
+  - Solo un contrato activo por número. Un contrato con compras no se borra ni cambia de número: solo se desactiva.
+  - Filtros: con o sin contrato, no retener y "excede cupo" (cajas compradas en la semana actual).
+- **Compra de fruta:**
+  - Cada compra de CONTRATO elige **qué contrato** del vendedor es y **qué parte** (1, 1.1, 1.2…, para liquidar un contrato partido): `producer_quota_lines.contract_id` y `contract_part`.
+  - Si el vendedor tiene un solo contrato, se elige solo. Al elegir el contrato se propone su precio.
+  - Muestra lo comprado contra el cupo semanal; si pasa, dice "EXCEDE CUPO", pero no bloquea.
+  - Si el vendedor tiene contratos, elegir uno es obligatorio. Sin contratos registrados se deja pasar y dice "SIN CONTRATO REGISTRADO".
+  - SPOT nunca guarda contrato.
+- **Perfil LIQUIDACIONES:** las 7 pantallas de LIQUIDACIÓN. Comercial solo **lee** los contratos activos para elegirlos al comprar.
+- **Migración** `2026_11_06_000001_liquidacion_parametros_contratos`. Tiene `down()`; se probó la vuelta atrás.
+- [SelectBuscable](src/components/common/SelectBuscable.jsx) ahora acepta `aria-label`, para lectores de pantalla.
+- **Pruebas (local):**
+  - Backend 40/40:
+    - Permisos.
+    - Parámetros, con la semana repetida.
+    - Tramos: con hueco, y último tramo con "hasta".
+    - Simulador igual al Excel WK43: 4.761 cajas → 1,20 % → $ 484,48; 5.239 → 1,21 %; 1.900 → 1,12 %; 298 → 1 %.
+    - BPA y no retener.
+    - Contratos: número repetido, fechas, bitácora, quitar o renumerar uno con compras, desactivar y reemplazar.
+    - Compra: falta elegir, contrato de otro vendedor, contrato 2.1, SPOT sin contrato.
+  - Pruebas anteriores: seguridad 80, permisos 50 (ahora 11 perfiles), inventario 111, por despachar 18, OC y contabilidad 44, notas de crédito 36, presentación 21.
+  - Interfaz 21/21 en Chrome (contratos, parámetros, simulador, celular sin scroll lateral, compra de contrato con cupo excedido); sin errores de JavaScript.
+  - Build OK; lint sin errores nuevos (82).
 
 ### 05/11/2026 — Órdenes de compra por departamento, aprobación de Contabilidad y archivo de pagos Banco Pichincha (en producción desde 06/11/2026)
 - **Pedido:** cada departamento (Compras, Sistemas, Asistente de Gerencia, Logística…) tiene su usuario y llena sus OC. Le llegan a Contabilidad (Andrea), que es la **única que aprueba** y después hace la **carga masiva** al Banco Pichincha con un TXT.

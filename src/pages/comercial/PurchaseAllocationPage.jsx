@@ -72,6 +72,8 @@ const compraDesdeBackend = (c) => ({
   transport_deduction: Number(c.transport_deduction) ? texto(c.transport_deduction) : '',
   notes: texto(c.notes),
   pickup_warehouse_id: texto(c.pickup_warehouse_id),
+  contract_id: texto(c.contract_id),
+  contract_part: String(c.contract_part ?? 0),
   bloqueo: c.quota_status === 'LIQUIDADO' ? 'CUPO LIQUIDADO' : c.con_tarjas ? 'YA TIENE TARJAS' : c.despachada ? 'YA RETIRÓ MATERIALES' : null,
   liquidada: c.quota_status === 'LIQUIDADO',
 });
@@ -100,6 +102,7 @@ const compraVacia = (anterior, puertoBloque, precioMag) => ({
   boxes: '', official_price: precioMag ? texto(precioMag.price) : (anterior?.official_price || ''), real_price: '',
   negotiation_type: 'SPOT', payment_scheme: '80_20', transport_deduction: '', notes: '',
   pickup_warehouse_id: anterior?.pickup_warehouse_id || '',
+  contract_id: '', contract_part: '0',
   bloqueo: null, liquidada: false,
 });
 
@@ -119,6 +122,7 @@ export default function PurchaseAllocationPage() {
   const [ultimaBodega, setUltimaBodega] = useState({}); // { third_party_id: warehouse_id }
   const [preciosMag, setPreciosMag] = useState([]); // precios oficiales MAG activos
   const [fincas, setFincas] = useState([]); // fincas del catálogo (activas + las ya usadas)
+  const [contratos, setContratos] = useState([]); // 06/11/2026: contratos de los vendedores (Liquidaciones → Contratos y retención)
   const [nuevaFinca, setNuevaFinca] = useState(null); // { bKey, cKey, third_party_id, dueno, name, magap_code, zone }
   const [errorFinca, setErrorFinca] = useState('');
   const [guardandoFinca, setGuardandoFinca] = useState(false);
@@ -141,6 +145,7 @@ export default function PurchaseAllocationPage() {
     setUltimaBodega(data.last_pickup || {});
     setPreciosMag(data.official_prices || []);
     setFincas(data.farms || []);
+    setContratos(data.contracts || []);
     setVersion(data.version);
     const lista = data.blocks.map(bloqueDesdeBackend);
     setBloques(lista);
@@ -199,6 +204,18 @@ export default function PurchaseAllocationPage() {
   const fincasDe = (tpId, actual) => fincas.filter((f) => String(f.third_party_id) === String(tpId) && (f.status || String(f.id) === String(actual)));
   const conFinca = (c, finca) => ({ ...c, farm_id: finca ? String(finca.id) : '', farm_name: finca?.name || '', mag_code: finca?.magap_code || '' });
 
+  // 06/11/2026: contratos del vendedor (activos + el que ya tiene la compra) y cajas compradas por contrato
+  // en esta semana (el cupo es semanal; pasarse solo avisa)
+  const contratosDe = (tpId, actual) => contratos.filter((k) => String(k.third_party_id) === String(tpId) && (k.status || String(k.id) === String(actual)));
+  const cajasContrato = (contratoId) => todas.filter((x) => x.negotiation_type === 'CONTRATO' && x.contract_id === String(contratoId)).reduce((s, x) => s + n(x.boxes), 0);
+  // Al cambiar vendedor o pasar a CONTRATO: si el vendedor tiene un solo contrato, se elige solo
+  const conContrato = (c) => {
+    if (c.negotiation_type !== 'CONTRATO') return { ...c, contract_id: '', contract_part: '0' };
+    const propios = contratosDe(c.third_party_id).filter((k) => k.status);
+    if (propios.some((k) => String(k.id) === c.contract_id)) return c;
+    return { ...c, contract_id: propios.length === 1 ? String(propios[0].id) : '', contract_part: '0' };
+  };
+
   // Precio MAG vigente para la marca del bloque (según su tipo de caja) en la fecha de corte
   const precioMagDe = (b, c) => {
     const marca = clientes.flatMap((x) => x.brands).find((m) => String(m.id) === b.brand_id);
@@ -216,7 +233,7 @@ export default function PurchaseAllocationPage() {
       // PACKED: todas sus compras pasan a SPOT (las liquidadas no se tocan; el backend avisa)
       if (campo === 'presentation' && valor === 'PACKED') {
         nuevo.purchases = b.purchases.map((c) => (c.liquidada || c.negotiation_type === 'SPOT' ? c
-          : { ...c, negotiation_type: 'SPOT', payment_scheme: PAGO_POR_TIPO.SPOT }));
+          : { ...c, negotiation_type: 'SPOT', payment_scheme: PAGO_POR_TIPO.SPOT, contract_id: '', contract_part: '0' }));
       }
       if (campo === 'customer_id') {
         const marcas = clientes.find((x) => String(x.id) === valor)?.brands || [];
@@ -235,8 +252,15 @@ export default function PurchaseAllocationPage() {
       ...b,
       purchases: b.purchases.map((c) => {
         if (c._key !== cKey) return c;
-        const nueva = { ...c, [campo]: valor };
+        let nueva = { ...c, [campo]: valor };
         if (campo === 'negotiation_type') nueva.payment_scheme = PAGO_POR_TIPO[valor];
+        if (campo === 'negotiation_type' || campo === 'third_party_id') nueva = conContrato(nueva);
+        if (campo === 'contract_id') nueva.contract_part = '0';
+        // Al elegir el contrato se propone su precio (si todavía no hay precio real)
+        if (campo === 'contract_id' && c.real_price === '') {
+          const k = contratos.find((x) => String(x.id) === valor);
+          if (k?.price) nueva.real_price = texto(k.price);
+        }
         // Si se le compra directo a un productor, no hay "productor real" aparte
         if (campo === 'third_party_id' && tipoDe(valor) === 'PRODUCTOR') nueva.producer_id = '';
         // Al elegir vendedor se propone la última bodega donde retiró materiales
@@ -301,6 +325,9 @@ export default function PurchaseAllocationPage() {
             : `BLOQUE ${i + 1}, COMPRA ${j + 1}: FALTA LA FINCA.`);
         }
         if (!c.pickup_warehouse_id) faltan.push(`BLOQUE ${i + 1}, COMPRA ${j + 1}: FALTA LA BODEGA DONDE RETIRA LOS MATERIALES.`);
+        if (c.negotiation_type === 'CONTRATO' && !c.contract_id && contratosDe(c.third_party_id).some((k) => k.status)) {
+          faltan.push(`BLOQUE ${i + 1}, COMPRA ${j + 1}: ELIGE QUÉ CONTRATO DEL VENDEDOR ES.`);
+        }
       });
     });
     if (faltan.length) {
@@ -339,6 +366,8 @@ export default function PurchaseAllocationPage() {
             transport_deduction: n(c.transport_deduction),
             notes: c.notes || null,
             pickup_warehouse_id: Number(c.pickup_warehouse_id),
+            contract_id: c.negotiation_type === 'CONTRATO' ? num(c.contract_id) : null,
+            contract_part: c.negotiation_type === 'CONTRATO' ? Number(c.contract_part || 0) : 0,
           })),
         })),
       });
@@ -658,7 +687,7 @@ export default function PurchaseAllocationPage() {
                                 )}
                               </td>
                               <td className="px-2 py-1.5 min-w-[80px]"><CampoNumero decimales={2} value={c.real_price} onChange={cambiar('real_price')} disabled={c.liquidada} className={`${inputClass} text-right font-semibold`} /></td>
-                              <td className="px-2 py-1.5 min-w-[130px]">
+                              <td className="px-2 py-1.5 min-w-[170px]">
                                 {/* 02/11/2026: la fruta PACKED se compra siempre SPOT (precio negociado con cada productor) */}
                                 <SelectBuscable value={c.negotiation_type} onChange={cambiar('negotiation_type')} disabled={c.liquidada || b.presentation === 'PACKED'}
                                   title={b.presentation === 'PACKED' ? 'La fruta packed se compra siempre SPOT' : ''} className={`${inputClass} text-xs mb-1`}>
@@ -669,6 +698,37 @@ export default function PurchaseAllocationPage() {
                                   <option value="100">PAGO 100 %</option>
                                   <option value="80_20">PAGO 80 / 20</option>
                                 </SelectBuscable>
+                                {/* 06/11/2026: qué contrato del vendedor es y, si se liquida partido, qué parte (1, 1.1, 1.2) */}
+                                {c.negotiation_type === 'CONTRATO' && c.third_party_id && (() => {
+                                  const propios = contratosDe(c.third_party_id, c.contract_id);
+                                  if (propios.length === 0) {
+                                    return <span className="block text-[10px] font-semibold text-amber-700 mt-1" title="Liquidaciones registra los contratos en Contratos y retención">SIN CONTRATO REGISTRADO</span>;
+                                  }
+                                  const k = propios.find((x) => String(x.id) === c.contract_id);
+                                  const usadas = k ? cajasContrato(k.id) : 0;
+                                  return (
+                                    <>
+                                      <div className="flex gap-1 mt-1">
+                                        <SelectBuscable value={c.contract_id} onChange={cambiar('contract_id')} disabled={c.liquidada} aria-label="Contrato del vendedor"
+                                          title={k ? `Contrato ${k.number} · $ ${formatoDinero(k.price)}` : 'Elige qué contrato del vendedor es'}
+                                          className={`${inputClass} text-xs flex-1 min-w-[96px] ${c.contract_id ? '' : 'ring-1 ring-amber-400'}`}>
+                                          <option value="">¿CONTRATO?</option>
+                                          {propios.map((x) => <option key={x.id} value={String(x.id)}>{x.number} · $ {formatoDinero(x.price)}</option>)}
+                                        </SelectBuscable>
+                                        {k && (
+                                          <SelectBuscable value={c.contract_part} onChange={cambiar('contract_part')} disabled={c.liquidada} aria-label="Parte del contrato" title="Para liquidar el contrato partido (una parte pagada y otra pendiente)" className={`${inputClass} text-xs w-14 shrink-0`}>
+                                            {[0, 1, 2, 3].map((p) => <option key={p} value={String(p)}>{p === 0 ? k.number : `${k.number}.${p}`}</option>)}
+                                          </SelectBuscable>
+                                        )}
+                                      </div>
+                                      {k && (
+                                        <span className={`block text-[10px] mt-0.5 ${usadas > k.weekly_boxes ? 'font-semibold text-red-600' : 'text-gray-500'}`} title="Cajas compradas esta semana con este contrato / cupo semanal">
+                                          {usadas.toLocaleString('es-EC')} / {Number(k.weekly_boxes).toLocaleString('es-EC')} CAJAS{usadas > k.weekly_boxes ? ' · EXCEDE CUPO' : ''}
+                                        </span>
+                                      )}
+                                    </>
+                                  );
+                                })()}
                               </td>
                               <td className="px-2 py-1.5 min-w-[90px]"><CampoNumero decimales={2} value={c.transport_deduction} onChange={cambiar('transport_deduction')} disabled={c.liquidada} placeholder="0" title="Transporte de contenedor negociado: se descuenta al liquidar" className={`${inputClass} text-right`} /></td>
                               <td className="px-2 py-1.5 text-right whitespace-nowrap">{c.real_price === '' ? <span className="text-xs text-amber-600 font-semibold">SIN PRECIO</span> : `$ ${formatoDinero(n(c.boxes) * n(c.real_price))}`}</td>

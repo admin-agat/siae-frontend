@@ -47,6 +47,7 @@ export default function SelectBuscable({
     className = '',
     title,
     id,
+    'aria-label': ariaLabel, // 06/11/2026: nombre para lectores de pantalla cuando no hay <label>
     children,
 }) {
     const opciones = useMemo(() => leerOpciones(children), [children]);
@@ -182,6 +183,7 @@ export default function SelectBuscable({
                 type="text"
                 autoComplete="off"
                 role="combobox"
+                aria-label={ariaLabel}
                 aria-expanded={abierto}
                 disabled={disabled}
                 value={abierto ? busqueda : (seleccionada && seleccionada.value !== '' ? seleccionada.etiqueta : '')}

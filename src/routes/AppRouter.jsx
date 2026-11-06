@@ -62,6 +62,9 @@ const SettlementsPage = lazy(PAGINAS.SettlementsPage);
 const SettlementFormPage = lazy(PAGINAS.SettlementFormPage);
 const SettlementDetailPage = lazy(PAGINAS.SettlementDetailPage);
 const SettlementHistoryPage = lazy(PAGINAS.SettlementHistoryPage);
+// 06/11/2026: parámetros de la semana + tabla de retención, contratos y retención de productores
+const SettlementParametersPage = lazy(PAGINAS.SettlementParametersPage);
+const ProducerContractsPage = lazy(PAGINAS.ProducerContractsPage);
 // Despacho de Materiales — cálculo de receta/BOM por cupo de productor + guardado del EGRESO
 const MaterialDispatchPage = lazy(PAGINAS.MaterialDispatchPage);
 // Historial de despachos (quién retiró, valor a descontar, reimprimir guía, anular)
@@ -171,6 +174,8 @@ export default function AppRouter() {
 
           {/* ===== Liquidación (dinero al productor) — solo ADMIN ===== */}
           <Route path="/liquidacion" element={P('liquidar', <SettlementsPage />)} />
+          <Route path="/liquidacion/parametros" element={P('parametros_liquidacion', <SettlementParametersPage />)} />
+          <Route path="/liquidacion/contratos" element={P('contratos_productores', <ProducerContractsPage />)} />
           <Route path="/liquidacion/tarjas" element={P('tarjas', <TalliesPage />)} />
           <Route path="/liquidacion/tarjas/:id" element={P('tarjas', <TallySheetPage />)} />
           <Route path="/liquidacion/anticipos" element={P('anticipos', <ProducerAdvancesPage />)} />

@@ -9,7 +9,7 @@ import {
     FileSignature, Tag, Ship, Container,
     CircleDollarSign, History, ClipboardCheck, HandCoins, Calculator,
     MapPin, CheckCircle2, Truck, Anchor, ShoppingBasket, UserCog, Landmark, Receipt, ScrollText, ShieldCheck, PackageCheck, ListOrdered, Wallet, TrendingUp, Inbox,
-    FilePlus2, BadgeCheck, CreditCard
+    FilePlus2, BadgeCheck, CreditCard, SlidersHorizontal
 } from "lucide-react";
 
 export const menuItems = [
@@ -69,7 +69,10 @@ export const menuItems = [
     {
         seccion: "LIQUIDACIÓN",
         // 29/10/2026: tarjas (lo recibido en puerto) → liquidar → registrar pagos 80/20 o 100 %
+        // 06/11/2026: datos base como el Excel de liquidaciones (Base Productores y PARAMETROS)
         items: [
+            { label: "Contratos y retención", ruta: "/liquidacion/contratos", icono: FileSignature, pantalla: "contratos_productores" },
+            { label: "Parámetros de la semana", ruta: "/liquidacion/parametros", icono: SlidersHorizontal, pantalla: "parametros_liquidacion" },
             { label: "Tarjas", ruta: "/liquidacion/tarjas", icono: ClipboardCheck, pantalla: "tarjas" },
             { label: "Anticipos y préstamos", ruta: "/liquidacion/anticipos", icono: HandCoins, pantalla: "anticipos" },
             { label: "Liquidar", ruta: "/liquidacion", icono: Calculator, pantalla: "liquidar" },
