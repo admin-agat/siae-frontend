@@ -8,7 +8,8 @@ import {
     ArrowLeftRight, ClipboardList, FileText, ShoppingCart,
     FileSignature, Tag, Ship, Container,
     CircleDollarSign, History, ClipboardCheck, HandCoins, Calculator,
-    MapPin, CheckCircle2, Truck, Anchor, ShoppingBasket, UserCog, Landmark, Receipt, ScrollText, ShieldCheck, PackageCheck, ListOrdered, Wallet, TrendingUp, Inbox
+    MapPin, CheckCircle2, Truck, Anchor, ShoppingBasket, UserCog, Landmark, Receipt, ScrollText, ShieldCheck, PackageCheck, ListOrdered, Wallet, TrendingUp, Inbox,
+    FilePlus2, BadgeCheck, CreditCard
 } from "lucide-react";
 
 export const menuItems = [
@@ -83,6 +84,21 @@ export const menuItems = [
         items: [
             { label: "Gastos del viaje", ruta: "/finanzas/gastos-viaje", icono: Wallet, pantalla: "gastos_viaje" },
             { label: "Ganancia por viaje", ruta: "/finanzas/ganancia-viaje", icono: TrendingUp, pantalla: "ganancia_viaje" },
+        ],
+    },
+    {
+        seccion: "COMPRAS",
+        // 05/11/2026: cada departamento llena sus OC; le llegan a Contabilidad
+        items: [
+            { label: "Órdenes de compra", ruta: "/compras/ordenes", icono: FilePlus2, pantalla: "oc_departamento" },
+        ],
+    },
+    {
+        seccion: "CONTABILIDAD",
+        // 05/11/2026: solo Contabilidad aprueba; carga masiva al banco (TXT de Banco Pichincha)
+        items: [
+            { label: "Aprobación y pago de OC", ruta: "/contabilidad/ordenes", icono: BadgeCheck, pantalla: "aprobar_oc" },
+            { label: "Cuentas bancarias", ruta: "/contabilidad/cuentas", icono: CreditCard, pantalla: "cuentas_bancarias" },
         ],
     },
     // CONFIGURACIÓN — datos maestros. Usuarios, Perfiles y Bitácora son solo del ADMIN.

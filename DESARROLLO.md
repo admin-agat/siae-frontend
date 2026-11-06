@@ -64,6 +64,8 @@ Respaldo del archivo original: `C:\php\php.ini.respaldo-2026-10-28`.
 | **BODEGUERO** | 5 | Solo su bodega: Stock, Nuevo movimiento (compra, transferencia, devolución), Despacho de materiales, Historial. |
 | **EXPORTACIONES** | 0 (nuevo 29/10) | Pedido semanal, Distribución en barcos, Cierre de embarque, Navieras, Bookings. No ve Inventario ni Comercial. |
 | **COMERCIAL** | 0 (nuevo 29/10) | Compra de fruta (bloques, compras, precios, bodega de retiro) y Precios oficiales MAG. Lee pedido y barcos por la API, sin editarlos. |
+| **DEPARTAMENTO** | nuevo 05/11 | Un usuario por departamento (Compras, Sistemas, Logística…): llena sus órdenes de compra y ve solo las de su departamento. |
+| **CONTABILIDAD** | nuevo 05/11 | Aprueba (única) las OC de todos los departamentos, genera el TXT de pagos de Banco Pichincha y maneja las cuentas bancarias de proveedores. |
 
 Los usuarios se crean en **CONFIGURACIÓN → Usuarios** (solo ADMIN). Desactivar un usuario le cierra la sesión al instante.
 
@@ -267,6 +269,18 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 ---
 
 ## 7. Historial de cambios
+
+### 05/11/2026 — Órdenes de compra por departamento, aprobación de Contabilidad y archivo de pagos Banco Pichincha (solo en local)
+- **Pedido:** cada departamento (Compras, Sistemas, Asistente de Gerencia, Logística…) tiene su usuario y llena sus OC. Le llegan a Contabilidad (Andrea), que es la **única que aprueba** y después hace la **carga masiva** al Banco Pichincha con un TXT.
+- **Usuarios:** dos tipos base nuevos con su perfil: **DEPARTAMENTO** (pantalla *Órdenes de compra*) y **CONTABILIDAD** (*Aprobación y pago de OC* y *Cuentas bancarias*). En Usuarios hay un campo **Departamento** (obligatorio para el tipo DEPARTAMENTO); las OC lo copian. Cada usuario ve solo las OC de **su** departamento.
+- **OC del departamento** (COMPRAS → Órdenes de compra): proveedor, fecha, **concepto** y líneas de **texto libre** (descripción, cantidad, precio, IVA 15/5/0, % descuento, % retención IR). No entran a bodega (`warehouse_id` y `supply_id` NULL). Mismo correlativo OC-AAAA-NNNN que las de bodega. Se corrige mientras está POR APROBAR o RECHAZADA (al guardar vuelve a POR APROBAR); se cancela con motivo mientras no se haya mandado al banco.
+- **Contabilidad** (CONTABILIDAD → Aprobación y pago de OC): pestañas POR APROBAR (ver, aprobar, rechazar con motivo), POR PAGAR (marcar y **Generar archivo Pichincha**), LOTES AL BANCO (bajar otra vez el TXT, marcar pagado, anular → las OC vuelven a por pagar) y TODAS. También le llegan las **OC de bodega** nuevas (departamento BODEGA). Una OC en un lote no se puede cambiar, cancelar ni volver a pagar (bloqueo de filas al generar).
+- **Valor a pagar** = total de la OC (subtotal − descuento + IVA − retención IR).
+- **Cuentas bancarias** (CONTABILIDAD → Cuentas bancarias): banco, tipo (ahorros/corriente), número, cédula/RUC/pasaporte y nombre del titular, correo. Tabla aparte (`third_party_bank_accounts`): **no sale en /third-parties**; solo la ven Contabilidad y el ADMIN; en la bandeja la cuenta va enmascarada (****1234); cambios en la bitácora. Pestaña **Bancos** con el **código de cada banco** para el archivo (se sembraron 20 bancos **sin código**: lo llena Contabilidad con la tabla del banco).
+- **Archivo** ([PichinchaPagos.php](../siae-backend/app/Services/PichinchaPagos.php)): una línea por OC, separada por TAB, CRLF: `PA · cédula/RUC · USD · valor en centavos (13 dígitos) · CTA · AHO/CTE · cuenta · OC + concepto (40) · C/R/P · identificación · titular (40) · código del banco`. Texto en mayúsculas sin tildes ni Ñ. ⚠️ **Formato PROVISIONAL**: hay que confirmarlo con un archivo real que Andrea ya haya subido al banco; si cambia, se toca solo esa clase.
+- **Migración** `2026_11_05_000001_oc_departamentos_contabilidad`: `users.department`, roles CONTABILIDAD y DEPARTAMENTO, tablas `banks`, `third_party_bank_accounts`, `bank_payment_batches` (código PAG-AAAA-NNNN, TXT guardado), campos de aprobación y pago en `purchase_orders`, `description` en las líneas. Las OC que ya existían quedan **ANTERIOR** (no aparecen por aprobar ni por pagar).
+- Corregido de paso: `cancellation_reason` no estaba en `$fillable` de PurchaseOrder (el motivo de cancelar una OC de bodega no se guardaba). La lista de OC de bodega ya no muestra las de departamento.
+- **Pruebas (local):** backend 44/44 (visibilidad por departamento, 403 sin permiso, rechazo → corrección → aprobación, cuenta y código de banco, TXT exacto, doble lote, anular y pagar); seguridad 80, permisos 50 (ahora 10 perfiles), inventario 111, por despachar 18; interfaz 27/27 en Chrome (recorrido completo, celular sin scroll lateral). Build OK; lint sin errores nuevos.
 
 ### 05/11/2026 — Fecha de "hoy" en hora de Ecuador (antes, desde las 19:00 salía la de mañana)
 - **Problema:** varios formularios proponían "hoy" con `new Date().toISOString()`, que es la fecha en **UTC**. Ecuador es UTC−5, así que desde las 19:00 la fecha propuesta era la de **mañana**. El servidor también está en UTC (`app.timezone`), con el mismo efecto en lo que fecha él.

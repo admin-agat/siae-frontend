@@ -24,14 +24,14 @@ import { getMensajeExito, getMensajeError } from '../../utils/toastMessages';
 import SelectBuscable from '../../components/common/SelectBuscable';
 import { soloTelefono } from '../../utils/telefono';
 
-const formularioVacio = { name: '', email: '', password: '', profile_id: '', boss_id: '', phone: '', warehouse_id: '', warehouse_ids: [], screens_added: [], screens_removed: [] };
+const formularioVacio = { name: '', email: '', password: '', profile_id: '', boss_id: '', phone: '', department: '', warehouse_id: '', warehouse_ids: [], screens_added: [], screens_removed: [] };
 
-function UserModal({ usuario, perfiles, usuarios, catalogo, bodegas, onClose, onGuardado }) {
+function UserModal({ usuario, perfiles, usuarios, catalogo, bodegas, departamentos, onClose, onGuardado }) {
   const esEdicion = Boolean(usuario?.id);
   const [form, setForm] = useState(() => (usuario ? {
     name: usuario.name || '', email: usuario.email || '', password: '',
     profile_id: usuario.profile_id ? String(usuario.profile_id) : '', boss_id: usuario.boss_id ? String(usuario.boss_id) : '',
-    phone: usuario.phone || '', warehouse_id: usuario.warehouse_id ? String(usuario.warehouse_id) : '',
+    phone: usuario.phone || '', department: usuario.department || '', warehouse_id: usuario.warehouse_id ? String(usuario.warehouse_id) : '',
     warehouse_ids: usuario.warehouse_ids || [],
     screens_added: usuario.screens_added || [], screens_removed: usuario.screens_removed || [],
   } : formularioVacio));
@@ -50,7 +50,7 @@ function UserModal({ usuario, perfiles, usuarios, catalogo, bodegas, onClose, on
     ? catalogo.map((p) => p.key)
     : [...new Set([...delPerfil, ...form.screens_added])].filter((k) => esPermitida(k) && !form.screens_removed.includes(k));
 
-  const cambiar = (campo) => (e) => setForm((f) => ({ ...f, [campo]: campo === 'name' ? e.target.value.toUpperCase() : campo === 'phone' ? soloTelefono(e.target.value) : e.target.value }));
+  const cambiar = (campo) => (e) => setForm((f) => ({ ...f, [campo]: campo === 'name' || campo === 'department' ? e.target.value.toUpperCase() : campo === 'phone' ? soloTelefono(e.target.value) : e.target.value }));
   // Marcar/desmarcar una pantalla respecto a su perfil: lo que no es del perfil queda como EXTRA,
   // lo que es del perfil y se desmarca queda como QUITADA
   const alternar = (key) => setForm((f) => {
@@ -74,6 +74,7 @@ function UserModal({ usuario, perfiles, usuarios, catalogo, bodegas, onClose, on
     if (esEdicion && form.password && form.password.length < 8) return setError('LA CONTRASEÑA DEBE TENER AL MENOS 8 CARACTERES.');
     if (!form.profile_id) return setError('ELIGE EL PERFIL DEL USUARIO.');
     if (tipo === 'BODEGUERO' && !form.warehouse_id) return setError('UN BODEGUERO DEBE TENER SU BODEGA.');
+    if (tipo === 'DEPARTAMENTO' && !form.department.trim()) return setError('ESCRIBE EL DEPARTAMENTO DEL USUARIO (EJ. SISTEMAS).');
 
     setGuardando(true);
     const accion = esEdicion ? 'actualizar' : 'crear';
@@ -85,6 +86,7 @@ function UserModal({ usuario, perfiles, usuarios, catalogo, bodegas, onClose, on
         profile_id: Number(form.profile_id),
         boss_id: form.boss_id ? Number(form.boss_id) : null,
         phone: form.phone.trim() || null,
+        department: form.department.trim() || null,
         warehouse_id: tipo === 'BODEGUERO' ? Number(form.warehouse_id) : null,
         // 03/11/2026: bodegas que opera (ninguna = todas); el BODEGUERO y el ADMIN no llevan
         warehouse_ids: ['ADMIN', 'BODEGUERO'].includes(tipo) ? [] : form.warehouse_ids,
@@ -151,6 +153,17 @@ function UserModal({ usuario, perfiles, usuarios, catalogo, bodegas, onClose, on
           <label className={label}>Teléfono</label>
           <input value={form.phone} onChange={cambiar('phone')} maxLength={20} className={input} />
         </div>
+        {tipo && tipo !== 'ADMIN' && (
+          <div>
+            {/* 05/11/2026: sus órdenes de compra llevan este departamento (obligatorio para el tipo DEPARTAMENTO) */}
+            <label className={label} htmlFor="usuario-departamento">Departamento{tipo === 'DEPARTAMENTO' && ' *'}</label>
+            <input id="usuario-departamento" list="lista-departamentos" value={form.department} onChange={cambiar('department')} maxLength={60}
+              placeholder="EJ. SISTEMAS, LOGÍSTICA, COMPRAS" className={input} />
+            <datalist id="lista-departamentos">
+              {departamentos.map((d) => <option key={d} value={d} />)}
+            </datalist>
+          </div>
+        )}
         {tipo === 'BODEGUERO' && (
           <div>
             <label className={label}>Bodega *</label>
@@ -265,6 +278,7 @@ export default function UsersPage() {
     { titulo: 'Nombre', render: (u) => u.name, className: 'font-medium' },
     { titulo: 'Usuario', render: (u) => u.email },
     { titulo: 'Perfil', render: (u) => <span className="text-xs font-semibold bg-primario-claro text-primario px-2 py-1 rounded-full whitespace-nowrap">{u.profile_name || u.role.replace('_', ' ')}</span> },
+    { titulo: 'Departamento', render: (u) => u.department || <span className="text-gray-400">—</span> },
     { titulo: 'Asistente de', render: (u) => u.boss_name || <span className="text-gray-400">—</span> },
     {
       titulo: 'Excepciones',
@@ -315,11 +329,12 @@ export default function UsersPage() {
         cargando={cargando}
         nombreRegistros="usuarios"
         placeholderBusqueda="Buscar por nombre, usuario, perfil o jefe..."
-        textosBusqueda={(u) => [u.name, u.email, u.profile_name, u.boss_name, u.warehouse_name]}
+        textosBusqueda={(u) => [u.name, u.email, u.profile_name, u.boss_name, u.warehouse_name, u.department]}
       />
 
       {modal && (
         <UserModal usuario={modal.usuario} perfiles={perfiles} usuarios={usuarios} catalogo={catalogo} bodegas={bodegas}
+          departamentos={[...new Set(usuarios.map((u) => u.department).filter(Boolean))].sort()}
           onClose={() => setModal(null)} onGuardado={cargar} />
       )}
 

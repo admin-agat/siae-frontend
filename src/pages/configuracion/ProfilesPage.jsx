@@ -28,6 +28,9 @@ const TIPOS_BASE = {
   BODEGUERO: 'Opera solo SU bodega (se le asigna en Usuarios) y solo los motivos permitidos al bodeguero.',
   GERENCIA: 'Gerencia: el único tipo que puede ver el Dashboard.',
   FINANZAS: 'Finanzas / Contabilidad: gastos de cada viaje y ganancia.',
+  // 05/11/2026
+  CONTABILIDAD: 'Contabilidad: aprueba las órdenes de compra de todos los departamentos y genera el archivo de pagos del banco.',
+  DEPARTAMENTO: 'Un departamento (Sistemas, Logística...): llena sus órdenes de compra y ve solo las de su departamento (se pone en Usuarios).',
 };
 
 const formularioVacio = { name: '', base_role: 'COMERCIAL', description: '', screens: [] };

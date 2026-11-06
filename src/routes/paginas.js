@@ -49,6 +49,10 @@ export const PAGINAS = {
   MaterialDispatchPage: () => import("../pages/inventario/MaterialDispatchPage"),
   MaterialDispatchHistoryPage: () => import("../pages/inventario/MaterialDispatchHistoryPage"),
   PurchaseOrdersPage: () => import("../pages/inventario/PurchaseOrdersPage"),
+  // 05/11/2026: OC de cada departamento → Contabilidad aprueba y paga (TXT de Banco Pichincha)
+  DepartmentOrdersPage: () => import("../pages/compras/DepartmentOrdersPage"),
+  AccountingOrdersPage: () => import("../pages/contabilidad/AccountingOrdersPage"),
+  BankAccountsPage: () => import("../pages/contabilidad/BankAccountsPage"),
 };
 
 let precargadas = false;

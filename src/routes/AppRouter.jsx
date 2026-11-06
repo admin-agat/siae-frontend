@@ -71,6 +71,10 @@ const DispatchPendingPage = lazy(PAGINAS.DispatchPendingPage);
 
 //ordenes de compras
 const PurchaseOrdersPage = lazy(PAGINAS.PurchaseOrdersPage);
+// 05/11/2026: OC por departamento, aprobación y pago (Contabilidad), cuentas bancarias de proveedores
+const DepartmentOrdersPage = lazy(PAGINAS.DepartmentOrdersPage);
+const AccountingOrdersPage = lazy(PAGINAS.AccountingOrdersPage);
+const BankAccountsPage = lazy(PAGINAS.BankAccountsPage);
 
 // Componente que protege rutas privadas
 function RutaPrivada({ children }) {
@@ -203,6 +207,10 @@ export default function AppRouter() {
           <Route path="/ordenes-compra" element={P('ordenes_compra', <PurchaseOrdersPage />)} />
           <Route path="/ordenes-compra/nueva" element={P('ordenes_compra', <PurchaseOrderFormPage />)} />
           <Route path="/ordenes-compra/:id" element={P('ordenes_compra', <PurchaseOrderDetailPage />)} />
+
+          <Route path="/compras/ordenes" element={P('oc_departamento', <DepartmentOrdersPage />)} />
+          <Route path="/contabilidad/ordenes" element={P('aprobar_oc', <AccountingOrdersPage />)} />
+          <Route path="/contabilidad/cuentas" element={P('cuentas_bancarias', <BankAccountsPage />)} />
 
         </Route>
         {/* Ruta no encontrada */}
