@@ -1,6 +1,6 @@
 import { Suspense, useCallback, useEffect, useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
-import { LogOut } from 'lucide-react';
+import { KeyRound, LogOut } from 'lucide-react';
 import Sidebar from "./Sidebar";
 import AvisoInactividad from './common/AvisoInactividad';
 import { precargarPaginas } from '../routes/paginas';
@@ -87,6 +87,16 @@ export default function Layout() {
               <p className="text-white text-sm font-semibold">{user?.name || 'Usuario'}</p>
               <p className="text-white text-[11px] opacity-80">{user?.profile_name || user?.role?.replace('_', ' ')}</p>
             </div>
+            {/* 09/11/2026: cambiar la propia contraseña cuando quiera (es obligatorio al primer ingreso y cada 3 meses) */}
+            <button
+              type="button"
+              onClick={() => navigate('/cambiar-clave')}
+              title="Cambiar contraseña"
+              aria-label="Cambiar contraseña"
+              className="flex items-center text-white border border-white/50 rounded-lg px-2.5 py-1.5 hover:bg-white hover:text-primario transition shrink-0"
+            >
+              <KeyRound size={15} />
+            </button>
             <button
               type="button"
               onClick={cerrarSesion}

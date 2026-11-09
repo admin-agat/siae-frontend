@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext';
 // 30/10/2026: permisos por persona — cada ruta pide su pantalla (misma clave que el menú y el backend)
 import { puede, esAdmin, inicioDe } from './menu';
 import LoginPage from '../pages/auth/LoginPage';
+import CambiarClavePage from '../pages/auth/CambiarClavePage';
 import Layout from '../components/Layout';
 const DashboardPage = lazy(PAGINAS.DashboardPage);
 const BrandsPage = lazy(PAGINAS.BrandsPage);
@@ -80,9 +81,15 @@ const AccountingOrdersPage = lazy(PAGINAS.AccountingOrdersPage);
 const BankAccountsPage = lazy(PAGINAS.BankAccountsPage);
 
 // Componente que protege rutas privadas
+// 09/11/2026: si debe cambiar la contraseña (primer ingreso o vencida) solo ve "Cambia tu contraseña"
 function RutaPrivada({ children }) {
+  const { token, user } = useAuth();
+  if (!token) return <Navigate to="/login" />;
+  return user?.cambiar_clave ? <Navigate to="/cambiar-clave" replace /> : children;
+}
+function RutaCambiarClave() {
   const { token } = useAuth();
-  return token ? children : <Navigate to="/login" />;
+  return token ? <CambiarClavePage /> : <Navigate to="/login" />;
 }
 // Mientras llegan las pantallas del usuario (/me, ver Layout.jsx) no se decide nada: así una sesión
 // guardada antes de los permisos por persona no rebota a otra pantalla al recargar.
@@ -125,6 +132,8 @@ export default function AppRouter() {
       <Routes>
         {/* Ruta pública */}
         <Route path="/login" element={<LoginPage />} />
+        {/* 09/11/2026: fuera del Layout (sin menú): obligatoria al primer ingreso y cada 3 meses */}
+        <Route path="/cambiar-clave" element={<RutaCambiarClave />} />
         {/* Rutas privadas — dentro del Layout */}
         <Route path="/" element={
           <RutaPrivada>

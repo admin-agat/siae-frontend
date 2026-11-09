@@ -34,6 +34,20 @@ api.interceptors.response.use(
       }
     }
 
+    // 09/11/2026: debe cambiar la contraseña (primer ingreso o venció a los 3 meses): se marca en el
+    // usuario guardado y se va a "Cambia tu contraseña" (el backend no deja usar nada más)
+    if (status === 403 && error.response?.data?.codigo === "CAMBIAR_CLAVE") {
+      try {
+        const user = JSON.parse(localStorage.getItem("user") || "null");
+        if (user) localStorage.setItem("user", JSON.stringify({ ...user, cambiar_clave: error.response.data.motivo }));
+      } catch {
+        // usuario guardado dañado: la pantalla igual lo pide al backend (/me)
+      }
+      if (window.location.pathname !== "/cambiar-clave") {
+        window.location.assign("/cambiar-clave");
+      }
+    }
+
     if (status === 429 && error.response?.data) {
       error.response.data.message = "DEMASIADOS INTENTOS. ESPERA UN MINUTO E INTÉNTALO DE NUEVO.";
     }

@@ -26,7 +26,8 @@ export default function LoginPage() {
         try {
             const res = await api.post("/login", { email, password });
             login(res.data.user, res.data.token);
-            navigate(inicioDe(res.data.user)); // 30/10/2026: primera pantalla que tiene permitida
+            // 30/10/2026: primera pantalla que tiene permitida. 09/11/2026: antes, cambiar la contraseña si le toca
+            navigate(res.data.user.cambiar_clave ? "/cambiar-clave" : inicioDe(res.data.user));
         } catch (err) {
             // 429 = demasiados intentos (el backend permite 5 por minuto)
             // 29/10/2026: un usuario desactivado ve el motivo (lo manda el backend)

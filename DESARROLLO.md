@@ -218,6 +218,7 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 - Tokens vencidos se borran solos cada día (`sanctum:prune-expired`, requiere `php artisan schedule:run` en producción).
 - Si la sesión vence, el frontend vuelve al login con el aviso "Tu sesión expiró" (interceptor 401 en [axios.js](src/api/axios.js)).
 - `localStorage` dañado ya no deja la aplicación en blanco ([AuthContext.jsx](src/context/AuthContext.jsx)).
+- **09/11/2026 — Cambio de contraseña obligatorio (LOPDP):** al primer ingreso (o cuando el ADMIN le pone una nueva) y cada **3 meses**. El ADMIN queda fuera. Mientras tanto la API responde `403 CAMBIAR_CLAVE` a todo menos `/me`, `/me/password` y `/logout` (middleware `clave`). Ver historial 09/11/2026.
 
 **API**
 - CORS configurable (`config/cors.php`, variable `CORS_ALLOWED_ORIGINS`): en producción aceptar solo el dominio del frontend.
@@ -270,6 +271,34 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 ---
 
 ## 7. Historial de cambios
+
+### 09/11/2026 — Cambio de contraseña obligatorio (LOPDP)
+- **Pedido:** que cada usuario cambie la contraseña al entrar por primera vez, para que el ADMIN no conozca la contraseña definitiva de nadie. Decidido con el usuario:
+  - También los usuarios que ya existen (todas sus contraseñas las puso el ADMIN).
+  - Vence cada **3 meses**.
+  - El ADMIN queda fuera.
+- **Base de datos** (migración `2026_11_09_000001_cambio_clave_obligatorio`):
+  - `users.must_change_password` y `users.password_changed_at`.
+  - Al migrar, todos los usuarios que no son ADMIN quedan marcados.
+- **Cuándo debe cambiarla** (`User::motivoCambioClave()`):
+  - `PRIMER_INGRESO`: usuario nuevo, o el ADMIN le escribió una contraseña en Usuarios.
+  - `VENCIDA`: pasaron 3 meses desde que la cambió él mismo (`MESES_VIGENCIA_CLAVE`).
+- **Backend:**
+  - El middleware `clave` (`app/Http/Middleware/ClaveVigente.php`) bloquea el resto de la API con `403 CAMBIAR_CLAVE`, así que no se salta llamando a la API directo.
+  - `PUT /me/password` pide la actual, la nueva y su repetición. La nueva debe tener mínimo 8 caracteres, con letras y números, y ser distinta de la actual.
+  - Al cambiarla se cierran sus otras sesiones (ej. el celular) y queda `CAMBIO_CLAVE` en la bitácora, sin la contraseña.
+  - Límite propio `cambio_clave`: 10 intentos por minuto por usuario. Un `throttle:10,1` suelto compartía el contador con el `throttle:120,1` general y bloqueaba al primer intento.
+  - `/login` y `/me` traen `cambiar_clave`.
+- **Frontend:**
+  - Pantalla [CambiarClavePage.jsx](src/pages/auth/CambiarClavePage.jsx) en `/cambiar-clave`, sin menú, con los requisitos a la vista.
+  - Mientras deba cambiarla, `RutaPrivada` y el interceptor 403 de [axios.js](src/api/axios.js) lo llevan ahí.
+  - Botón con una **llave** en la barra azul para cambiarla cuando quiera ([Layout.jsx](src/components/Layout.jsx)).
+  - En Usuarios aparece "FALTA CAMBIAR CONTRASEÑA" o "CONTRASEÑA VENCIDA".
+- **Probado:**
+  - Backend 33/33 (transacción revertida).
+  - Permisos 50/50 y seguridad 80/80: se ajustaron para marcar como "ya cambiada" a los usuarios de prueba.
+  - Liquidación 40/40.
+  - Chrome, computadora y celular, 19/19.
 
 ### 06/11/2026 — Barra azul fija arriba (en producción desde 06/11/2026)
 - **Pedido:** que la barra azul de arriba (semana, fecha, hora, usuario y Cerrar sesión) se quede fija al bajar en la página.

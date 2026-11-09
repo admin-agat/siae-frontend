@@ -295,7 +295,21 @@ export default function UsersPage() {
       },
     },
     { titulo: 'Bodega', render: (u) => u.warehouse_name || (u.warehouse_names?.length ? u.warehouse_names.join(', ') : <span className="text-gray-400">—</span>) },
-    { titulo: 'Estado', render: (u) => <EstadoBadge activo={u.status} /> },
+    {
+      titulo: 'Estado',
+      render: (u) => (
+        <div className="flex flex-col items-start gap-1">
+          <EstadoBadge activo={u.status} />
+          {/* 09/11/2026: aún no cambia la contraseña que le dio el ADMIN, o le venció (3 meses) */}
+          {u.status && u.cambiar_clave && (
+            <span className="text-[11px] font-semibold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full whitespace-nowrap"
+              title={u.cambiar_clave === 'VENCIDA' ? 'Pasaron 3 meses desde su último cambio' : 'Debe cambiar la contraseña al entrar'}>
+              {u.cambiar_clave === 'VENCIDA' ? 'CONTRASEÑA VENCIDA' : 'FALTA CAMBIAR CONTRASEÑA'}
+            </span>
+          )}
+        </div>
+      ),
+    },
     {
       titulo: 'Acciones',
       render: (u) => (
