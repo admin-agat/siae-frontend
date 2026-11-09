@@ -1,23 +1,25 @@
 import { Suspense, useCallback, useEffect, useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
-import { KeyRound, LogOut } from 'lucide-react';
+import { KeyRound, LogOut, RefreshCw } from 'lucide-react';
 import Sidebar from "./Sidebar";
 import AvisoInactividad from './common/AvisoInactividad';
+import AvisoVersion from './common/AvisoVersion';
 import { precargarPaginas } from '../routes/paginas';
 import { useAuth } from '../context/AuthContext';
 import { semanaISO } from '../utils/semana';
 import api from '../api/axios';
 
-// 05/11/2026: semana bananera, día y hora en la barra de arriba (se actualiza cada 20 s)
+// 05/11/2026: semana bananera, día y hora en la barra de arriba.
+// 09/11/2026: con segundos (se actualiza cada segundo; solo se vuelve a dibujar el reloj, no la página)
 function RelojSemana() {
   const [ahora, setAhora] = useState(() => new Date());
   useEffect(() => {
-    const t = setInterval(() => setAhora(new Date()), 20000);
+    const t = setInterval(() => setAhora(new Date()), 1000);
     return () => clearInterval(t);
   }, []);
   const { semana } = semanaISO(ahora);
   const dia = ahora.toLocaleDateString('es-EC', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
-  const hora = ahora.toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit', hour12: false });
+  const hora = ahora.toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
   // 05/11/2026: en celular solo "SEM 45" (sin día ni hora) para que la barra no se apriete
   return (
     <div className="flex items-center gap-3 text-white text-sm" title="Semana bananera (ISO): de lunes a domingo">
@@ -71,8 +73,10 @@ export default function Layout() {
 
         {/* Navbar superior. 02/11/2026: usuario, perfil y "Cerrar sesión" arriba a la derecha (antes al pie del menú) */}
         {/* 06/11/2026: fija arriba al bajar en la página (semana, fecha, hora y usuario siempre a la vista).
-            z-20: queda debajo del menú desplegado (z-30/40) y de los modales */}
-        <header className="sticky top-0 z-20 px-4 sm:px-6 py-3 flex items-center justify-between gap-3 sm:gap-4 shadow-sm bg-primario">
+            z-20: queda debajo del menú desplegado (z-30/40) y de los modales.
+            09/11/2026: lo fijo es este contenedor, que lleva la barra y, debajo, el aviso de versión nueva */}
+        <div className="sticky top-0 z-20">
+        <header className="px-4 sm:px-6 py-3 flex items-center justify-between gap-3 sm:gap-4 shadow-sm bg-primario">
           <span className="text-white font-semibold text-sm whitespace-nowrap flex items-center gap-2">
             {/* 06/11/2026: ícono del sistema (hojas verdes) en un círculo blanco para que se vea sobre el azul */}
             <span className="w-8 h-8 rounded-full bg-white flex items-center justify-center shrink-0">
@@ -87,6 +91,16 @@ export default function Layout() {
               <p className="text-white text-sm font-semibold">{user?.name || 'Usuario'}</p>
               <p className="text-white text-[11px] opacity-80">{user?.profile_name || user?.role?.replace('_', ' ')}</p>
             </div>
+            {/* 09/11/2026: recarga el sistema (trae la última versión y los datos al día) sin buscar F5 */}
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              title="Actualizar sistema"
+              aria-label="Actualizar sistema"
+              className="flex items-center text-white border border-white/50 rounded-lg px-2.5 py-1.5 hover:bg-white hover:text-primario transition shrink-0"
+            >
+              <RefreshCw size={15} />
+            </button>
             {/* 09/11/2026: cambiar la propia contraseña cuando quiera (es obligatorio al primer ingreso y cada 3 meses) */}
             <button
               type="button"
@@ -109,6 +123,8 @@ export default function Layout() {
             </button>
           </div>
         </header>
+        <AvisoVersion />
+        </div>
 
         {/* Página activa — Outlet renderiza la ruta hija */}
         <main className="flex-1 p-6">

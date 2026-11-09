@@ -272,6 +272,19 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 09/11/2026 — Aviso de versión nueva, botón Actualizar y reloj con segundos
+- **Pedido:** no tener que recargar con F5 / Ctrl+F5 para ver lo que se sube.
+- **Aviso de versión nueva** ([AvisoVersion.jsx](src/components/common/AvisoVersion.jsx)):
+  - Cada 5 minutos, y al volver a la pestaña, baja `index.html` sin caché y compara el nombre del JS principal (`/assets/index-XXXX.js`, cambia en cada build) con el cargado.
+  - Si cambió, aparece una franja amarilla bajo la barra azul: "Hay una versión nueva del sistema… **Actualizar**".
+  - No recarga sola, para no perder un formulario a medias. En desarrollo (`npm run dev`) no revisa.
+- **Botón Actualizar** (flechas circulares) en la barra azul, junto a la llave: recarga la página.
+- **Barra:** lo fijo ahora es un contenedor con la barra y la franja. El reloj muestra los segundos y se actualiza cada segundo (solo el reloj, no la página).
+- **Pendiente con sudo:** que nginx sirva `index.html` con `Cache-Control: no-cache` (en `location /`: `add_header Cache-Control "no-cache";`), para que una recarga normal siempre traiga lo último.
+- **Probado en Chrome (build real con `vite preview` y dev), computadora y celular:**
+  - Segundos, botón, aviso que no recarga solo, franja fija al bajar, Actualizar carga lo nuevo: todo OK.
+  - La simulación de subida (solo el JS principal renombrado) mezcla versiones y rompe Usuarios; en una subida real se regeneran todos los archivos.
+
 ### 09/11/2026 — Ojo para ver la contraseña (en producción desde 09/11/2026)
 - **Pedido:** un botón para ver la contraseña que se está escribiendo.
 - Componente común [CampoClave.jsx](src/components/common/CampoClave.jsx): campo de contraseña con un ojo a la derecha. Arranca oculta; el ojo la muestra u oculta (`aria-label` "Mostrar/Ocultar contraseña") y no envía el formulario.
