@@ -84,6 +84,17 @@ export default function Layout() {
             </span>
             <span className="sm:hidden">SIAE</span>
             <span className="hidden sm:inline">Sistema Integral AGAT-ECUAGREEN <span className="font-normal opacity-70">v1.0</span></span>
+            {/* 09/11/2026: recarga el sistema (trae la última versión y los datos al día) sin buscar F5.
+                Junto a la versión (no junto a Cerrar sesión, para no tocar Salir por error) */}
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              title="Actualizar sistema"
+              aria-label="Actualizar sistema"
+              className="flex items-center text-white border border-white/50 rounded-lg px-2 py-1 hover:bg-white hover:text-primario transition shrink-0"
+            >
+              <RefreshCw size={14} />
+            </button>
           </span>
           <RelojSemana />
           <div className="flex items-center gap-3 sm:gap-4 min-w-0">
@@ -91,16 +102,6 @@ export default function Layout() {
               <p className="text-white text-sm font-semibold">{user?.name || 'Usuario'}</p>
               <p className="text-white text-[11px] opacity-80">{user?.profile_name || user?.role?.replace('_', ' ')}</p>
             </div>
-            {/* 09/11/2026: recarga el sistema (trae la última versión y los datos al día) sin buscar F5 */}
-            <button
-              type="button"
-              onClick={() => window.location.reload()}
-              title="Actualizar sistema"
-              aria-label="Actualizar sistema"
-              className="flex items-center text-white border border-white/50 rounded-lg px-2.5 py-1.5 hover:bg-white hover:text-primario transition shrink-0"
-            >
-              <RefreshCw size={15} />
-            </button>
             {/* 09/11/2026: cambiar la propia contraseña cuando quiera (es obligatorio al primer ingreso y cada 3 meses) */}
             <button
               type="button"

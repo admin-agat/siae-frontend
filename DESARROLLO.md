@@ -278,7 +278,7 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
   - Cada 5 minutos, y al volver a la pestaña, baja `index.html` sin caché y compara el nombre del JS principal (`/assets/index-XXXX.js`, cambia en cada build) con el cargado.
   - Si cambió, aparece una franja amarilla bajo la barra azul: "Hay una versión nueva del sistema… **Actualizar**".
   - No recarga sola, para no perder un formulario a medias. En desarrollo (`npm run dev`) no revisa.
-- **Botón Actualizar** (flechas circulares) en la barra azul, junto a la llave: recarga la página.
+- **Botón Actualizar** (flechas circulares) en la barra azul: recarga la página. Primero estuvo junto a la llave; el mismo 09/11/2026 se movió **al lado de "v1.0"** (en celular, al lado de "SIAE") para dejarlo con la versión y lejos de Cerrar sesión.
 - **Barra:** lo fijo ahora es un contenedor con la barra y la franja. El reloj muestra los segundos y se actualiza cada segundo (solo el reloj, no la página).
 - **Pendiente con sudo:** que nginx sirva `index.html` con `Cache-Control: no-cache` (en `location /`: `add_header Cache-Control "no-cache";`), para que una recarga normal siempre traiga lo último.
 - **Probado en Chrome (build real con `vite preview` y dev), computadora y celular:**
