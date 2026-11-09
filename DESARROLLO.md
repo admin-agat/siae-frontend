@@ -272,6 +272,17 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 09/11/2026 — Revisión de seguridad, etapa 1
+- **Bitácora sin números de cuenta completos:** `Auditable` registra `account_number` como `****1234` (crear, editar antes→después, borrar) con `AuditLog::enmascarar()`. Migración `2026_11_09_000002_enmascarar_cuentas_bitacora` enmascara lo que ya estaba guardado (sin vuelta atrás; el número completo sigue en `third_party_bank_accounts`).
+- **Symfony 7.4.22 → 7.4.23** (http-foundation, http-kernel, routing y dependencias, solo parches): `composer audit` sin avisos.
+- **Borrado el comando `db:reset-schemas`** (borraba esquemas sin preguntar; ya no se usaba, todo está en `public`).
+- **Servidor (cron de peter, sin sudo):**
+  - `schedule:run` cada minuto (borra a diario los tokens vencidos, `sanctum:prune-expired`).
+  - Respaldo diario de la base a las 02:00 con `~/bin/respaldo_siae.sh` → `~/respaldos/siae_production_AAAAMMDD_HHMM_diario.sql.gz`, permiso 600, se guardan 30 días, registro en `~/respaldos/respaldo.log`. Falta la copia fuera del servidor (B2).
+  - `.env` con permiso 640 y respaldos `.sql`/`.tgz` con 600.
+  - `LOG_LEVEL=warning` (estaba en `debug`).
+- **Probado:** enmascarado y migración (12/13; la que "falla" es solo el orden de las llaves del JSON), seguridad 80/80, permisos 50/50, cambio de clave 33/33, inventario 111/111, liquidación 40/40, OC 44/44, bitácora 22/22, cierre 8/8.
+
 ### 09/11/2026 — Control de cambios simultáneos: detecta guardados en el mismo segundo (backend)
 - **Hallazgo de la revisión de seguridad:** la "versión" de Distribución en barcos, Compra de fruta y Cierre de embarque era `COUNT + MAX(updated_at)`. `updated_at` va en segundos, así que dos guardados en el mismo segundo daban la misma versión y el segundo no recibía el 409 ("otro usuario guardó cambios…"). Riesgo bajo en la práctica, pero real.
 - **Cambio:** `huella()` ([ControlVersion.php](../siae-backend/app/Http/Controllers/Concerns/ControlVersion.php)) ahora es el md5 del **contenido** de las filas (`string_agg(t::text ORDER BY t.id)`), sin depender de la hora. Compra de fruta usa la misma `huella()` (antes tenía su propio COUNT/MAX por el join; ahora pasa `select('l.*')`). Sin cambios en el frontend ni en la base.
