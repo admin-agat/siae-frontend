@@ -272,6 +272,12 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 09/11/2026 — Ojo para ver la contraseña (en producción desde 09/11/2026)
+- **Pedido:** un botón para ver la contraseña que se está escribiendo.
+- Componente común [CampoClave.jsx](src/components/common/CampoClave.jsx): campo de contraseña con un ojo a la derecha. Arranca oculta; el ojo la muestra u oculta (`aria-label` "Mostrar/Ocultar contraseña") y no envía el formulario.
+- Se usa en Usuarios (nuevo y editar), en el inicio de sesión y en "Cambia tu contraseña". En esta última, cada campo tiene su ojo (antes había una casilla "Mostrar contraseñas").
+- **Probado en Chrome, computadora y celular, 17/17.**
+
 ### 09/11/2026 — Cambio de contraseña obligatorio (LOPDP)
 - **Pedido:** que cada usuario cambie la contraseña al entrar por primera vez, para que el ADMIN no conozca la contraseña definitiva de nadie. Decidido con el usuario:
   - También los usuarios que ya existen (todas sus contraseñas las puso el ADMIN).

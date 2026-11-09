@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../api/axios";
 import { inicioDe } from "../../routes/menu";
+import CampoClave from "../../components/common/CampoClave";
 
 export default function LoginPage() {
     const { login } = useAuth();
@@ -71,9 +72,9 @@ export default function LoginPage() {
 
                     <div>
                         <label htmlFor="login-clave" className="text-sm font-medium text-gray-600">Contraseña</label>
-                        <input
+                        {/* 09/11/2026: con ojo para ver lo que se escribe */}
+                        <CampoClave
                             id="login-clave"
-                            type="password"
                             value={password}
                             autoComplete="current-password"
                             onChange={(e) => setPassword(e.target.value)}

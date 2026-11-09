@@ -18,6 +18,7 @@ import AccionesFila from '../../components/common/AccionesFila';
 import DialogoConfirmacion from '../../components/common/DialogoConfirmacion';
 import ToastFlotante from '../../components/common/ToastFlotante';
 import ModalShell from '../../components/common/ModalShell';
+import CampoClave from '../../components/common/CampoClave';
 import SelectorPantallas from '../../components/common/SelectorPantallas';
 import { pantallasDelTipo } from '../../routes/menu';
 import { getMensajeExito, getMensajeError } from '../../utils/toastMessages';
@@ -133,7 +134,8 @@ function UserModal({ usuario, perfiles, usuarios, catalogo, bodegas, departament
         </div>
         <div>
           <label className={label}>{esEdicion ? 'Nueva contraseña' : 'Contraseña *'}</label>
-          <input type="password" value={form.password} onChange={cambiar('password')} maxLength={100} placeholder={esEdicion ? 'Déjala vacía para no cambiarla' : 'Mínimo 8, con letras y números'} autoComplete="new-password" className={input} />
+          {/* 09/11/2026: con ojo para ver lo que se escribe */}
+          <CampoClave value={form.password} onChange={cambiar('password')} maxLength={100} placeholder={esEdicion ? 'Déjala vacía para no cambiarla' : 'Mínimo 8, con letras y números'} autoComplete="new-password" className={input} aria-label={esEdicion ? 'Nueva contraseña' : 'Contraseña'} />
         </div>
         <div>
           <label className={label}>Perfil *</label>

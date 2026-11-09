@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../api/axios";
 import { inicioDe } from "../../routes/menu";
+import CampoClave from "../../components/common/CampoClave";
 
 // 09/11/2026 — LOPDP: cambio de contraseña.
 // Obligatorio al primer ingreso (o cuando el ADMIN le puso una nueva) y cada 3 meses: mientras tanto
@@ -23,7 +24,6 @@ export default function CambiarClavePage() {
     const [actual, setActual] = useState("");
     const [nueva, setNueva] = useState("");
     const [repetir, setRepetir] = useState("");
-    const [ver, setVer] = useState(false);
     const [error, setError] = useState("");
     const [guardando, setGuardando] = useState(false);
 
@@ -82,23 +82,20 @@ export default function CambiarClavePage() {
                     <input type="text" name="username" value={user?.email || ""} autoComplete="username" readOnly hidden />
                     <div>
                         <label htmlFor="clave-actual" className="text-sm font-medium text-gray-600">Contraseña actual</label>
-                        <input id="clave-actual" type={ver ? "text" : "password"} value={actual} autoComplete="current-password" autoFocus
+                        {/* 09/11/2026: cada campo con su ojo (antes una casilla "Mostrar contraseñas") */}
+                        <CampoClave id="clave-actual" value={actual} autoComplete="current-password" autoFocus
                             onChange={(e) => setActual(e.target.value)} className={inputClass} />
                     </div>
                     <div>
                         <label htmlFor="clave-nueva" className="text-sm font-medium text-gray-600">Contraseña nueva</label>
-                        <input id="clave-nueva" type={ver ? "text" : "password"} value={nueva} autoComplete="new-password"
+                        <CampoClave id="clave-nueva" value={nueva} autoComplete="new-password"
                             onChange={(e) => setNueva(e.target.value)} className={inputClass} />
                     </div>
                     <div>
                         <label htmlFor="clave-repetir" className="text-sm font-medium text-gray-600">Repite la contraseña nueva</label>
-                        <input id="clave-repetir" type={ver ? "text" : "password"} value={repetir} autoComplete="new-password"
+                        <CampoClave id="clave-repetir" value={repetir} autoComplete="new-password"
                             onChange={(e) => setRepetir(e.target.value)} className={inputClass} />
                     </div>
-                    <label className="flex items-center gap-2 text-sm text-gray-600 select-none">
-                        <input type="checkbox" checked={ver} onChange={(e) => setVer(e.target.checked)} />
-                        Mostrar contraseñas
-                    </label>
 
                     <ul className="text-sm space-y-1">
                         {reglas.map((r) => (
