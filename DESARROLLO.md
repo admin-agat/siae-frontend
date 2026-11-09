@@ -272,6 +272,19 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 09/11/2026 — Revisión de seguridad, etapa 2 (base de datos) — sistema v1.1
+- La barra azul pasa a mostrar **v1.1** (antes v1.0).
+- **Cuentas bancarias cifradas:** `ThirdPartyBankAccount.account_number` con cast `encrypted` (APP_KEY). Migración `2026_11_10_000001_cifrar_cuentas_bancarias`: columna a `text` y cifra las existentes (no cifra dos veces; `down` descifra). Contabilidad, el resumen `****1234` de la OC y el TXT del Pichincha leen el número real desde el modelo. **Sin la APP_KEY del `.env` de producción las cuentas no se pueden leer**: el `.env` se respalda junto con la base.
+- La bitácora enmascara con el valor descifrado (`getOriginal`/`getAttribute`), no con el texto cifrado.
+- **Índices y controles** (`2026_11_10_000002_indices_y_controles`):
+  - Índice en 51 llaves foráneas que no tenían (solo si no existe uno que empiece por esa columna).
+  - Se quitan 2 índices repetidos: `third_parties_type_index` (lo cubre `type, status`) y `shipment_lines_shipment_id_index` (lo cubre el único `shipment_id, customer_order_line_id`).
+  - CHECK con la misma lista que valida el código: `profiles.base_role` (`Profile::TIPOS_BASE`), `inventory_movements.transfer_status` (PENDIENTE/CONFIRMADA/CANCELADA), `negotiation_type` CONTRATO/SPOT en `customers`, `shipment_lines` y `settlement_lines`. `supplies.unit`, `material_recipes.unit`, `settlement_week_parameters.box_type` y `shipment_bookings.dae_status` quedan libres (se escriben a mano).
+- **Bookings viejos fuera** (`2026_11_10_000003_quitar_bookings_viejos`): tabla `bookings` y `shipment_lines.booking_id` (si tienen datos, la migración se detiene sin borrar nada). Se quitan `BookingController`, el modelo `Booking`, las rutas `/bookings`, la pantalla `bookings` de los permisos de rutas y en el frontend `BookingsPage`, `BookingModal` y `api/bookings.js` (no estaban en el menú). Los bookings reales siguen en `shipment_bookings` (Cierre de embarque).
+- **No se tocaron (pendiente de decidir):** `skus`, `sku_supplies` (módulo SKU/Recetas "por construir"), `invoices`, `invoice_lines`, `bills_of_lading` (¿facturación/Contífico?) y sus catálogos `box_weights`, `package_types`, `shipment_types`, `sticker_types`.
+- **Probado:** cifrado 11/11 (cifra las existentes, ceros a la izquierda, dos veces no cifra doble, bitácora `****`, TXT con el número real, down/up); huella 12/12; las 3 migraciones se revierten y se vuelven a aplicar; seguridad 80/80, permisos 50/50, cambio de clave 33/33, inventario 111/111, OC/Contabilidad 44/44, liquidación 40/40, NC 36/36, presentación 21/21, por despachar 18/18, movimientos 33/33, sugerencias 28/28, costo promedio 23/23, bitácora 22/22.
+- Nota de pruebas: corridas seguidas con el mismo usuario chocan con el límite de 120 peticiones/minuto (429); entre suites, `php artisan cache:clear`.
+
 ### 09/11/2026 — Revisión de seguridad, etapa 1
 - **Bitácora sin números de cuenta completos:** `Auditable` registra `account_number` como `****1234` (crear, editar antes→después, borrar) con `AuditLog::enmascarar()`. Migración `2026_11_09_000002_enmascarar_cuentas_bitacora` enmascara lo que ya estaba guardado (sin vuelta atrás; el número completo sigue en `third_party_bank_accounts`).
 - **Symfony 7.4.22 → 7.4.23** (http-foundation, http-kernel, routing y dependencias, solo parches): `composer audit` sin avisos.

@@ -83,7 +83,7 @@ export default function Layout() {
               <img src="/icono-64.png" alt="" className="w-6 h-6" />
             </span>
             <span className="sm:hidden">SIAE</span>
-            <span className="hidden sm:inline">Sistema Integral AGAT-ECUAGREEN <span className="font-normal opacity-70">v1.0</span></span>
+            <span className="hidden sm:inline">Sistema Integral AGAT-ECUAGREEN <span className="font-normal opacity-70">v1.1</span></span>
             {/* 09/11/2026: recarga el sistema (trae la última versión y los datos al día) sin buscar F5.
                 Junto a la versión (no junto a Cerrar sesión, para no tocar Salir por error) */}
             <button
