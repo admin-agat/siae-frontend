@@ -272,6 +272,11 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 09/11/2026 — Control de cambios simultáneos: detecta guardados en el mismo segundo (backend)
+- **Hallazgo de la revisión de seguridad:** la "versión" de Distribución en barcos, Compra de fruta y Cierre de embarque era `COUNT + MAX(updated_at)`. `updated_at` va en segundos, así que dos guardados en el mismo segundo daban la misma versión y el segundo no recibía el 409 ("otro usuario guardó cambios…"). Riesgo bajo en la práctica, pero real.
+- **Cambio:** `huella()` ([ControlVersion.php](../siae-backend/app/Http/Controllers/Concerns/ControlVersion.php)) ahora es el md5 del **contenido** de las filas (`string_agg(t::text ORDER BY t.id)`), sin depender de la hora. Compra de fruta usa la misma `huella()` (antes tenía su propio COUNT/MAX por el join; ahora pasa `select('l.*')`). Sin cambios en el frontend ni en la base.
+- **Probado:** el cierre (proforma/turno) detecta la versión vieja sin pausa (8/8); huella de las 3 hojas: igual sin cambios, distinta con un cambio en el mismo segundo, vuelve a ser igual al restaurar el dato, ~2 ms por cálculo (12/12).
+
 ### 09/11/2026 — Aviso de versión nueva, botón Actualizar y reloj con segundos
 - **Pedido:** no tener que recargar con F5 / Ctrl+F5 para ver lo que se sube.
 - **Aviso de versión nueva** ([AvisoVersion.jsx](src/components/common/AvisoVersion.jsx)):
