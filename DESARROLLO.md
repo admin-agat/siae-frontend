@@ -281,6 +281,7 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
   - Respaldo diario de la base a las 02:00 con `~/bin/respaldo_siae.sh` → `~/respaldos/siae_production_AAAAMMDD_HHMM_diario.sql.gz`, permiso 600, se guardan 30 días, registro en `~/respaldos/respaldo.log`. Falta la copia fuera del servidor (B2).
   - `.env` con permiso 640 y respaldos `.sql`/`.tgz` con 600.
   - `LOG_LEVEL=warning` (estaba en `debug`).
+- **Incidente al subir (09/11/2026 ~20:40–20:44, unos 3 minutos):** en la sesión SSH del respaldo quedó `umask 077` y en esa misma sesión corrieron `git pull`, `composer install` y `php artisan optimize`. Los archivos nuevos (Symfony en `vendor/`, `bootstrap/cache/packages.php` y `services.php`, `AuditLog.php`, `Auditable.php`) quedaron sin lectura para `www-data` → la API respondía 500. Se arregló con `chmod go+r` (y `go+rx` en carpetas); sin pérdida de datos. **Regla:** usar `umask 077` solo en un subshell `( umask 077; pg_dump … )`, nunca en la sesión donde se sube código; después de subir, revisar `find . -user peter ! -perm -o=r ! -name .env`.
 - **Probado:** enmascarado y migración (12/13; la que "falla" es solo el orden de las llaves del JSON), seguridad 80/80, permisos 50/50, cambio de clave 33/33, inventario 111/111, liquidación 40/40, OC 44/44, bitácora 22/22, cierre 8/8.
 
 ### 09/11/2026 — Control de cambios simultáneos: detecta guardados en el mismo segundo (backend)
