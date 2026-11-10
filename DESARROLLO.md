@@ -273,7 +273,8 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
-### 10/11/2026 — Compra de fruta: "Enviar a bodega" y contador de "Por despachar" (solo en local, sin subir)
+### 10/11/2026 — Compra de fruta: "Enviar a bodega" y contador de "Por despachar" (en producción desde 10/11/2026)
+- **Producción** (10/11/2026 09:39, a pedido del usuario): respaldos `~/respaldos/siae_production_20261110_1439_antes_envio_bodega.sql`, `frontend_dist_20261110_1439_antes_envio_bodega.tgz` y `backend_env_20261110_1439_antes_envio_bodega` (hora del servidor, UTC). Migración en 38 ms; las 6 compras que había quedaron enviadas (0 sin enviar). Backend `c64ee65`, frontend `2ae35bd`. Sin archivos ilegibles para www-data; rutas nuevas 401 sin sesión.
 - **Pedido del usuario:** cuando Comercial guarda la compra, debe enviarla a bodega para su despacho, y la bodega ve el listado de pendientes. Acordado: botón por línea y por bloque sin repetir, las compras existentes quedan enviadas, contador en el menú.
 - **Compra de fruta** ([PurchaseAllocationPage.jsx](src/pages/comercial/PurchaseAllocationPage.jsx)):
   - Columna nueva **BODEGA**. En la compra guardada aparece el botón **Enviar a bodega**. Ya enviada muestra **✔ ENVIADA dd/mm hh:mm**, quién la envió y, si después cambió, **CAMBIÓ dd/mm hh:mm**.
