@@ -273,6 +273,33 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 10/11/2026 — Semana de compra por línea: nave que se queda a la semana siguiente (solo en local, sin subir)
+- **Caso del usuario** (pizarra): Baltic Winter tiene cupo WK46 de 27k y se compra en la WK46 y en la WK47, porque la nave se queda. Además tiene cupo WK47 de 23k, que se compra en la WK47. Son 2 embarques, uno en cada pedido.
+- **Reglas del usuario:**
+  - La semana de una compra es la semana en que la fruta llega al puerto, hasta el domingo.
+  - Se liquida a la semana siguiente.
+  - Cuenta en el cupo semanal del contrato de la semana de compra, aunque se embarque una semana después.
+  - El STAR SPIRIT de la carga WK40 es el mismo caso: cupo en el pedido WK39 y 132 de sus 133 compras con corte en la semana 40.
+- **Backend** ([PurchaseAllocationController](../siae-backend/app/Http/Controllers/Api/PurchaseAllocationController.php)):
+  - Cada compra acepta `purchase_week`, que puede ser la semana del pedido o la siguiente (con cambio de año). Sin ese campo se usa la del pedido.
+  - La compra va al **cupo del vendedor de su semana de compra** (`producer_quotas`), así que la liquidación, el cupo del contrato (`cajasPorContrato`) y el despacho la toman en esa semana sin más cambios.
+  - Las compras del pedido ahora se leen **por su bloque** (`purchase_blocks.customer_order_id`), tanto en la compra, la versión y las Tarjas. Antes se leían por `producer_quotas.customer_order_id`, pero un cupo de la semana siguiente puede tener compras de dos pedidos. El cupo guarda el primer pedido que lo creó.
+  - Validaciones:
+    - Una semana fuera del rango da 422.
+    - No se agregan compras a una semana que el vendedor ya tiene liquidada.
+    - No se cambia la semana de una compra que tiene tarjas, retiros o está liquidada.
+    - Cambiar la semana de una compra ya enviada marca "CAMBIÓ".
+  - El GET devuelve `purchase_week` en cada compra y `purchase_weeks` para el pedido.
+- **Pantalla** ([PurchaseAllocationPage.jsx](src/pages/comercial/PurchaseAllocationPage.jsx)):
+  - Debajo del día de corte va un selector **COMPRA WKnn**. Cuando la semana no es la del pedido, el selector se pinta en celeste.
+  - La compra nueva copia la semana de la fila anterior.
+  - Si un bloque tiene compras de la semana siguiente, su cabecera muestra "COMPRA WK46: x · COMPRA WK47: y".
+- **Pendiente al subir:** pasar las 133 compras de STAR SPIRIT (pedido WK39) a la semana de compra 40, como dice el Excel.
+- **Pruebas:**
+  - Nueva `prueba_semana_compra` 18/18: cupo de la semana siguiente, la compra sigue en su pedido aunque el cupo apunte a otro, 422 por rango, semana liquidada y compra bloqueada, sin semana va la del pedido, cajas en la semana siguiente y tarjas.
+  - Siguen en verde: envío 32, por despachar 18, presentación 21, NC 36, liquidación 40, inventario 111, tarjas 111, sugerencias 28, contratos 18, bitácora 22 y permisos 50.
+  - Build OK y captura `semana-compra.png`.
+
 ### 10/11/2026 — Modalidades de carga unificadas, bodega opcional y carga de la compra WK40 (en producción desde 10/11/2026)
 - **Producción** (10/11/2026 19:00 UTC, a pedido del usuario): respaldos `~/respaldos/siae_production_20261110_1900_antes_modalidades_wk40.sql`, `frontend_dist_20261110_1900_antes_modalidades_wk40.tgz`, `backend.env_20261110_1900` y `frontend.env_20261110_1900`. Migración en 21 ms. Backend `a58e0f4`, frontend `bd7c18e`. Sin archivos ilegibles para www-data.
   - Carga WK40: primero en simulación sobre producción (igual que la copia, nadie había registrado compras encima) y luego la real: pedido #45 133 compras / 84.937 cajas, pedido #46 128 / 64.447. Precio MAG 2026 registrado; tokens de la carga borrados; `~/carga_wk40` borrada del servidor; la base `siae_copia` y el respaldo descargado borrados de esta PC.

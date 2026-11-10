@@ -82,6 +82,7 @@ const compraDesdeBackend = (c) => ({
   mag_code: texto(c.mag_code),
   executive: texto(c.executive),
   cut_date: texto(c.cut_date),
+  purchase_week: texto(c.purchase_week),
   delivery_port_id: texto(c.delivery_port_id),
   boxes: texto(c.boxes),
   official_price: texto(c.official_price),
@@ -120,7 +121,7 @@ const bloqueDesdeBackend = (b) => ({
 const compraVacia = (anterior, puertoBloque, precioMag) => ({
   _key: nuevaClave('c'), id: null,
   third_party_id: '', producer_id: '', farm_id: '', farm_name: '', mag_code: '',
-  executive: anterior?.executive || '', cut_date: anterior?.cut_date || '',
+  executive: anterior?.executive || '', cut_date: anterior?.cut_date || '', purchase_week: anterior?.purchase_week || '',
   delivery_port_id: anterior ? anterior.delivery_port_id : puertoBloque,
   boxes: '', official_price: precioMag ? texto(precioMag.price) : (anterior?.official_price || ''), real_price: '',
   negotiation_type: 'SPOT', payment_scheme: '80_20', transport_deduction: '', notes: '',
@@ -135,6 +136,7 @@ export default function PurchaseAllocationPage() {
   const navigate = useNavigate();
 
   const [pedido, setPedido] = useState(null);
+  const [semanasCompra, setSemanasCompra] = useState([]); // 10/11/2026: la del pedido y la siguiente
   const [clientes, setClientes] = useState([]);
   const [barcos, setBarcos] = useState([]);
   const [bloques, setBloques] = useState([]);
@@ -161,9 +163,11 @@ export default function PurchaseAllocationPage() {
   const [mostrarConfirmarSalida, setMostrarConfirmarSalida] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [quitarEnvio, setQuitarEnvio] = useState(null); // compra a la que se le quita el envío
+  const semanaDeCompra = (c) => Number(c.purchase_week) || pedido?.week;
 
   const aplicarRespuesta = (data) => {
     setPedido(data.order);
+    setSemanasCompra(data.purchase_weeks || []);
     setClientes(data.customers);
     setBarcos(data.shipments);
     setEjecutivos(data.executives || []);
@@ -388,6 +392,7 @@ export default function PurchaseAllocationPage() {
             farm_id: num(c.farm_id),
             executive: c.executive || null,
             cut_date: c.cut_date || null,
+            purchase_week: num(c.purchase_week),
             delivery_port_id: num(c.delivery_port_id),
             boxes: Number(c.boxes),
             official_price: num(c.official_price),
@@ -602,6 +607,8 @@ export default function PurchaseAllocationPage() {
           const tieneBloqueadas = b.purchases.some((c) => c.bloqueo);
           // Compras guardadas que faltan enviar a bodega (las liquidadas ya no se envían)
           const porEnviar = b.purchases.filter((c) => c.id && !c.enviada && !c.liquidada);
+          const porSemana = semanasCompra.map((w) => ({ week: w.week, cajas: b.purchases.filter((c) => semanaDeCompra(c) === w.week).reduce((t, c) => t + n(c.boxes), 0) }));
+          const conSiguiente = porSemana.some((w) => w.week !== pedido.week && w.cajas > 0);
           return (
             <div key={b._key} className={`bg-white rounded-xl shadow overflow-hidden border-l-8 ${colorBarco(b.shipment_id).borde}`}
               title={!meta ? 'Sin meta' : falta === 0 ? 'Meta cumplida' : falta > 0 ? `Faltan ${formatoCajas(falta)} cajas` : `${formatoCajas(-falta)} cajas sobre la meta`}>
@@ -614,6 +621,7 @@ export default function PurchaseAllocationPage() {
                   <p className="font-bold text-gray-800">{i + 1}. {marcaConPresentacion(marcaNombre, b.presentation)} · {nombreBarco(b.shipment_id)}</p>
                   <p className="text-xs text-gray-600">
                     {clienteNombre} · {MODALIDADES[b.cargo_mode]} · {puertosSalida.find((p) => String(p.id) === b.departure_port_id)?.name || 'SIN PUERTO'} · {b.purchases.length} compras
+                    {conSiguiente && <span className="ml-1 font-semibold text-sky-800">· {porSemana.map((w) => `COMPRA WK${w.week}: ${formatoCajas(w.cajas)}`).join(' · ')}</span>}
                   </p>
                 </div>
                 <div className="flex gap-4 text-sm text-center">
@@ -697,7 +705,7 @@ export default function PurchaseAllocationPage() {
                           <th className={th}>Finca</th>
                           <th className={th}>MAG</th>
                           <th className={th}>Ejecutivo</th>
-                          <th className={th}>Día corte</th>
+                          <th className={th} title="Semana de compra: lo que llega al puerto hasta el domingo. Si la nave se queda a la semana siguiente, elige esa semana: se liquida y cuenta en el contrato ahí">Día corte · Semana</th>
                           <th className={th}>Entrega en</th>
                           <th className={th}>Retira materiales en *</th>
                           <th className={`${th} text-right`}>Cajas *</th>
@@ -759,7 +767,17 @@ export default function PurchaseAllocationPage() {
                                 <input value={c.mag_code} readOnly tabIndex={-1} title="Sale de la finca elegida (se corrige en Configuración → Fincas)" className={`${inputClass} bg-gray-200 text-gray-600 cursor-not-allowed`} />
                               </td>
                               <td className="px-2 py-1.5 min-w-[130px]"><input list="ejecutivos" value={c.executive} maxLength={60} onChange={mayus('executive')} disabled={c.liquidada} className={inputClass} /></td>
-                              <td className="px-2 py-1.5"><input type="date" value={c.cut_date} onChange={cambiar('cut_date')} disabled={c.liquidada} className={inputClass} /></td>
+                              <td className="px-2 py-1.5">
+                                <input type="date" value={c.cut_date} onChange={cambiar('cut_date')} disabled={c.liquidada} className={inputClass} />
+                                {semanasCompra.length > 1 && (
+                                  <select value={c.purchase_week || String(pedido.week)} onChange={cambiar('purchase_week')} disabled={Boolean(c.bloqueo)}
+                                    aria-label="Semana de compra"
+                                    title={c.bloqueo ? `No se cambia: ${c.bloqueo}` : 'Semana de compra (se liquida y cuenta en el contrato en esa semana)'}
+                                    className={`${inputClass} mt-1 text-xs ${semanaDeCompra(c) !== pedido.week ? 'bg-sky-100 font-semibold' : ''}`}>
+                                    {semanasCompra.map((w) => <option key={w.week} value={String(w.week)}>COMPRA WK{w.week}</option>)}
+                                  </select>
+                                )}
+                              </td>
                               <td className="px-2 py-1.5 min-w-[130px]">
                                 <SelectBuscable value={c.delivery_port_id} onChange={cambiar('delivery_port_id')} disabled={c.liquidada} className={inputClass}>
                                   <option value="">—</option>
