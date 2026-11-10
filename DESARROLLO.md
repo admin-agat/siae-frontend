@@ -273,6 +273,12 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 10/11/2026 — El Despacho ya no exige "Enviar a bodega" (pedido del usuario mientras se cuadra la operación)
+- El usuario pidió que, por ahora, el envío a bodega **no sea requisito para despachar** (se está cuadrando exportaciones → comercial → tarjas → liquidaciones con lo histórico).
+- `MaterialDispatchController`: los cupos (`/material-dispatch/quotas`) y las cajas a entregar vuelven a contar **todas** las compras; se quita el mensaje "Comercial todavía no envía esta compra a bodega".
+- La bandeja **Por despachar** y el contador siguen mostrando solo lo enviado: las compras históricas que se carguen no se envían y no llenan la bandeja.
+- Probado: envío 30/30 (ajustado: sin enviar sale en cupos y calcular da 200), por despachar 18/18, inventario 111/111; exportaciones solo las 4 fallas viejas de `/bookings`.
+
 ### 10/11/2026 — Compra de fruta: "Enviar a bodega" y contador de "Por despachar" (en producción desde 10/11/2026)
 - **Producción** (10/11/2026 09:39, a pedido del usuario): respaldos `~/respaldos/siae_production_20261110_1439_antes_envio_bodega.sql`, `frontend_dist_20261110_1439_antes_envio_bodega.tgz` y `backend_env_20261110_1439_antes_envio_bodega` (hora del servidor, UTC). Migración en 38 ms; las 6 compras que había quedaron enviadas (0 sin enviar). Backend `c64ee65`, frontend `2ae35bd`. Sin archivos ilegibles para www-data; rutas nuevas 401 sin sesión.
 - **Pedido del usuario:** cuando Comercial guarda la compra, debe enviarla a bodega para su despacho, y la bodega ve el listado de pendientes. Acordado: botón por línea y por bloque sin repetir, las compras existentes quedan enviadas, contador en el menú.
