@@ -40,6 +40,13 @@ export const saveOrderPurchases = (id, data) => axios.put(`/customer-orders/${id
 // 04/11/2026: finca nueva desde la compra { third_party_id, name, magap_code, zone } → queda en el catálogo
 export const createPurchaseFarm = (id, data) => axios.post(`/customer-orders/${id}/purchases/farms`, data);
 
+// 10/11/2026: enviar compras a bodega para que despache los materiales (una o todo el bloque).
+// Las ya enviadas no se repiten. Devuelve lo mismo que getOrderPurchases + { enviadas, ya_enviadas }
+export const sendPurchasesToWarehouse = (id, purchaseIds) => axios.post(`/customer-orders/${id}/purchases/send`, { purchase_ids: purchaseIds });
+
+// Quitar el envío (enviada por error): solo si la bodega no entregó materiales todavía
+export const unsendPurchase = (id, lineId) => axios.patch(`/customer-orders/${id}/purchases/${lineId}/unsend`);
+
 // 29/10/2026 — Cierre de embarque (Exportaciones): bookings con lo realmente embarcado y documentos
 // Devuelve { order, customers, shipments (con bookings), tallies, parties, version }
 export const getOrderClosing = (id) => axios.get(`/customer-orders/${id}/closing`);

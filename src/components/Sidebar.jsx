@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 // 30/10/2026: el menú y los permisos por pantalla están en routes/menu.js (los usa también AppRouter)
 import { menuDe } from "../routes/menu";
+import { getPorDespacharCuenta } from "../api/materialDispatch";
 
 // 03/11/2026: el menú quedó como una barra angosta de iconos (una por sección) para que la
 // pantalla de trabajo sea más ancha. Al hacer clic en un icono, la lista de opciones se abre
@@ -13,6 +14,16 @@ import { menuDe } from "../routes/menu";
 
 // Llave de localStorage donde se recuerdan las secciones abiertas (menú completo)
 const LLAVE_SECCIONES = "siae.sidebar.seccionesAbiertas";
+
+// 10/11/2026: contador de "Por despachar" (compras que Comercial envió a bodega y faltan despachar).
+// Se pide al abrir, al cambiar de página y cada 2 minutos; solo si la persona tiene esa pantalla.
+const RUTA_POR_DESPACHAR = "/despacho-materiales/pendientes";
+const CADA_MS = 120000;
+const Contador = ({ n, className = "" }) => (
+    <span className={`text-[10px] font-bold bg-red-600 text-white rounded-full px-1.5 min-w-[18px] h-[18px] leading-[18px] text-center ${className}`}>
+        {n > 99 ? "99+" : n}
+    </span>
+);
 
 // Secciones que NO se pliegan (una sola opción, no vale la pena)
 const SECCIONES_FIJAS = ["PRINCIPAL"];
@@ -76,6 +87,17 @@ export default function Sidebar() {
     const seccionActiva = menuVisible.find((grupo) =>
         grupo.items.some((item) => item.ruta === rutaActiva)
     )?.seccion;
+
+    const tieneBandeja = menuVisible.some((g) => g.items.some((i) => i.ruta === RUTA_POR_DESPACHAR));
+    const [porDespachar, setPorDespachar] = useState(0);
+    useEffect(() => {
+        if (!tieneBandeja) return undefined;
+        const pedir = () => getPorDespacharCuenta().then((d) => setPorDespachar(Number(d?.count) || 0)).catch(() => {});
+        pedir();
+        const t = setInterval(pedir, CADA_MS);
+        return () => clearInterval(t);
+    }, [tieneBandeja, location.pathname]);
+    const contadorDe = (ruta) => (ruta === RUTA_POR_DESPACHAR ? porDespachar : 0);
 
     // Panel abierto encima del contenido: null, una sección o TODO
     const [panel, setPanel] = useState(null);
@@ -165,6 +187,7 @@ export default function Sidebar() {
             >
                 <Icono size={15} />
                 {item.label}
+                {contadorDe(item.ruta) > 0 && <Contador n={contadorDe(item.ruta)} className="ml-auto" />}
             </button>
         );
     };
@@ -230,20 +253,22 @@ export default function Sidebar() {
                         const Icono = ICONO_SECCION[grupo.seccion] || Circle;
                         const esActiva = grupo.seccion === seccionActiva;
                         const abierta = panel === grupo.seccion;
+                        const pendientes = grupo.items.reduce((s, i) => s + contadorDe(i.ruta), 0);
                         return (
                             <button
                                 key={grupo.seccion}
                                 type="button"
                                 onClick={() => clicSeccion(grupo)}
-                                title={grupo.seccion}
+                                title={pendientes ? `${grupo.seccion} · ${pendientes} por despachar` : grupo.seccion}
                                 aria-label={grupo.seccion}
                                 aria-expanded={abierta}
-                                className={`w-11 h-11 rounded-lg flex items-center justify-center transition border-l-4 ${abierta || esActiva
+                                className={`relative w-11 h-11 rounded-lg flex items-center justify-center transition border-l-4 ${abierta || esActiva
                                     ? "bg-primario-claro text-primario border-primario"
                                     : "text-gray-500 hover:bg-green-50 hover:text-primario border-transparent"
                                     }`}
                             >
                                 <Icono size={20} />
+                                {pendientes > 0 && <Contador n={pendientes} className="absolute -top-1 -right-1" />}
                             </button>
                         );
                     })}

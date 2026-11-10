@@ -4,6 +4,8 @@
 //   PENDIENTE (no retiró nada) · PARCIAL (faltan materiales) · COMPLETO · SIN RECETA (la marca no tiene receta)
 // "Despachar" abre Despacho de materiales con bodega, productor y cupo ya elegidos.
 // El backend filtra las bodegas de cada usuario (BODEGUERO: la suya; las compras sin bodega fija las ven todos).
+// 10/11/2026: solo salen las compras que Comercial ENVIÓ A BODEGA (fecha y quién en "Enviado"); si después
+// cambiaron cajas, marca, bodega o vendedor y no se ha retirado desde entonces, sale el aviso CAMBIÓ.
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Truck, RefreshCw } from 'lucide-react';
@@ -26,6 +28,7 @@ const FILTROS = [
 ];
 
 const fechaVer = (f) => (f ? String(f).slice(0, 10).split('-').reverse().join('/') : '—');
+const fechaHora = (iso) => (iso ? new Date(iso).toLocaleString('es-EC', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) : '—');
 const cajas = (n) => Number(n || 0).toLocaleString('es-EC');
 
 function Resumen({ titulo, valor, detalle, clase }) {
@@ -81,7 +84,7 @@ export default function DispatchPendingPage() {
         <div className="p-6 space-y-6">
             <EncabezadoPagina
                 titulo="Por despachar"
-                subtitulo="Compras de fruta de Comercial y los materiales que falta entregar a cada productor"
+                subtitulo="Compras de fruta que Comercial envió a bodega y los materiales que falta entregar a cada productor"
             >
                 <button
                     type="button"
@@ -141,6 +144,20 @@ export default function DispatchPendingPage() {
                     { titulo: 'Marca', render: (f) => f.brand_name },
                     { titulo: 'Cajas', render: (f) => cajas(f.cajas), className: 'text-right font-semibold' },
                     { titulo: 'Bodega de retiro', render: (f) => f.warehouse_name || <span className="text-gray-400">CUALQUIERA</span> },
+                    {
+                        titulo: 'Enviado',
+                        render: (f) => (
+                            <div className="leading-tight">
+                                <p className="whitespace-nowrap">{fechaHora(f.enviado_at)}</p>
+                                {f.enviado_por?.length > 0 && <p className="text-xs text-gray-500">{f.enviado_por.join(', ')}</p>}
+                                {f.cambio && (
+                                    <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-800" title="Comercial cambió cajas, marca, bodega o vendedor después de enviarla">
+                                        CAMBIÓ {fechaHora(f.cambio_at)}
+                                    </span>
+                                )}
+                            </div>
+                        ),
+                    },
                     {
                         titulo: 'Estado',
                         render: (f) => {

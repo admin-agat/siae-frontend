@@ -34,3 +34,6 @@ export const getCuposAsignados = (thirdPartyId) =>
 //    warehouse_id, warehouse_name, estado: PENDIENTE|PARCIAL|COMPLETO|SIN_RECETA, avance, retiros, ultimo_retiro }]
 export const getPorDespachar = (params = {}) =>
   axios.get('/material-dispatch/pending', { params }).then((res) => res.data);
+// 10/11/2026: cuántas compras enviadas por Comercial faltan por despachar (contador del menú): { count }
+export const getPorDespacharCuenta = () =>
+  axios.get('/material-dispatch/pending/count').then((res) => res.data);

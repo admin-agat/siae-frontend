@@ -20,10 +20,12 @@
 // es compra directa); si tiene una sola se pone sola y, si no tiene, "+ NUEVA FINCA" la crea en el catálogo.
 // El código MAG no se escribe: sale de la finca (el backend guarda la copia al comprar). Obligatoria en
 // compras nuevas; las de antes sin finca se siguen guardando y muestran lo que se escribió.
+// 10/11/2026: cada compra guardada se ENVÍA A BODEGA (botón por línea o "Enviar bloque"); solo las enviadas
+// salen en Inventario → Por despachar. Las ya enviadas no se repiten; "Quitar envío" mientras no retire nada.
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, Save, X, Lock, ChevronDown, ChevronRight, AlertTriangle } from 'lucide-react';
-import { getOrderPurchases, saveOrderPurchases, createPurchaseFarm } from '../../api/customerOrders';
+import { ArrowLeft, Plus, Trash2, Save, X, Lock, ChevronDown, ChevronRight, AlertTriangle, Truck, Undo2 } from 'lucide-react';
+import { getOrderPurchases, saveOrderPurchases, createPurchaseFarm, sendPurchasesToWarehouse, unsendPurchase } from '../../api/customerOrders';
 import { getThirdParties } from '../../api/thirdParties';
 import { getPorts } from '../../api/ports';
 import DialogoConfirmacion from '../../components/common/DialogoConfirmacion';
@@ -36,6 +38,8 @@ import CampoNumero from '../../components/common/CampoNumero';
 const formatoCajas = (n) => Number(n || 0).toLocaleString('es-EC');
 const formatoDinero = (n) => Number(n || 0).toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const n = (v) => Number(v) || 0;
+// 10/11/2026: fecha y hora del envío a bodega (dd/mm hh:mm, hora local)
+const fechaHora = (iso) => (iso ? new Date(iso).toLocaleString('es-EC', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) : '');
 
 const MODALIDADES = { BAJO_CUBIERTA: 'BAJO CUBIERTA', CONTENEDOR: 'CONTENEDOR' };
 const PAGO_POR_TIPO = { CONTRATO: '100', SPOT: '80_20' };
@@ -76,6 +80,10 @@ const compraDesdeBackend = (c) => ({
   contract_part: String(c.contract_part ?? 0),
   bloqueo: c.quota_status === 'LIQUIDADO' ? 'CUPO LIQUIDADO' : c.con_tarjas ? 'YA TIENE TARJAS' : c.despachada ? 'YA RETIRÓ MATERIALES' : null,
   liquidada: c.quota_status === 'LIQUIDADO',
+  despachada: Boolean(c.despachada),
+  enviada: c.sent_at || null,
+  enviada_por: c.sent_by || '',
+  cambio_envio: c.changed_after_sent_at || null,
 });
 
 const bloqueDesdeBackend = (b) => ({
@@ -104,6 +112,7 @@ const compraVacia = (anterior, puertoBloque, precioMag) => ({
   pickup_warehouse_id: anterior?.pickup_warehouse_id || '',
   contract_id: '', contract_part: '0',
   bloqueo: null, liquidada: false,
+  despachada: false, enviada: null, enviada_por: '', cambio_envio: null,
 });
 
 export default function PurchaseAllocationPage() {
@@ -135,6 +144,8 @@ export default function PurchaseAllocationPage() {
   const [errores, setErrores] = useState([]);
   const [toast, setToast] = useState(null);
   const [mostrarConfirmarSalida, setMostrarConfirmarSalida] = useState(false);
+  const [enviando, setEnviando] = useState(false);
+  const [quitarEnvio, setQuitarEnvio] = useState(null); // compra a la que se le quita el envío
 
   const aplicarRespuesta = (data) => {
     setPedido(data.order);
@@ -382,6 +393,51 @@ export default function PurchaseAllocationPage() {
     }
   };
 
+  // ---------------- Enviar a bodega (10/11/2026) ----------------
+
+  // Se envía lo GUARDADO: con cambios pendientes, primero hay que guardar
+  const enviarABodega = async (ids) => {
+    if (hayCambios()) {
+      setErrores(['GUARDA LOS CAMBIOS ANTES DE ENVIAR A BODEGA.']);
+      return;
+    }
+    setErrores([]);
+    setEnviando(true);
+    try {
+      const { data } = await sendPurchasesToWarehouse(id, ids);
+      aplicarRespuesta(data);
+      const partes = [data.enviadas === 1 ? '1 compra enviada a bodega' : `${data.enviadas} compras enviadas a bodega`];
+      if (data.ya_enviadas) partes.push(`${data.ya_enviadas} ya estaban enviadas`);
+      setToast({ tipo: data.enviadas ? 'exito' : 'error', mensaje: partes.join(' · ') });
+    } catch (err) {
+      const e = err.response?.data?.errors;
+      setErrores(e ? Object.values(e).flat() : [err.response?.data?.message || 'NO SE PUDO ENVIAR A BODEGA.']);
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  const confirmarQuitarEnvio = async () => {
+    const c = quitarEnvio;
+    setQuitarEnvio(null);
+    if (hayCambios()) {
+      setErrores(['GUARDA LOS CAMBIOS ANTES DE QUITAR EL ENVÍO.']);
+      return;
+    }
+    setErrores([]);
+    setEnviando(true);
+    try {
+      const { data } = await unsendPurchase(id, c.id);
+      aplicarRespuesta(data);
+      setToast({ tipo: 'exito', mensaje: 'Envío a bodega quitado' });
+    } catch (err) {
+      const e = err.response?.data?.errors;
+      setErrores(e ? Object.values(e).flat() : [err.response?.data?.message || 'NO SE PUDO QUITAR EL ENVÍO.']);
+    } finally {
+      setEnviando(false);
+    }
+  };
+
   const abrirNuevaFinca = (bKey, c) => {
     const duenoId = duenoFinca(c);
     setErrorFinca('');
@@ -511,6 +567,8 @@ export default function PurchaseAllocationPage() {
           const marcaNombre = marcas.find((m) => String(m.id) === b.brand_id)?.name || 'SIN MARCA';
           const clienteNombre = clientes.find((x) => String(x.id) === b.customer_id)?.name || 'SIN CLIENTE';
           const tieneBloqueadas = b.purchases.some((c) => c.bloqueo);
+          // Compras guardadas que faltan enviar a bodega (las liquidadas ya no se envían)
+          const porEnviar = b.purchases.filter((c) => c.id && !c.enviada && !c.liquidada);
           return (
             <div key={b._key} className="bg-white rounded-xl shadow overflow-hidden">
               {/* Cabecera del bloque (como la fila de título de la hoja) */}
@@ -532,6 +590,13 @@ export default function PurchaseAllocationPage() {
                     <p className={`font-semibold ${falta < 0 ? 'text-red-600' : falta === 0 ? 'text-green-700' : 'text-amber-700'}`}>{falta === 0 ? '✔' : formatoCajas(falta)}</p>
                   </div>
                 </div>
+                {porEnviar.length > 0 && (
+                  <button type="button" onClick={() => enviarABodega(porEnviar.map((c) => c.id))} disabled={enviando}
+                    title="Envía a bodega las compras guardadas de este bloque que faltan (las ya enviadas no se repiten)"
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg shadow-sm bg-guardar text-guardar-texto hover:bg-guardar-hover disabled:opacity-50 transition">
+                    <Truck size={14} /> Enviar bloque a bodega ({porEnviar.length})
+                  </button>
+                )}
                 <button type="button" onClick={() => quitarBloque(b._key)} disabled={tieneBloqueadas} title={tieneBloqueadas ? 'Tiene compras con materiales, tarjas o liquidadas' : 'Quitar bloque'} className="text-white p-1.5 rounded-lg shadow-sm bg-red-600 hover:bg-red-700 disabled:opacity-40">
                   <Trash2 size={16} />
                 </button>
@@ -589,7 +654,7 @@ export default function PurchaseAllocationPage() {
 
                   {/* Compras del bloque */}
                   <div className="overflow-x-auto border rounded-lg">
-                    <table className="w-full text-sm min-w-[2180px]">
+                    <table className="w-full text-sm min-w-[2340px]">
                       <thead className="bg-primario text-white">
                         <tr>
                           <th className={th}>#</th>
@@ -609,12 +674,13 @@ export default function PurchaseAllocationPage() {
                           <th className={`${th} text-right`}>Total real</th>
                           <th className={`${th} text-right`} title="Cajas × (precio oficial − precio real): la entrega el vendedor">Nota créd. $</th>
                           <th className={th}>Notas</th>
+                          <th className={th}>Bodega</th>
                           <th className="px-2 py-2 w-10"></th>
                         </tr>
                       </thead>
                       <tbody>
                         {b.purchases.length === 0 ? (
-                          <tr><td colSpan={18} className="text-center py-5 text-gray-400">Agrega la primera compra de este bloque</td></tr>
+                          <tr><td colSpan={19} className="text-center py-5 text-gray-400">Agrega la primera compra de este bloque</td></tr>
                         ) : b.purchases.map((c, j) => {
                           const fijo = Boolean(c.bloqueo);
                           const esComercial = tipoDe(c.third_party_id) === 'COMERCIALIZADORA';
@@ -738,6 +804,30 @@ export default function PurchaseAllocationPage() {
                                     : <span className="font-semibold text-gray-700">$ {formatoDinero(nc)}</span>}
                               </td>
                               <td className="px-2 py-1.5 min-w-[160px]"><input value={c.notes} maxLength={255} onChange={mayus('notes')} placeholder="EJ. CONSOLIDADO EN PTO" className={inputClass} /></td>
+                              <td className="px-2 py-1.5 min-w-[150px]">
+                                {!c.id ? (
+                                  <span className="text-[10px] text-gray-400" title="Primero guarda las compras">GUARDA PARA ENVIAR</span>
+                                ) : c.enviada ? (
+                                  <div className="leading-tight">
+                                    <span className="text-[11px] font-semibold text-green-700 whitespace-nowrap" title={c.enviada_por ? `Enviada por ${c.enviada_por}` : 'Ya estaba en la bodega antes del botón (10/11/2026)'}>✔ ENVIADA {fechaHora(c.enviada)}</span>
+                                    {c.enviada_por && <span className="block text-[10px] text-gray-500">{c.enviada_por}</span>}
+                                    {c.cambio_envio && <span className="block text-[10px] font-semibold text-amber-700" title="La bodega lo ve como CAMBIÓ">CAMBIÓ {fechaHora(c.cambio_envio)}</span>}
+                                    {!c.despachada && !c.liquidada && (
+                                      <button type="button" onClick={() => setQuitarEnvio(c)} disabled={enviando} className="flex items-center gap-1 text-[10px] text-gray-500 hover:text-red-600 hover:underline mt-0.5">
+                                        <Undo2 size={10} /> Quitar envío
+                                      </button>
+                                    )}
+                                  </div>
+                                ) : c.liquidada ? (
+                                  <span className="text-[10px] text-gray-400">—</span>
+                                ) : (
+                                  <button type="button" onClick={() => enviarABodega([c.id])} disabled={enviando}
+                                    title="La bodega la verá en Por despachar para entregar los materiales"
+                                    className="flex items-center gap-1 px-2 py-1 text-[11px] font-semibold rounded-lg shadow-sm bg-guardar text-guardar-texto hover:bg-guardar-hover disabled:opacity-50 whitespace-nowrap transition">
+                                    <Truck size={13} /> Enviar a bodega
+                                  </button>
+                                )}
+                              </td>
                               <td className="px-2 py-1.5">
                                 <button type="button" onClick={() => quitarCompra(b._key, c._key)} disabled={fijo} title={fijo ? `No se puede quitar: ${c.bloqueo}` : 'Quitar compra'} className="text-white p-1.5 rounded-lg shadow-sm bg-red-600 hover:bg-red-700 disabled:opacity-40">
                                   <Trash2 size={16} />
@@ -797,6 +887,18 @@ export default function PurchaseAllocationPage() {
             <input value={nuevaFinca.zone} maxLength={100} onChange={(e) => setNuevaFinca((p) => ({ ...p, zone: e.target.value.toUpperCase() }))} placeholder="EJ. MACHALA" className={inputClass} />
           </div>
         </ModalShell>
+      )}
+
+      {quitarEnvio && (
+        <DialogoConfirmacion
+          titulo="¿Quitar el envío a bodega?"
+          textoAceptar="Quitar envío"
+          textoCancelar="Cancelar"
+          onCancelar={() => setQuitarEnvio(null)}
+          onAceptar={confirmarQuitarEnvio}
+        >
+          La compra de {quitarEnvio.boxes} cajas deja de aparecer en Por despachar de la bodega hasta que la vuelvas a enviar.
+        </DialogoConfirmacion>
       )}
 
       {mostrarConfirmarSalida && (

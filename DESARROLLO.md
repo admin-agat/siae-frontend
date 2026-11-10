@@ -133,7 +133,8 @@ Leyenda: ✅ terminado · 🟡 parcial · ⏳ pendiente
 | Motivos de movimiento | ✅ | Motivos permitidos por rol. |
 | Stock general | ✅ | Existencia + en tránsito por bodega. |
 | Nuevo movimiento | ✅ | Ingreso por OC (recepción parcial), egreso, devolución, transferencia. |
-| Despacho de materiales | ✅ | Receta (BOM) por marca y cajas; guía de remisión. Desde el 28/10/2026 se despacha contra el **cupo de Comercial** (marca y cajas fijas). |
+| Por despachar | ✅ | (05/11/2026) Bandeja del bodeguero. Desde el 10/11/2026 solo muestra las compras que Comercial **envió a bodega**; contador en el menú. |
+| Despacho de materiales | ✅ | Receta (BOM) por marca y cajas; guía de remisión. Desde el 28/10/2026 se despacha contra el **cupo de Comercial** (marca y cajas fijas); desde el 10/11/2026, solo lo enviado a bodega. |
 | Historial de despachos | ✅ | Reimprimir guía, anular. |
 | Transferencias pendientes | ✅ | Confirmar (con ajuste por pérdida/daño) o cancelar. El faltante se registra como MERMA/DAÑO en la bodega destino. |
 | Recibir transferencias | ✅ | (31/10/2026) El bodeguero de la bodega destino confirma lo que le llega; no cancela. |
@@ -271,6 +272,30 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 ---
 
 ## 7. Historial de cambios
+
+### 10/11/2026 — Compra de fruta: "Enviar a bodega" y contador de "Por despachar" (solo en local, sin subir)
+- **Pedido del usuario:** cuando Comercial guarda la compra, debe enviarla a bodega para su despacho, y la bodega ve el listado de pendientes. Acordado: botón por línea y por bloque sin repetir, las compras existentes quedan enviadas, contador en el menú.
+- **Compra de fruta** ([PurchaseAllocationPage.jsx](src/pages/comercial/PurchaseAllocationPage.jsx)):
+  - Columna nueva **BODEGA**. En la compra guardada aparece el botón **Enviar a bodega**. Ya enviada muestra **✔ ENVIADA dd/mm hh:mm**, quién la envió y, si después cambió, **CAMBIÓ dd/mm hh:mm**.
+  - **Quitar envío** (con confirmación): solo mientras la bodega no haya entregado materiales de esa marca en esa bodega.
+  - En la cabecera del bloque, **Enviar bloque a bodega (N)**: envía las guardadas que faltan; las ya enviadas no se repiten (conservan su fecha) y las de cupo liquidado se saltan.
+  - Se envía lo guardado: con cambios sin guardar pide "GUARDA LOS CAMBIOS ANTES DE ENVIAR A BODEGA".
+- **Backend:**
+  - Migración `2026_11_10_000004_envio_compras_a_bodega`: `producer_quota_lines.sent_to_warehouse_at`, `sent_to_warehouse_by` (usuario) y `changed_after_sent_at`. Las compras que ya existían quedan **enviadas** (con su `created_at`), así la bodega no deja de verlas.
+  - `POST /customer-orders/{id}/purchases/send` `{ purchase_ids }` y `PATCH /customer-orders/{id}/purchases/{lineId}/unsend` (pantalla `compra_fruta`). Bloquean la semana (`lockForUpdate`): dos clics no envían dos veces. Cada envío queda en la bitácora.
+  - Enviar **no cambia la "version"** de la semana: la huella de las compras ya no incluye `updated_at` ni las columnas del envío, así no choca con otro usuario que esté editando.
+  - Al guardar, si una compra enviada cambia **cajas, marca, bodega de retiro o vendedor**, se marca `changed_after_sent_at` (las notas, precios, etc. no).
+  - **Por despachar** (`GET /material-dispatch/pending`): solo las compras enviadas; columnas nuevas `enviado_at`, `enviado_por`, `cambio` (cambió después de enviar y no se ha retirado desde entonces) y `cambio_at`.
+  - **Despacho de materiales:** los cupos (`/material-dispatch/quotas`) y las cajas a entregar cuentan solo lo enviado. Si la compra existe pero no se envió: "Comercial todavía no envía esta compra a bodega."
+  - Contador `GET /material-dispatch/pending/count` (pendientes + parciales, con las bodegas de cada usuario; pantalla `despacho`).
+- **Menú** ([Sidebar.jsx](src/components/Sidebar.jsx)): número rojo en el ícono de INVENTARIO y junto a "Por despachar". Se pide al abrir, al cambiar de página y cada 2 minutos, solo si la persona tiene esa pantalla. **Bandeja** ([DispatchPendingPage.jsx](src/pages/inventario/DispatchPendingPage.jsx)): columna ENVIADO (fecha, quién y aviso CAMBIÓ).
+- **Probado:**
+  - `prueba_envio_bodega.php` 30/30, en transacción revertida: sin enviar no sale en la bandeja, ni en cupos, y calcular da 422; enviar con fecha y quién; no repite; bitácora; version igual; contador +1; guardar sin cambios o con cambio de notas no marca CAMBIÓ y con cambio de cajas sí; un retiro posterior quita el CAMBIÓ; quitar envío con retiro da 422, sin retiro se permite; lista vacía 422; cupo liquidado no se envía; bodeguero 403 al enviar y 200 en el contador.
+  - Chrome `ui_envio_bodega.mjs` 18/18: botón, aviso de guardar primero, ✔ ENVIADA y quién, bandeja del bodeguero con ENVIADO, contador en el ícono y en el ítem, quitar envío con confirmación, enviar bloque, sin errores de consola.
+  - Regresión: por despachar 18/18, inventario 111/111, presentación 21/21, seguridad 80/80, permisos 50/50, huella 12/12.
+  - Exportaciones: se ajustó la prueba del cupo, que ahora se envía antes de buscarlo en el Despacho. Quedan solo las 4 fallas conocidas de `/bookings`, que se quitó en la v1.1 (la prueba está vieja).
+  - Build OK.
+- **Al subir:** quien tenga abierta Compra de fruta en ese momento recibirá una vez el aviso de "otro usuario guardó" (cambió la forma de la huella) y debe recargar.
 
 ### 09/11/2026 — Revisión de seguridad, etapa 2 (base de datos) — sistema v1.1
 - La barra azul pasa a mostrar **v1.1** (antes v1.0).
