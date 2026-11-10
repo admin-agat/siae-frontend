@@ -273,7 +273,10 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
-### 10/11/2026 — Semana de compra por línea: nave que se queda a la semana siguiente (solo en local, sin subir)
+### 10/11/2026 — Semana de compra por línea: nave que se queda a la semana siguiente (en producción desde 10/11/2026)
+- **Producción** (10/11/2026 20:32 UTC, a pedido del usuario):
+  - Respaldos `~/respaldos/siae_production_20261110_2032_antes_semana_compra.sql`, `frontend_dist_20261110_2032_antes_semana_compra.tgz` y los `.env` con la misma hora. Antes se revisó que no hubiera compras sin bloque ni con un cupo de otro pedido (0 en los dos casos). Backend `ec42b71`, frontend `b5d4307`. Ningún archivo ilegible.
+  - STAR SPIRIT: sus 133 compras (84.937 cajas) pasaron a semana de compra 40, por el mismo PUT, primero simulado. Los cupos de la WK40 suman 261 compras y 149.384 cajas, igual que la hoja WEEK40; la WK39 queda sin compras.
 - **Caso del usuario** (pizarra): Baltic Winter tiene cupo WK46 de 27k y se compra en la WK46 y en la WK47, porque la nave se queda. Además tiene cupo WK47 de 23k, que se compra en la WK47. Son 2 embarques, uno en cada pedido.
 - **Reglas del usuario:**
   - La semana de una compra es la semana en que la fruta llega al puerto, hasta el domingo.
@@ -294,7 +297,6 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
   - Debajo del día de corte va un selector **COMPRA WKnn**. Cuando la semana no es la del pedido, el selector se pinta en celeste.
   - La compra nueva copia la semana de la fila anterior.
   - Si un bloque tiene compras de la semana siguiente, su cabecera muestra "COMPRA WK46: x · COMPRA WK47: y".
-- **Pendiente al subir:** pasar las 133 compras de STAR SPIRIT (pedido WK39) a la semana de compra 40, como dice el Excel.
 - **Pruebas:**
   - Nueva `prueba_semana_compra` 18/18: cupo de la semana siguiente, la compra sigue en su pedido aunque el cupo apunte a otro, 422 por rango, semana liquidada y compra bloqueada, sin semana va la del pedido, cajas en la semana siguiente y tarjas.
   - Siguen en verde: envío 32, por despachar 18, presentación 21, NC 36, liquidación 40, inventario 111, tarjas 111, sugerencias 28, contratos 18, bitácora 22 y permisos 50.
