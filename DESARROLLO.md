@@ -273,7 +273,9 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
-### 10/11/2026 — Modalidades de carga unificadas, bodega opcional y carga de la compra WK40 (solo en local y en la copia, sin subir)
+### 10/11/2026 — Modalidades de carga unificadas, bodega opcional y carga de la compra WK40 (en producción desde 10/11/2026)
+- **Producción** (10/11/2026 19:00 UTC, a pedido del usuario): respaldos `~/respaldos/siae_production_20261110_1900_antes_modalidades_wk40.sql`, `frontend_dist_20261110_1900_antes_modalidades_wk40.tgz`, `backend.env_20261110_1900` y `frontend.env_20261110_1900`. Migración en 21 ms. Backend `a58e0f4`, frontend `bd7c18e`. Sin archivos ilegibles para www-data.
+  - Carga WK40: primero en simulación sobre producción (igual que la copia, nadie había registrado compras encima) y luego la real: pedido #45 133 compras / 84.937 cajas, pedido #46 128 / 64.447. Precio MAG 2026 registrado; tokens de la carga borrados; `~/carga_wk40` borrada del servidor; la base `siae_copia` y el respaldo descargado borrados de esta PC.
 - **Modalidades** (pedido de Exportaciones y Logística): son las mismas 4 en el pedido, la distribución, la compra (bloques) y el cierre (bookings).
   - GRANEL BAJO CUBIERTA, PALETIZADO BAJO CUBIERTA, CONTENEDOR AL GRANEL y CONTENEDOR PALETIZADO.
   - Los códigos son los del pedido (`CAJA_` = paletizado). En el backend están en `CustomerOrderLine::TIPOS_CARGA` y `esContenedor()`; en el frontend, en [utils/modalidades.js](src/utils/modalidades.js).
@@ -295,11 +297,11 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
     - GLOBAL VILLAGE va a RVI; PALM BANANAS y DOÑA ELENA, a GT.
   - STAR SPIRIT está en el pedido WK39 del sistema, así que sus 133 compras (84.937 cajas) van a la compra de la WK39 con el día de corte del Excel.
   - PALLETS SUR queda con la entrega vacía y una nota, pendiente de confirmar.
-  - Se crearon 65 productores, 16 comercializadoras y 152 fincas con el nombre del Excel y sin RUC, para validar. Las decisiones están en `WK40_carga_decisiones.csv`.
-  - **Hecho en la copia `siae_copia` (respaldo de producción del 10/11 15:08 UTC), no en producción.**
+  - **Error corregido antes de la carga real:** el script unía al productor por el MAG de la finca cuando no lo hallaba por nombre, pero en el Excel varias personas entregan con el MAG de otra (p. ej. 5 productores distintos quedaban como uno solo) → se habría liquidado a la persona equivocada. Se quitó la regla "POR MAG": el productor se busca solo por nombre y, si no está, se crea.
+  - En producción se crearon 82 productores, 16 comercializadoras y 169 fincas con el nombre del Excel y sin RUC, para validar (25 PROBABLE por nombre y RUTH GUANGA duplicada, pendientes de que el usuario confirme). Las decisiones están en `WK40_carga_decisiones_v2.csv`.
 - Pruebas: envío 32/32 (nuevas: compra sin bodega), exportaciones 96 (solo las 4 viejas de `/bookings`), presentación 21, NC 36, liquidación 40, bitácora 22, proforma 8, bandeja 18, huella 12. Las pruebas pasaron a los códigos nuevos de modalidad. Build OK.
 
-### 10/11/2026 — Compra de fruta: un color suave por barco (solo en local, sin subir)
+### 10/11/2026 — Compra de fruta: un color suave por barco (en producción desde 10/11/2026)
 - Pedido del usuario (revisión de interfaz del módulo comercial): que al llenar no se pierda entre bloques y en la fila de 19 columnas.
 - Se probó también un color por grupo de columnas (vendedor, entrega, precio…); el usuario prefirió la tabla **sin colores, como estaba**, y se quitó.
 - [PurchaseAllocationPage.jsx](src/pages/comercial/PurchaseAllocationPage.jsx):
