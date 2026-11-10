@@ -14,13 +14,10 @@ import { getCustomerOrder } from '../api/customerOrders';
 import { useAuth } from '../context/AuthContext';
 import EstadoBadge from './common/EstadoBadge';
 import { marcaConPresentacion } from '../utils/presentaciones';
+import { ETIQUETA_MODALIDAD } from '../utils/modalidades';
 
-const TIPOS_CARGA = {
-    CAJA_BAJO_CUBIERTA: 'BAJO CUBIERTA',
-    GRANEL_BAJO_CUBIERTA: 'GRANEL BAJO CUBIERTA',
-    CAJA_CONTENEDOR: 'CONTENEDOR',
-    GRANEL_CONTENEDOR: 'CONTENEDOR A GRANEL',
-};
+// 10/11/2026: las 4 modalidades con los nombres de Exportaciones y Logística (utils/modalidades.js)
+const TIPOS_CARGA = ETIQUETA_MODALIDAD;
 
 const formatoCajas = (n) => Number(n || 0).toLocaleString('es-EC');
 const formatoDinero = (n) => Number(n || 0).toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 });

@@ -25,15 +25,12 @@ import SelectBuscable from '../../components/common/SelectBuscable';
 import { PRESENTACIONES } from '../../utils/presentaciones';
 import CampoNumero from '../../components/common/CampoNumero';
 import { hoyISO } from '../../utils/fecha';
+import { MODALIDADES_CARGA } from '../../utils/modalidades';
 
 const INCOTERMS = ['FOB', 'CFR', 'CIF'];
 
-const TIPOS_CARGA = [
-  { valor: 'CAJA_BAJO_CUBIERTA', etiqueta: 'BAJO CUBIERTA' },
-  { valor: 'GRANEL_BAJO_CUBIERTA', etiqueta: 'GRANEL BAJO CUBIERTA' },
-  { valor: 'CAJA_CONTENEDOR', etiqueta: 'CONTENEDOR' },
-  { valor: 'GRANEL_CONTENEDOR', etiqueta: 'CONTENEDOR A GRANEL' },
-];
+// 10/11/2026: las 4 modalidades con los nombres de Exportaciones y Logística (utils/modalidades.js)
+const TIPOS_CARGA = MODALIDADES_CARGA;
 
 const esContenedor = (tipo) => tipo?.endsWith('_CONTENEDOR');
 

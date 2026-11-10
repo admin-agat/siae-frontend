@@ -7,6 +7,7 @@
 // carga, marca, booking, DAE, B/L, M, cupo, embarcado, diferencia, pesos, AUCP, orden, ingreso y
 // estado de la DAE. Los totales de peso se calculan sobre TODAS las filas.
 // Imprime lo que está en pantalla; si hay cambios sin guardar sale marcado como BORRADOR.
+import { ETIQUETA_MODALIDAD, esContenedor } from '../utils/modalidades';
 
 const formatoCajas = (v) => Number(v || 0).toLocaleString('es-EC');
 const formatoKilos = (v) => Number(v || 0).toLocaleString('es-EC', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -69,7 +70,7 @@ export default function ClosingPrint({ pedido, barcos, resumenCliente, nombreCli
         </thead>
         <tbody>
           {filas.map(({ b, k }) => {
-            const contenedor = k.cargo_mode === 'CONTENEDOR';
+            const contenedor = esContenedor(k.cargo_mode);
             return (
               <tr key={k._key}>
                 <td className={td}>{k.arrival_note}</td>
@@ -80,7 +81,7 @@ export default function ClosingPrint({ pedido, barcos, resumenCliente, nombreCli
                 <td className={td}>{b.puerto}</td>
                 <td className={td}>{k.consignee_name || nombreCliente(k.customer_id)}</td>
                 <td className={td}>{k.notify_name}</td>
-                <td className={td}>{contenedor ? 'CONTENEDORES' : `BODEGA ${k.holds}`}</td>
+                <td className={td}>{ETIQUETA_MODALIDAD[k.cargo_mode] || k.cargo_mode}{!contenedor && k.holds ? ` · BODEGA ${k.holds}` : ''}</td>
                 <td className={td}>{nombreMarca(k.customer_id, k.brand_id)} {k.negotiation_type}</td>
                 <td className={td}>{k.booking_number}</td>
                 <td className={`${td} whitespace-nowrap`}>{k.dae_number}</td>
@@ -104,7 +105,7 @@ export default function ClosingPrint({ pedido, barcos, resumenCliente, nombreCli
         <tfoot>
           <tr className="font-bold bg-gray-100">
             <td className={td} colSpan={13}>TOTAL</td>
-            <td className={tdN}>{formatoCajas(total((k) => (k.cargo_mode === 'CONTENEDOR' ? n(k.containers_qty) : 0)))}</td>
+            <td className={tdN}>{formatoCajas(total((k) => (esContenedor(k.cargo_mode) ? n(k.containers_qty) : 0)))}</td>
             <td className={tdN}>{formatoCajas(total((k) => n(k.quota_boxes)))}</td>
             <td className={tdN}>{formatoCajas(total((k) => n(k.shipped_boxes)))}</td>
             <td className={tdN}>{formatoCajas(total((k) => n(k.shipped_boxes) - n(k.quota_boxes)))}</td>

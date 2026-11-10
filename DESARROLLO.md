@@ -273,6 +273,44 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 10/11/2026 — Modalidades de carga unificadas, bodega opcional y carga de la compra WK40 (solo en local y en la copia, sin subir)
+- **Modalidades** (pedido de Exportaciones y Logística): son las mismas 4 en el pedido, la distribución, la compra (bloques) y el cierre (bookings).
+  - GRANEL BAJO CUBIERTA, PALETIZADO BAJO CUBIERTA, CONTENEDOR AL GRANEL y CONTENEDOR PALETIZADO.
+  - Los códigos son los del pedido (`CAJA_` = paletizado). En el backend están en `CustomerOrderLine::TIPOS_CARGA` y `esContenedor()`; en el frontend, en [utils/modalidades.js](src/utils/modalidades.js).
+  - Migración `2026_11_10_000005_modalidades_carga_unificadas`: `purchase_blocks.cargo_mode` y `shipment_bookings.cargo_mode` pasan a varchar(25) con un CHECK nuevo. Lo existente pasa a la versión GRANEL (BAJO_CUBIERTA/BODEGA → GRANEL_BAJO_CUBIERTA, CONTENEDOR → GRANEL_CONTENEDOR). En la copia de producción eran 1 bloque y 11 bookings.
+  - El cierre, la impresión del cierre y los gastos por viaje reconocen el contenedor por `_CONTENEDOR`.
+- **Bodega de retiro opcional:**
+  - El backend acepta compras sin bodega, para la carga histórica.
+  - La pantalla la sigue exigiendo en las compras nuevas, y deja volver a guardar las que no la tienen.
+- **Cliente AGAT-ECUAGREEN S.A.S** (la empresa se vende su propia fruta): lo crean ellos en Terceros como CLIENTE, con su RUC, país y marcas.
+- **Precio MAG 2026:** $7,50 por la caja 22XU, Acuerdo Ministerial 107, vigente del 01/01 al 31/12/2026. Se registra una vez al año en Precios MAG; en producción no estaba registrado.
+- **Carga de la compra WK40** desde `SEGUIMIENTO DE COMPRAS 2026 RESPALDO.xlsx`, hoja WEEK40_2026: 261 compras en 12 bloques, 149.384 cajas estimadas, igual que el Excel.
+  - Pasa por el mismo `PUT /customer-orders/{id}/purchases` que la pantalla.
+  - Script `carga_wk40.php`: exige `CARGA_BD` y con `CARGA_SIMULAR=1` revierte todo.
+  - Reglas del usuario:
+    - cajas = estimadas (las terminadas van en Tarjas);
+    - precio del Excel = precio real;
+    - bodega vacía;
+    - BANDA = PACKED y SPOT;
+    - GLOBAL VILLAGE va a RVI; PALM BANANAS y DOÑA ELENA, a GT.
+  - STAR SPIRIT está en el pedido WK39 del sistema, así que sus 133 compras (84.937 cajas) van a la compra de la WK39 con el día de corte del Excel.
+  - PALLETS SUR queda con la entrega vacía y una nota, pendiente de confirmar.
+  - Se crearon 65 productores, 16 comercializadoras y 152 fincas con el nombre del Excel y sin RUC, para validar. Las decisiones están en `WK40_carga_decisiones.csv`.
+  - **Hecho en la copia `siae_copia` (respaldo de producción del 10/11 15:08 UTC), no en producción.**
+- Pruebas: envío 32/32 (nuevas: compra sin bodega), exportaciones 96 (solo las 4 viejas de `/bookings`), presentación 21, NC 36, liquidación 40, bitácora 22, proforma 8, bandeja 18, huella 12. Las pruebas pasaron a los códigos nuevos de modalidad. Build OK.
+
+### 10/11/2026 — Compra de fruta: un color suave por barco (solo en local, sin subir)
+- Pedido del usuario (revisión de interfaz del módulo comercial): que al llenar no se pierda entre bloques y en la fila de 19 columnas.
+- Se probó también un color por grupo de columnas (vendedor, entrega, precio…); el usuario prefirió la tabla **sin colores, como estaba**, y se quitó.
+- [PurchaseAllocationPage.jsx](src/pages/comercial/PurchaseAllocationPage.jsx):
+  - **Cada barco con su color suave**: la cabecera y un borde izquierdo grueso del bloque. Los bloques del mismo barco comparten color. Son 6 tonos: turquesa, naranja, índigo, lima, cian y amarillo. A pedido del usuario no hay rojo, rosado ni fucsia. Se asignan por el orden de los barcos de la semana y, si hay más de 6, se repiten.
+  - **"#" y "Se le compra a" quedan fijos a la izquierda** al desplazar la tabla. Toman el mismo fondo gris o blanco de la fila.
+  - Vendedor y cajas vacíos llevan **borde ámbar**, como ya tenían finca y bodega.
+  - Arriba de los bloques, una leyenda **"BARCOS DE LA SEMANA"** con el color de cada barco.
+  - El estado de la meta sigue en la columna FALTA y en el texto al pasar el mouse sobre el bloque.
+  - Solo cambia la apariencia: no toca lo que se guarda.
+- Revisado en Chrome a 1600 px (capturas `colores-*.png`): el vendedor queda fijo a 37 px del borde al desplazar y no hay errores de consola. Lint sin avisos, build OK.
+
 ### 10/11/2026 — El Despacho ya no exige "Enviar a bodega" (pedido del usuario mientras se cuadra la operación)
 - El usuario pidió que, por ahora, el envío a bodega **no sea requisito para despachar** (se está cuadrando exportaciones → comercial → tarjas → liquidaciones con lo histórico).
 - `MaterialDispatchController`: los cupos (`/material-dispatch/quotas`) y las cajas a entregar vuelven a contar **todas** las compras; se quita el mensaje "Comercial todavía no envía esta compra a bodega".

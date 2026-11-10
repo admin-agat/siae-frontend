@@ -7,13 +7,10 @@
 //   2) Un bloque por barco con las líneas que lleva
 //   3) Resumen por cliente y lo que queda pendiente por embarcar
 // Imprime lo que está en pantalla; si hay cambios sin guardar sale marcado como BORRADOR.
+import { ETIQUETA_MODALIDAD } from '../utils/modalidades';
 
-const TIPOS_CARGA = {
-  CAJA_BAJO_CUBIERTA: 'BAJO CUBIERTA',
-  GRANEL_BAJO_CUBIERTA: 'GRANEL BAJO CUBIERTA',
-  CAJA_CONTENEDOR: 'CONTENEDOR',
-  GRANEL_CONTENEDOR: 'CONTENEDOR A GRANEL',
-};
+// 10/11/2026: las 4 modalidades con los nombres de Exportaciones y Logística (utils/modalidades.js)
+const TIPOS_CARGA = ETIQUETA_MODALIDAD;
 
 const formatoCajas = (n) => Number(n || 0).toLocaleString('es-EC');
 const formatoFecha = (f) => (f ? f.split('-').reverse().join('/') : '—');

@@ -23,6 +23,7 @@ import ToastFlotante from '../../components/common/ToastFlotante';
 import ClosingPrint from '../../components/ClosingPrint';
 import SelectBuscable from '../../components/common/SelectBuscable';
 import CampoNumero from '../../components/common/CampoNumero';
+import { MODALIDADES_CARGA, MODALIDAD_POR_DEFECTO, esContenedor } from '../../utils/modalidades';
 
 const CAJAS_POR_CONTENEDOR = 1200;
 const formatoCajas = (v) => Number(v || 0).toLocaleString('es-EC');
@@ -46,7 +47,7 @@ const bookingDesdeBackend = (k) => ({
   customer_id: texto(k.customer_id),
   brand_id: texto(k.brand_id),
   negotiation_type: k.negotiation_type || 'SPOT',
-  cargo_mode: k.cargo_mode || 'BODEGA',
+  cargo_mode: k.cargo_mode || MODALIDAD_POR_DEFECTO,
   holds: texto(k.holds),
   containers_qty: k.containers_qty ? texto(k.containers_qty) : '',
   booking_number: texto(k.booking_number),
@@ -92,7 +93,7 @@ const avisosFila = (k) => {
   const avisos = [];
   const dif = n(k.shipped_boxes) - n(k.quota_boxes);
   if (k.shipped_boxes !== '' && dif > 0) avisos.push(`SE EMBARCARON ${formatoCajas(dif)} CAJAS SOBRE EL CUPO`);
-  if (k.cargo_mode === 'CONTENEDOR' && n(k.containers_qty) && n(k.shipped_boxes)) {
+  if (esContenedor(k.cargo_mode) && n(k.containers_qty) && n(k.shipped_boxes)) {
     const capacidad = n(k.containers_qty) * CAJAS_POR_CONTENEDOR;
     if (capacidad !== n(k.shipped_boxes)) {
       avisos.push(`${k.containers_qty} CONT. × ${formatoCajas(CAJAS_POR_CONTENEDOR)} = ${formatoCajas(capacidad)}; EMBARCADO ${formatoCajas(k.shipped_boxes)}`);
@@ -151,7 +152,7 @@ export default function ShipmentClosingPage() {
   const totalEmbarcado = sumar(todas, 'shipped_boxes');
   const totalNeto = todas.reduce((s, k) => s + n(k.shipped_boxes) * n(k.net_weight_per_box), 0);
   const totalBruto = todas.reduce((s, k) => s + n(k.shipped_boxes) * n(k.gross_weight_per_box), 0);
-  const totalContenedores = todas.reduce((s, k) => s + (k.cargo_mode === 'CONTENEDOR' ? n(k.containers_qty) : 0), 0);
+  const totalContenedores = todas.reduce((s, k) => s + (esContenedor(k.cargo_mode) ? n(k.containers_qty) : 0), 0);
   const totalPedido = clientes.reduce((s, c) => s + c.pedido, 0);
 
   const nombreCliente = (cid) => clientes.find((c) => String(c.id) === String(cid))?.name || '—';
@@ -214,7 +215,7 @@ export default function ShipmentClosingPage() {
           }
         }
         // En contenedor el cupo se propone con los contenedores completos
-        if (campo === 'containers_qty' && k.cargo_mode === 'CONTENEDOR' && (k.quota_boxes === '' || n(k.quota_boxes) === n(k.containers_qty) * CAJAS_POR_CONTENEDOR)) {
+        if (campo === 'containers_qty' && esContenedor(k.cargo_mode) && (k.quota_boxes === '' || n(k.quota_boxes) === n(k.containers_qty) * CAJAS_POR_CONTENEDOR)) {
           nuevo.quota_boxes = valor === '' ? '' : String(n(valor) * CAJAS_POR_CONTENEDOR);
         }
         return nuevo;
@@ -236,7 +237,7 @@ export default function ShipmentClosingPage() {
         customer_id: cliente,
         brand_id: anterior?.brand_id || (marcas.length === 1 ? String(marcas[0].id) : ''),
         negotiation_type: anterior?.negotiation_type || 'SPOT',
-        cargo_mode: anterior?.cargo_mode || 'BODEGA',
+        cargo_mode: anterior?.cargo_mode || MODALIDAD_POR_DEFECTO,
         holds: '', containers_qty: '',
         booking_number: '', dae_number: anterior?.dae_number || '', bl_number: '', aucp: '', order_ref: '', forma_a: '', proforma_paid: false, turn_paid: false,
         consignee_name: texto(anterior?.consignee_name || p?.consignee_name),
@@ -282,7 +283,7 @@ export default function ShipmentClosingPage() {
       b.bookings.forEach((k, j) => {
         const fila = `${b.vessel_name}, FILA ${j + 1}`;
         if (!k.customer_id) faltan.push(`${fila}: FALTA EL CLIENTE.`);
-        if (k.cargo_mode === 'CONTENEDOR' && !n(k.containers_qty)) faltan.push(`${fila}: INDICA CUÁNTOS CONTENEDORES.`);
+        if (esContenedor(k.cargo_mode) && !n(k.containers_qty)) faltan.push(`${fila}: INDICA CUÁNTOS CONTENEDORES.`);
       });
     });
     if (faltan.length) {
@@ -308,7 +309,7 @@ export default function ShipmentClosingPage() {
             negotiation_type: k.negotiation_type,
             cargo_mode: k.cargo_mode,
             holds: k.holds || null,
-            containers_qty: k.cargo_mode === 'CONTENEDOR' ? n(k.containers_qty) : 0,
+            containers_qty: esContenedor(k.cargo_mode) ? n(k.containers_qty) : 0,
             booking_number: k.booking_number || null,
             dae_number: k.dae_number || null,
             bl_number: k.bl_number || null,
@@ -554,12 +555,11 @@ export default function ShipmentClosingPage() {
                             </td>
                             <td className="px-2 py-1.5 min-w-[165px]">
                               <SelectBuscable value={k.cargo_mode} onChange={cambiar('cargo_mode')} className={inputClass}>
-                                <option value="BODEGA">BODEGA (CS)</option>
-                                <option value="CONTENEDOR">CONTENEDOR</option>
+                                {MODALIDADES_CARGA.map((m) => <option key={m.valor} value={m.valor}>{m.etiqueta}</option>)}
                               </SelectBuscable>
                             </td>
                             <td className="px-2 py-1.5 min-w-[110px]">
-                              {k.cargo_mode === 'CONTENEDOR'
+                              {esContenedor(k.cargo_mode)
                                 ? <CampoNumero decimales={0} value={k.containers_qty} onChange={cambiar('containers_qty')} placeholder="# CONT." title="Número de contenedores" className={`${inputClass} text-right`} />
                                 : <input value={k.holds} maxLength={40} onChange={mayus('holds')} placeholder="2ABCDE" title="Bodegas del barco" className={inputClass} />}
                             </td>

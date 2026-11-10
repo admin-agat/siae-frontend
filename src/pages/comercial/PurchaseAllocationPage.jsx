@@ -34,6 +34,7 @@ import SelectBuscable from '../../components/common/SelectBuscable';
 import ModalShell from '../../components/common/ModalShell';
 import { PRESENTACIONES, marcaConPresentacion } from '../../utils/presentaciones';
 import CampoNumero from '../../components/common/CampoNumero';
+import { ETIQUETA_MODALIDAD, MODALIDAD_POR_DEFECTO } from '../../utils/modalidades';
 
 const formatoCajas = (n) => Number(n || 0).toLocaleString('es-EC');
 const formatoDinero = (n) => Number(n || 0).toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -41,7 +42,21 @@ const n = (v) => Number(v) || 0;
 // 10/11/2026: fecha y hora del envío a bodega (dd/mm hh:mm, hora local)
 const fechaHora = (iso) => (iso ? new Date(iso).toLocaleString('es-EC', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) : '');
 
-const MODALIDADES = { BAJO_CUBIERTA: 'BAJO CUBIERTA', CONTENEDOR: 'CONTENEDOR' };
+// 10/11/2026: las 4 modalidades del pedido (antes BAJO CUBIERTA / CONTENEDOR)
+const MODALIDADES = ETIQUETA_MODALIDAD;
+
+// 10/11/2026: cada BARCO de la semana con su color suave (cabecera y borde del bloque); los bloques del
+// mismo barco comparten color. Tonos distintos a los de las columnas (sin rojo, rosado ni fucsia, a pedido del usuario).
+const COLORES_BARCO = [
+  { cabecera: 'bg-teal-100', borde: 'border-teal-300', punto: 'bg-teal-400' },
+  { cabecera: 'bg-orange-100', borde: 'border-orange-300', punto: 'bg-orange-400' },
+  { cabecera: 'bg-indigo-100', borde: 'border-indigo-300', punto: 'bg-indigo-400' },
+  { cabecera: 'bg-lime-100', borde: 'border-lime-400', punto: 'bg-lime-500' },
+  { cabecera: 'bg-cyan-100', borde: 'border-cyan-300', punto: 'bg-cyan-400' },
+  { cabecera: 'bg-yellow-100', borde: 'border-yellow-400', punto: 'bg-yellow-500' },
+];
+const SIN_BARCO = { cabecera: 'bg-gray-100', borde: 'border-gray-300', punto: 'bg-gray-400' };
+
 const PAGO_POR_TIPO = { CONTRATO: '100', SPOT: '80_20' };
 
 let contador = 0;
@@ -93,7 +108,7 @@ const bloqueDesdeBackend = (b) => ({
   brand_id: texto(b.brand_id),
   presentation: b.presentation || 'CONVENCIONAL',
   customer_id: texto(b.customer_id),
-  cargo_mode: b.cargo_mode || 'BAJO_CUBIERTA',
+  cargo_mode: b.cargo_mode || MODALIDAD_POR_DEFECTO,
   departure_port_id: texto(b.departure_port_id),
   target_boxes: texto(b.target_boxes),
   notes: texto(b.notes),
@@ -203,6 +218,10 @@ export default function PurchaseAllocationPage() {
   const productores = vendedores.filter((v) => v.type === 'PRODUCTOR');
   const comercializadoras = vendedores.filter((v) => v.type === 'COMERCIALIZADORA');
   const tipoDe = (tpId) => vendedores.find((v) => String(v.id) === tpId)?.type;
+  const colorBarco = (shipId) => {
+    const i = barcos.findIndex((x) => String(x.id) === String(shipId));
+    return i < 0 ? SIN_BARCO : COLORES_BARCO[i % COLORES_BARCO.length];
+  };
   const nombreBarco = (shipId) => {
     const b = barcos.find((x) => String(x.id) === String(shipId));
     const nombre = b?.vessel?.name || b?.vessel_name || '';
@@ -297,7 +316,7 @@ export default function PurchaseAllocationPage() {
       brand_id: marcas.length === 1 ? String(marcas[0].id) : '',
       presentation: 'CONVENCIONAL',
       customer_id: cliente ? String(cliente.id) : '',
-      cargo_mode: 'BAJO_CUBIERTA',
+      cargo_mode: MODALIDAD_POR_DEFECTO,
       departure_port_id: texto(barco?.departure_port_id),
       target_boxes: '', notes: '', purchases: [],
     }]);
@@ -335,7 +354,8 @@ export default function PurchaseAllocationPage() {
             ? `BLOQUE ${i + 1}, COMPRA ${j + 1}: ELIGE EL PRODUCTOR REAL Y SU FINCA.`
             : `BLOQUE ${i + 1}, COMPRA ${j + 1}: FALTA LA FINCA.`);
         }
-        if (!c.pickup_warehouse_id) faltan.push(`BLOQUE ${i + 1}, COMPRA ${j + 1}: FALTA LA BODEGA DONDE RETIRA LOS MATERIALES.`);
+        // 10/11/2026: obligatoria en las compras nuevas; las históricas se cargaron sin bodega
+        if (!c.id && !c.pickup_warehouse_id) faltan.push(`BLOQUE ${i + 1}, COMPRA ${j + 1}: FALTA LA BODEGA DONDE RETIRA LOS MATERIALES.`);
         if (c.negotiation_type === 'CONTRATO' && !c.contract_id && contratosDe(c.third_party_id).some((k) => k.status)) {
           faltan.push(`BLOQUE ${i + 1}, COMPRA ${j + 1}: ELIGE QUÉ CONTRATO DEL VENDEDOR ES.`);
         }
@@ -376,7 +396,7 @@ export default function PurchaseAllocationPage() {
             payment_scheme: c.payment_scheme,
             transport_deduction: n(c.transport_deduction),
             notes: c.notes || null,
-            pickup_warehouse_id: Number(c.pickup_warehouse_id),
+            pickup_warehouse_id: num(c.pickup_warehouse_id),
             contract_id: c.negotiation_type === 'CONTRATO' ? num(c.contract_id) : null,
             contract_part: c.negotiation_type === 'CONTRATO' ? Number(c.contract_part || 0) : 0,
           })),
@@ -556,6 +576,19 @@ export default function PurchaseAllocationPage() {
         </div>
       )}
 
+      {/* 10/11/2026: leyenda de colores por barco */}
+      {barcos.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 mb-3 text-xs">
+          <span className="font-semibold text-gray-500 uppercase">Barcos de la semana:</span>
+          {barcos.map((x) => (
+            <span key={x.id} className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border ${colorBarco(x.id).cabecera} ${colorBarco(x.id).borde}`}>
+              <span className={`w-2 h-2 rounded-full ${colorBarco(x.id).punto}`} />
+              {nombreBarco(x.id)}
+            </span>
+          ))}
+        </div>
+      )}
+
       {/* Bloques */}
       <div className="space-y-3 mb-4">
         {bloques.map((b, i) => {
@@ -570,9 +603,10 @@ export default function PurchaseAllocationPage() {
           // Compras guardadas que faltan enviar a bodega (las liquidadas ya no se envían)
           const porEnviar = b.purchases.filter((c) => c.id && !c.enviada && !c.liquidada);
           return (
-            <div key={b._key} className="bg-white rounded-xl shadow overflow-hidden">
+            <div key={b._key} className={`bg-white rounded-xl shadow overflow-hidden border-l-8 ${colorBarco(b.shipment_id).borde}`}
+              title={!meta ? 'Sin meta' : falta === 0 ? 'Meta cumplida' : falta > 0 ? `Faltan ${formatoCajas(falta)} cajas` : `${formatoCajas(-falta)} cajas sobre la meta`}>
               {/* Cabecera del bloque (como la fila de título de la hoja) */}
-              <div className="flex flex-wrap items-center gap-3 px-4 py-3 bg-primario-claro border-b">
+              <div className={`flex flex-wrap items-center gap-3 px-4 py-3 border-b ${colorBarco(b.shipment_id).cabecera}`}>
                 <button type="button" onClick={() => setAbiertos((p) => ({ ...p, [b._key]: !abierto }))} className="text-primario" title={abierto ? 'Cerrar' : 'Abrir'}>
                   {abierto ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
                 </button>
@@ -657,8 +691,8 @@ export default function PurchaseAllocationPage() {
                     <table className="w-full text-sm min-w-[2340px]">
                       <thead className="bg-primario text-white">
                         <tr>
-                          <th className={th}>#</th>
-                          <th className={th}>Se le compra a *</th>
+                          <th className={`${th} sticky left-0 z-20 bg-primario w-9 min-w-[36px]`}>#</th>
+                          <th className={`${th} sticky left-9 z-20 bg-primario`}>Se le compra a *</th>
                           <th className={th}>Productor real</th>
                           <th className={th}>Finca</th>
                           <th className={th}>MAG</th>
@@ -690,9 +724,9 @@ export default function PurchaseAllocationPage() {
                           const nc = notaCredito(c);
                           return (
                             <tr key={c._key} className={j % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                              <td className="px-2 py-1.5 text-gray-400">{j + 1}</td>
-                              <td className="px-2 py-1.5 min-w-[220px]">
-                                <SelectBuscable value={c.third_party_id} onChange={cambiar('third_party_id')} disabled={fijo} className={inputClass}>
+                              <td className="sticky left-0 z-10 bg-inherit w-9 min-w-[36px] px-2 py-1.5 text-gray-400">{j + 1}</td>
+                              <td className="sticky left-9 z-10 bg-inherit shadow-[2px_0_0_#e5e7eb] px-2 py-1.5 min-w-[220px]">
+                                <SelectBuscable value={c.third_party_id} onChange={cambiar('third_party_id')} disabled={fijo} className={`${inputClass} ${c.third_party_id ? '' : 'ring-1 ring-amber-400'}`}>
                                   <option value="">SELECCIONAR...</option>
                                   <optgroup label="COMERCIALES / COMERCIALIZADORAS">
                                     {comercializadoras.map((v) => <option key={v.id} value={String(v.id)}>{v.name}</option>)}
@@ -738,7 +772,7 @@ export default function PurchaseAllocationPage() {
                                   {bodegas.filter((w) => w.status || String(w.id) === c.pickup_warehouse_id).map((w) => <option key={w.id} value={String(w.id)}>{w.name}</option>)}
                                 </SelectBuscable>
                               </td>
-                              <td className="px-2 py-1.5 min-w-[90px]"><CampoNumero decimales={0} value={c.boxes} onChange={cambiar('boxes')} disabled={c.liquidada} className={`${inputClass} text-right font-semibold`} /></td>
+                              <td className="px-2 py-1.5 min-w-[90px]"><CampoNumero decimales={0} value={c.boxes} onChange={cambiar('boxes')} disabled={c.liquidada} className={`${inputClass} text-right font-semibold ${n(c.boxes) ? '' : 'ring-1 ring-amber-400'}`} /></td>
                               <td className="px-2 py-1.5 min-w-[90px]">
                                 <CampoNumero decimales={2} value={c.official_price} onChange={cambiar('official_price')} disabled={c.liquidada} title="Precio oficial MAG: el vendedor factura a este precio" className={`${inputClass} text-right`} />
                                 {mag && c.official_price !== '' && n(c.official_price) !== n(mag.price) && !c.liquidada && (
