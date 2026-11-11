@@ -273,6 +273,60 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 11/11/2026 — Precio oficial $7,50 en todas las compras de 2026 (solo datos, en producción 21:04 UTC)
+- **Precio oficial MAG 2026:** caja 22XU a $7,50 todo el año (Acuerdo Ministerial 107).
+- **Cambio:** 6 compras de la WK45, ingresadas a mano, no tenían precio oficial; quedaron en $7,50. Ya no queda ninguna compra de 2026 sin precio oficial.
+- **Cómo:** por la pantalla Compra de fruta, con simulación previa y respaldo `siae_production_20261111_2104_antes_precio_oficial.sql`.
+- **Ajuste necesario:** la pantalla exige el contrato para volver a guardar el pedido. La compra CONTRATO de ASOPRODMAR a $9,00 quedó en su contrato 1 ($9,00), por la regla aprobada del mismo precio.
+
+### 11/11/2026 — Compras históricas WK30–38 desde el SEGUIMIENTO (solo datos, en producción 20:50 UTC)
+- **Fuente:** `SEGUIMIENTO DE COMPRAS 2026 RESPALDO.xlsx`, hojas WEEK30 a WEEK39, 2.230 compras.
+- **Cruce:**
+  - Contra `REPORTE DE OPERACIONES 2026` (barcos) y `Reporte_RUC_Comercializadora_Productor_Finca` (nombres completos).
+  - Agentes de datos y QA.
+- **Cargado:** 1.424 compras y 955.765 cajas en los pedidos #36–#44.
+  - Pasó por la pantalla Compra de fruta (`PUT /customer-orders/{id}/purchases`).
+  - Se crearon 158 fincas por `POST /farms` y 3 vendedores con RUC del reporte por `POST /third-parties`: CAMPOVERDE RAMIREZ EMERSON ADALBERTO, EILEEN ROSENDO ARANDA ORDONEZ y RONQUILLO MORALES ISABEL MAGDALENA.
+  - Se respetó el límite de 120 peticiones por minuto.
+  - Respaldo `siae_production_20261111_2050_antes_compras_wk30_38.sql`, más el `dist` y los `.env`.
+- **Barcos:** el bloque "WK nn-PUERTO" va al pedido nn.
+  - Si ese pedido no tiene el barco, va al anterior o al siguiente, porque el barco se queda y se le sigue subiendo fruta.
+  - COOL ELEGANCE "WK37-BOLIVAR" va al COOL ELEGANCE del pedido WK36, en Guayaquil.
+  - La semana de compra es la de la hoja.
+- **Reglas de cada compra:**
+  - Igual que la WK40: cajas = estimado, precio del Excel, oficial MAG $7,50, banda = PACKED SPOT, sin enviar a bodega.
+  - "A / B" = A factura y B es el productor. "(MEDIO DIA)" y "(PROCESO 2PM)" no cuentan.
+  - Contrato: el vigente en la semana con el mismo precio (274 compras).
+- **Pendientes (no se cargaron; lista para Comercial):**
+  - 508 compras a comercializadoras con productor no validado.
+  - 34 compras cuyo "productor" es una comercializadora.
+  - 77 compras con dos contratos del mismo precio.
+  - 27 compras CONTRATO con precio que no es de ningún contrato.
+  - 41 compras de vendedores en duda: FISCHERT, RICHARD GARCIA, ARSENIO ANDRADE, AGRIBAJSA y 9 sin RUC.
+  - 119 compras del pedido WK39 #45: se cargan con la asignación de contratos de la WK39–40, porque el pedido ya tiene compras CONTRATO sin contrato y la pantalla no deja guardarlo así.
+- **Repetible:** el script salta las compras ya cargadas (nota "SEGUIMIENTO 2026-ww-n"), así que se puede volver a correr cuando Comercial responda.
+
+### 11/11/2026 — Carga de los 38 contratos de productores (solo datos, en producción 19:02 UTC)
+- **Fuente:** "REGISTROS DE CONTRATOS DE BANANO - ACTUALIZADO 27.10.2026", hoja REGISTROS DE CONTRATOS. La hoja RESCILIACIÓN no se cargó.
+- **Resultado:** 38 contratos de 23 vendedores.
+  - Pasaron por la pantalla Contratos (`PUT /producer-contracts/{tercero}`) y quedaron en la bitácora.
+  - Script con `CARGA_BD` y simulación previa.
+  - Respaldo `siae_production_20261111_1902_antes_contratos_excel.sql`, más el `dist` y los `.env`.
+- **Reglas:**
+  - Cupo semanal = "cajas en contrato"; vigencia desde la fecha del contrato hasta el 31/12/2026.
+  - N° 1, 2, 3… por vendedor, en el orden del Excel.
+  - Código bananero y finca ("S/N" queda vacío).
+  - Si la observación dice "(ACUERDO)", manda la condición del acuerdo y la nota lo aclara: ASOPROAREIBA 3 y 4, BATALLAS, MASAPANTA y ASOPRORITEROS 1.
+- **Datos del vendedor:**
+  - Régimen de retención y nombre de pago: se dejaron como estaban.
+  - Cajas registradas en el MAG: de la columna del Excel.
+  - En 11 vendedores no cuadran con la suma de contratos, igual que en el Excel. La pantalla avisa "NO COINCIDE CON EL MAG".
+- **No se cargó:** cuenta bancaria, correo ni ruta.
+- **Decisiones del usuario:**
+  - ICAMBAN → 73 ICAMBAN S.A.S. (comercializadora), no 661.
+  - ASOPROAREIBA y SAENZ VELEZ se cargan: en este Excel dicen REGISTRADO.
+- **Pendiente:** asignar a su contrato las compras WK40 marcadas CONTRATO. Falta saber, en el caso de JOSE LUIS SALDANA, a quién se le compra y a quién se le paga.
+
 ### 11/11/2026 — Revisión de seguridad y rendimiento: primeros arreglos (puntos 2, 3, 5, 8 y 9)
 - **Revisión general:**
   - 214 rutas del API: solo el login es público.
