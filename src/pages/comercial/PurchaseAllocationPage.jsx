@@ -783,7 +783,7 @@ export default function PurchaseAllocationPage() {
 
                   {/* Compras del bloque */}
                   {/* 11/11/2026: ~6 compras visibles; se desplaza dentro del recuadro y la barra horizontal queda a la vista */}
-                  <div className="overflow-auto max-h-[31rem] border rounded-lg">
+                  <div className="overflow-auto max-h-[31rem] border rounded-lg scroll-ancho">
                     <table className="w-full text-sm min-w-[2340px]">
                       <thead className="bg-primario text-white sticky top-0 z-30">
                         <tr>

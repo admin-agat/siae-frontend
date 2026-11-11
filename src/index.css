@@ -42,3 +42,28 @@
     width: 100%;
   }
 }
+
+/* 11/11/2026: barras de desplazamiento más anchas y visibles (tabla de compras de Compra de fruta).
+   Chrome/Edge toman el ancho en px; Firefox solo admite "auto" (la normal, no la delgada). */
+/* Solo Firefox: en Chrome/Edge estas propiedades anularían el ancho en px de abajo */
+@supports not selector(::-webkit-scrollbar) {
+  .scroll-ancho {
+    scrollbar-width: auto;
+    scrollbar-color: #9ca3af #f3f4f6;
+  }
+}
+.scroll-ancho::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+.scroll-ancho::-webkit-scrollbar-track {
+  background: #f3f4f6;
+}
+.scroll-ancho::-webkit-scrollbar-thumb {
+  background: #9ca3af;
+  border-radius: 7px;
+  border: 3px solid #f3f4f6;
+}
+.scroll-ancho::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}

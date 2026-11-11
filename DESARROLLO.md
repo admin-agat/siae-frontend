@@ -285,6 +285,7 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
   - La columna "Comerciales" se llena con etiquetas: "SELECCIONAR…" y luego "+ OTRO COMERCIAL", y cada etiqueta tiene su ✕ para quitarla.
   - Botón **"Comerciales"** (solo ADMIN) para agregar, desactivar o reactivar.
   - La tabla de cada bloque muestra **~6 compras** y se desplaza dentro de su recuadro, así la barra horizontal queda a la vista. Los títulos de columna quedan fijos.
+  - Barras de desplazamiento más anchas: clase `scroll-ancho` en `index.css`, de 14 px en Chrome/Edge; en Firefox, la barra normal.
 - Las compras existentes no cambian: sus nombres coinciden con la lista.
 - **Pruebas:** 14/14 OK, en transacción revertida:
   - Varios comerciales, nombre fuera de lista, desactivado ya usado vs. nuevo, agregar y repetido.
