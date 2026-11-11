@@ -53,7 +53,9 @@ export default function VoyageProfitPage() {
       <td className="px-3 py-2 text-right" title={`Despachado $ ${dinero(x.materiales)} − cobrado al productor $ ${dinero(x.materiales_recuperados)}`}>$ {dinero(matNetos(x))}</td>
       <td className="px-3 py-2 text-right" title={`Contenedor $ ${dinero(x.flete_contenedor)} + bajo cubierta $ ${dinero(x.flete_bajo_cubierta)}`}>$ {dinero(fletes(x))}</td>
       <td className="px-3 py-2 text-right" title={x.gastos_detalle ? Object.entries(x.gastos_detalle).map(([k, v]) => `${datos.categories[k] || k}: $ ${dinero(v)}`).join('\n') : ''}>$ {dinero(x.gastos)}</td>
-      <td className="px-3 py-2 text-right">$ {dinero(x.transporte_recuperado)}</td>
+      {/* 11/11/2026: neto = descontado al productor − reconocido al productor */}
+      <td className={`px-3 py-2 text-right ${(x.transporte_recuperado - (x.transporte_reconocido || 0)) < 0 ? 'text-red-600' : ''}`}
+        title={`Descontado al productor $ ${dinero(x.transporte_recuperado)} − reconocido al productor $ ${dinero(x.transporte_reconocido || 0)}`}>$ {dinero(x.transporte_recuperado - (x.transporte_reconocido || 0))}</td>
       <td className={`px-3 py-2 text-right font-bold ${color(x.ganancia)}`}>$ {dinero(x.ganancia)}</td>
       <td className={`px-3 py-2 text-right ${color(x.ganancia)}`}>{pct(x.margen)}</td>
     </>
@@ -120,7 +122,7 @@ export default function VoyageProfitPage() {
                     <th className={`${th} text-right`} title="Despachado a los productores − lo que se les cobra al liquidar">Materiales netos</th>
                     <th className={`${th} text-right`}>Fletes</th>
                     <th className={`${th} text-right`}>Otros gastos</th>
-                    <th className={`${th} text-right`} title="Transporte que se le descuenta al productor cuando él lo asume">+ Transp. recuperado</th>
+                    <th className={`${th} text-right`} title="Transporte descontado al productor menos el que se le reconoce cuando él lo pone">± Transporte</th>
                     <th className={`${th} text-right`}>Ganancia</th>
                     <th className={`${th} text-right`}>Margen</th>
                   </tr>

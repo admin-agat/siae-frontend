@@ -90,6 +90,9 @@ const compraDesdeBackend = (c) => ({
   negotiation_type: c.negotiation_type || 'SPOT',
   payment_scheme: c.payment_scheme || '80_20',
   transport_deduction: Number(c.transport_deduction) ? texto(c.transport_deduction) : '',
+  // 11/11/2026: transporte que se le reconoce al productor ($/caja, se paga por tarja)
+  reconoce_transporte: Number(c.transport_recognized_rate) > 0,
+  transport_recognized_rate: Number(c.transport_recognized_rate) ? texto(Number(c.transport_recognized_rate)) : '',
   notes: texto(c.notes),
   pickup_warehouse_id: texto(c.pickup_warehouse_id),
   contract_id: texto(c.contract_id),
@@ -125,6 +128,7 @@ const compraVacia = (anterior, puertoBloque, precioMag) => ({
   delivery_port_id: anterior ? anterior.delivery_port_id : puertoBloque,
   boxes: '', official_price: precioMag ? texto(precioMag.price) : (anterior?.official_price || ''), real_price: '',
   negotiation_type: 'SPOT', payment_scheme: '80_20', transport_deduction: '', notes: '',
+  reconoce_transporte: false, transport_recognized_rate: '',
   pickup_warehouse_id: anterior?.pickup_warehouse_id || '',
   contract_id: '', contract_part: '0',
   bloqueo: null, liquidada: false,
@@ -240,12 +244,26 @@ export default function PurchaseAllocationPage() {
 
   // 06/11/2026: contratos del vendedor (activos + el que ya tiene la compra) y cajas compradas por contrato
   // en esta semana (el cupo es semanal; pasarse solo avisa)
-  const contratosDe = (tpId, actual) => contratos.filter((k) => String(k.third_party_id) === String(tpId) && (k.status || String(k.id) === String(actual)));
+  // 11/11/2026: solo los vigentes en la semana de compra de la línea (el que ya tiene la compra siempre se ve)
+  const rangoSemana = (c) => {
+    const w = semanasCompra.find((x) => x.week === semanaDeCompra(c)) || { year: pedido?.year, week: pedido?.week };
+    if (!w.year || !w.week) return null;
+    const lunes = lunesSemana(w.year, w.week);
+    const d = new Date(`${lunes}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + 6);
+    return { lunes, domingo: d.toISOString().slice(0, 10) };
+  };
+  const vigenteEn = (k, c) => {
+    const r = rangoSemana(c);
+    return !r || ((!k.start_date || k.start_date <= r.domingo) && (!k.end_date || k.end_date >= r.lunes));
+  };
+  const contratosDe = (c, actual) => contratos.filter((k) => String(k.third_party_id) === String(c.third_party_id)
+    && ((k.status && vigenteEn(k, c)) || String(k.id) === String(actual)));
   const cajasContrato = (contratoId) => todas.filter((x) => x.negotiation_type === 'CONTRATO' && x.contract_id === String(contratoId)).reduce((s, x) => s + n(x.boxes), 0);
   // Al cambiar vendedor o pasar a CONTRATO: si el vendedor tiene un solo contrato, se elige solo
   const conContrato = (c) => {
     if (c.negotiation_type !== 'CONTRATO') return { ...c, contract_id: '', contract_part: '0' };
-    const propios = contratosDe(c.third_party_id).filter((k) => k.status);
+    const propios = contratosDe(c).filter((k) => k.status);
     if (propios.some((k) => String(k.id) === c.contract_id)) return c;
     return { ...c, contract_id: propios.length === 1 ? String(propios[0].id) : '', contract_part: '0' };
   };
@@ -288,7 +306,8 @@ export default function PurchaseAllocationPage() {
         if (c._key !== cKey) return c;
         let nueva = { ...c, [campo]: valor };
         if (campo === 'negotiation_type') nueva.payment_scheme = PAGO_POR_TIPO[valor];
-        if (campo === 'negotiation_type' || campo === 'third_party_id') nueva = conContrato(nueva);
+        // 11/11/2026: también al cambiar la semana de compra (el contrato debe estar vigente en esa semana)
+        if (campo === 'negotiation_type' || campo === 'third_party_id' || campo === 'purchase_week') nueva = conContrato(nueva);
         if (campo === 'contract_id') nueva.contract_part = '0';
         // Al elegir el contrato se propone su precio (si todavía no hay precio real)
         if (campo === 'contract_id' && c.real_price === '') {
@@ -360,8 +379,11 @@ export default function PurchaseAllocationPage() {
         }
         // 10/11/2026: obligatoria en las compras nuevas; las históricas se cargaron sin bodega
         if (!c.id && !c.pickup_warehouse_id) faltan.push(`BLOQUE ${i + 1}, COMPRA ${j + 1}: FALTA LA BODEGA DONDE RETIRA LOS MATERIALES.`);
-        if (c.negotiation_type === 'CONTRATO' && !c.contract_id && contratosDe(c.third_party_id).some((k) => k.status)) {
+        if (c.negotiation_type === 'CONTRATO' && !c.contract_id && contratosDe(c).some((k) => k.status)) {
           faltan.push(`BLOQUE ${i + 1}, COMPRA ${j + 1}: ELIGE QUÉ CONTRATO DEL VENDEDOR ES.`);
+        }
+        if (c.reconoce_transporte && !n(c.transport_recognized_rate)) {
+          faltan.push(`BLOQUE ${i + 1}, COMPRA ${j + 1}: ESCRIBE CUÁNTO SE LE RECONOCE DE TRANSPORTE POR CAJA.`);
         }
       });
     });
@@ -400,6 +422,7 @@ export default function PurchaseAllocationPage() {
             negotiation_type: c.negotiation_type,
             payment_scheme: c.payment_scheme,
             transport_deduction: n(c.transport_deduction),
+            transport_recognized_rate: c.reconoce_transporte ? num(c.transport_recognized_rate) : null,
             notes: c.notes || null,
             pickup_warehouse_id: num(c.pickup_warehouse_id),
             contract_id: c.negotiation_type === 'CONTRATO' ? num(c.contract_id) : null,
@@ -712,7 +735,7 @@ export default function PurchaseAllocationPage() {
                           <th className={`${th} text-right`}>P. oficial</th>
                           <th className={`${th} text-right`}>P. real</th>
                           <th className={th}>Tipo · Pago</th>
-                          <th className={`${th} text-right`}>Transp. $</th>
+                          <th className={`${th} text-right`} title="Arriba: transporte que se le descuenta (monto). Abajo: transporte que se le reconoce por caja, según tarja">Transp. $</th>
                           <th className={`${th} text-right`}>Total real</th>
                           <th className={`${th} text-right`} title="Cajas × (precio oficial − precio real): la entrega el vendedor">Nota créd. $</th>
                           <th className={th}>Notas</th>
@@ -818,9 +841,9 @@ export default function PurchaseAllocationPage() {
                                 </SelectBuscable>
                                 {/* 06/11/2026: qué contrato del vendedor es y, si se liquida partido, qué parte (1, 1.1, 1.2) */}
                                 {c.negotiation_type === 'CONTRATO' && c.third_party_id && (() => {
-                                  const propios = contratosDe(c.third_party_id, c.contract_id);
+                                  const propios = contratosDe(c, c.contract_id);
                                   if (propios.length === 0) {
-                                    return <span className="block text-[10px] font-semibold text-amber-700 mt-1" title="Liquidaciones registra los contratos en Contratos y retención">SIN CONTRATO REGISTRADO</span>;
+                                    return <span className="block text-[10px] font-semibold text-amber-700 mt-1" title="Liquidaciones registra los contratos en Contratos y retención">SIN CONTRATO VIGENTE</span>;
                                   }
                                   const k = propios.find((x) => String(x.id) === c.contract_id);
                                   const usadas = k ? cajasContrato(k.id) : 0;
@@ -844,11 +867,29 @@ export default function PurchaseAllocationPage() {
                                           {usadas.toLocaleString('es-EC')} / {Number(k.weekly_boxes).toLocaleString('es-EC')} CAJAS{usadas > k.weekly_boxes ? ' · EXCEDE CUPO' : ''}
                                         </span>
                                       )}
+                                      {k && !vigenteEn(k, c) && <span className="block text-[10px] font-semibold text-red-600" title="La vigencia del contrato no toca la semana de compra">CONTRATO NO VIGENTE EN WK{semanaDeCompra(c)}</span>}
                                     </>
                                   );
                                 })()}
                               </td>
-                              <td className="px-2 py-1.5 min-w-[90px]"><CampoNumero decimales={2} value={c.transport_deduction} onChange={cambiar('transport_deduction')} disabled={c.liquidada} placeholder="0" title="Transporte de contenedor negociado: se descuenta al liquidar" className={`${inputClass} text-right`} /></td>
+                              <td className="px-2 py-1.5 min-w-[110px] align-top">
+                                <CampoNumero decimales={2} value={c.transport_deduction} onChange={cambiar('transport_deduction')} disabled={c.liquidada} placeholder="0" title="Transporte que pusimos nosotros: monto total que se le DESCUENTA al liquidar" aria-label="Transporte a descontar" className={`${inputClass} text-right`} />
+                                {/* 11/11/2026: cuando el productor pone el transporte, se le reconoce $/caja (se paga por las cajas que llegan según tarja) */}
+                                <label className="flex items-center gap-1 mt-1 text-[10px] text-gray-600 whitespace-nowrap" title="El productor puso el transporte: se le paga $/caja por las cajas que lleguen según tarja">
+                                  <input type="checkbox" checked={c.reconoce_transporte} disabled={c.liquidada}
+                                    onChange={(e) => { cambiar('reconoce_transporte')({ target: { value: e.target.checked } }); if (!e.target.checked) cambiar('transport_recognized_rate')({ target: { value: '' } }); }} />
+                                  RECONOCER $/CAJA
+                                </label>
+                                {c.reconoce_transporte && (
+                                  <>
+                                    <CampoNumero decimales={4} max={5} value={c.transport_recognized_rate} onChange={cambiar('transport_recognized_rate')} disabled={c.liquidada} placeholder="0,30" aria-label="Transporte reconocido por caja"
+                                      className={`${inputClass} text-right mt-0.5 ${n(c.transport_recognized_rate) ? '' : 'ring-1 ring-amber-400'}`} />
+                                    {n(c.transport_recognized_rate) > 0 && n(c.boxes) > 0 && (
+                                      <span className="block text-[10px] text-green-700 text-right" title="Estimado con las cajas compradas; se paga por las que lleguen según tarja">≈ + $ {formatoDinero(n(c.boxes) * n(c.transport_recognized_rate))}</span>
+                                    )}
+                                  </>
+                                )}
+                              </td>
                               <td className="px-2 py-1.5 text-right whitespace-nowrap">{c.real_price === '' ? <span className="text-xs text-amber-600 font-semibold">SIN PRECIO</span> : `$ ${formatoDinero(n(c.boxes) * n(c.real_price))}`}</td>
                               <td className="px-2 py-1.5 text-right whitespace-nowrap">
                                 {nc === null ? <span className="text-gray-400">—</span>

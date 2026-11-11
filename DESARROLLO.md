@@ -273,6 +273,36 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 11/11/2026 — Contratos con vigencia, campos del Excel de contratos y transporte reconocido
+- **Migración** `2026_11_11_000001_contratos_vigencia_transporte_reconocido`:
+  - `contracts.banana_code` (código único bananero) y `contracts.farm_name`.
+  - `third_parties.magap_registered_boxes`.
+  - `producer_quota_lines.transport_recognized_rate` ($/caja).
+  - `settlement_lines.transport_recognized` y `settlements.transport_recognized_amount`.
+- **Contratos y retención:**
+  - Un contrato nuevo vale **desde hoy hasta el 31/12 de su año**. Si no se manda "hasta", el backend pone el 31/12.
+  - Etiquetas VENCIDO / VENCE dd/mm (30 días).
+  - Campos código único bananero, finca y **cajas registradas en el MAG** por vendedor, con aviso si no coinciden con el cupo de los contratos activos.
+- **Compra de fruta:**
+  - Solo se ofrecen los contratos **vigentes en la semana de compra** (también al cambiar la semana), y el backend lo valida: "EL CONTRATO N DE X NO ESTÁ VIGENTE EN LA WKnn".
+  - Las compras ya hechas se respetan aunque el contrato venza después.
+  - "Elige qué contrato" solo se exige si el vendedor tiene alguno vigente.
+- **Transporte reconocido:** casilla "RECONOCER $/CAJA" en la compra, para cuando el productor puso el transporte (ej. 0,30).
+  - Se paga **solo por las cajas que llegaron según tarja**: embarcadas + caídas.
+  - Al liquidar se suma: `Neto = fruta − materiales − transporte descontado + transporte reconocido − anticipos`.
+  - En la ganancia por viaje es gasto: la columna "± Transporte" = descontado − reconocido.
+  - El transporte descontado (monto total) sigue igual; pueden darse los dos casos.
+- **Decidido con el usuario:** cuando la observación del contrato dice "(ACUERDO)", vale el acuerdo para liquidar (lo del contrato va en notas).
+- **Pruebas:** 24/24 OK en la base local, en transacción revertida. Cubren:
+  - Vigencia y fin por defecto.
+  - Vencido → 422 y compra ya hecha respetada.
+  - Transporte reconocido por tarja, neto y pagos de la liquidación.
+  - Bloqueo en compra liquidada y ganancia por viaje.
+- **Pendiente:**
+  - Cargar los 38 contratos del Excel (27/10).
+  - Asignar las compras CONTRATO de la WK40.
+  - Diseño de "factura y pago a otra persona" con carta de autorización (arquitecto).
+
 ### 11/11/2026 — Equipo de agentes de Claude Code y base de pruebas `siae_test`
 - **`CLAUDE.md`** (raíz del frontend): reglas comunes del proyecto (límites, datos sensibles, código, UI) y flujo del equipo con los puntos de aprobación de Peter.
 - **`.claude/agents/`**, todos con esfuerzo medio. Solo se usan cuando Peter lo pide.

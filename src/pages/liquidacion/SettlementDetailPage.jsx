@@ -286,6 +286,7 @@ export default function SettlementDetailPage() {
             <div className="flex justify-between"><span>Fruta ({formatoCajas(liq.boxes_paid)} cajas)</span><span className="font-semibold">$ {formatoDinero(liq.fruit_amount)}</span></div>
             <div className="flex justify-between text-red-600 print:text-black"><span>(−) Materiales</span><span>$ {formatoDinero(liq.materials_amount)}</span></div>
             {Number(liq.transport_amount) > 0 && <div className="flex justify-between text-red-600 print:text-black"><span>(−) Transporte de contenedor</span><span>$ {formatoDinero(liq.transport_amount)}</span></div>}
+            {Number(liq.transport_recognized_amount) > 0 && <div className="flex justify-between text-green-700 print:text-black"><span>(+) Transporte reconocido</span><span>$ {formatoDinero(liq.transport_recognized_amount)}</span></div>}
             <div className="flex justify-between text-red-600 print:text-black"><span>(−) Anticipos / préstamos</span><span>$ {formatoDinero(liq.advances_amount)}</span></div>
             {liq.advances.map((a) => (
               <div key={a.id} className="flex justify-between text-xs print:text-[9px] text-gray-500 pl-4">

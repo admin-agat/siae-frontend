@@ -76,8 +76,8 @@ export default function SettlementFormPage() {
   if (!datos) return <div className="p-6 text-red-600 text-sm">{error}</div>;
 
   const totalAnticipos = r2(Object.values(aplicar).reduce((s, v) => s + (Number(v) || 0), 0));
-  // Descuentos fijos: materiales + transporte de contenedor negociado al comprar
-  const fijos = r2(datos.materials_amount + Number(datos.transport_amount || 0));
+  // Descuentos fijos: materiales + transporte de contenedor negociado − transporte reconocido (11/11/2026)
+  const fijos = r2(datos.materials_amount + Number(datos.transport_amount || 0) - Number(datos.transport_recognized_amount || 0));
   const neto = r2(datos.fruit_amount - fijos - totalAnticipos);
   const pagos = calcularPagos(datos.lines, fijos, totalAnticipos);
   const anticipoExcedido = datos.advances.some((a) => Number(aplicar[a.id] || 0) > a.saldo);
@@ -169,7 +169,7 @@ export default function SettlementFormPage() {
           <tbody>
             {datos.lines.map((l, i) => (
               <tr key={l.producer_quota_line_id} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                <td className="px-3 py-2 font-medium">{l.brand} <span className="text-gray-500 font-normal">({l.customer})</span>{(l.producer || l.farm_name) && <span className="block text-xs text-gray-500 font-normal">{[l.producer, l.farm_name].filter(Boolean).join(' · ')}</span>}{l.transport_deduction > 0 && <span className="block text-xs text-red-600 font-normal">Transporte − $ {formatoDinero(l.transport_deduction)}</span>}</td>
+                <td className="px-3 py-2 font-medium">{l.brand} <span className="text-gray-500 font-normal">({l.customer})</span>{(l.producer || l.farm_name) && <span className="block text-xs text-gray-500 font-normal">{[l.producer, l.farm_name].filter(Boolean).join(' · ')}</span>}{l.transport_deduction > 0 && <span className="block text-xs text-red-600 font-normal">Transporte − $ {formatoDinero(l.transport_deduction)}</span>}{l.transport_recognized > 0 && <span className="block text-xs text-green-700 font-normal">Transporte reconocido + $ {formatoDinero(l.transport_recognized)} ({formatoCajas(l.boxes_paid)} × $ {l.transport_recognized_rate})</span>}</td>
                 <td className="px-3 py-2 text-xs">{l.negotiation_type} · {ESQUEMA[l.payment_scheme]}</td>
                 <td className="px-3 py-2 text-right">{formatoCajas(l.boxes_purchased)}</td>
                 <td className="px-3 py-2 text-right">{formatoCajas(l.boxes_shipped)}</td>
@@ -288,6 +288,7 @@ export default function SettlementFormPage() {
             <div className="flex justify-between"><span>Fruta ({formatoCajas(datos.boxes_paid)} cajas)</span><span className="font-semibold">$ {formatoDinero(datos.fruit_amount)}</span></div>
             <div className="flex justify-between text-red-600"><span>(−) Materiales</span><span>$ {formatoDinero(datos.materials_amount)}</span></div>
             {Number(datos.transport_amount) > 0 && <div className="flex justify-between text-red-600"><span>(−) Transporte de contenedor</span><span>$ {formatoDinero(datos.transport_amount)}</span></div>}
+            {Number(datos.transport_recognized_amount) > 0 && <div className="flex justify-between text-green-700"><span>(+) Transporte reconocido</span><span>$ {formatoDinero(datos.transport_recognized_amount)}</span></div>}
             <div className="flex justify-between text-red-600"><span>(−) Anticipos / préstamos</span><span>$ {formatoDinero(totalAnticipos)}</span></div>
             <div className={`flex justify-between border-t pt-2 text-base font-bold ${neto < 0 ? 'text-red-600' : 'text-green-700'}`}>
               <span>NETO A PAGAR</span><span>$ {formatoDinero(neto)}</span>

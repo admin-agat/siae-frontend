@@ -12,6 +12,7 @@ import ModalShell from '../../components/common/ModalShell';
 import ToastFlotante from '../../components/common/ToastFlotante';
 import CampoNumero from '../../components/common/CampoNumero';
 import { dinero } from '../../utils/formato';
+import { hoyISO } from '../../utils/fecha';
 import { REGIMENES } from '../../utils/retencion';
 
 const label = 'block text-sm font-semibold text-gray-700 mb-1.5';
@@ -29,19 +30,36 @@ const COBROS = [
 const CONDICIONES = { CON_DESCUENTO: 'CON DESCUENTO', SIN_DESCUENTO: 'SIN DESCUENTO' };
 const colorRegimen = { NORMAL: 'bg-gray-100 text-gray-700', BPA: 'bg-blue-100 text-blue-700', NO_RETENER: 'bg-amber-100 text-amber-800' };
 
+// 11/11/2026: un contrato nuevo vale desde hoy hasta el 31/12 de este año (se puede cambiar)
 const contratoVacio = (numero) => ({
     id: null, number: String(numero), weekly_boxes: '', price: '', discount_condition: '',
     charge_transfer: true, charge_evaluators: true, charge_materials: true, charge_transport: true,
-    start_date: '', end_date: '', magap_contract_number: '', notes: '', status: true, cajas_semana: 0,
+    start_date: hoyISO(), end_date: `${new Date().getFullYear()}-12-31`, magap_contract_number: '', notes: '', status: true, cajas_semana: 0,
+    banana_code: '', farm_name: '',
 });
 
+// 11/11/2026: vigencia del contrato hoy: VENCIDO, VENCE PRONTO (30 días) o vigente
+const estadoVigencia = (c) => {
+    if (!c.end_date) return null;
+    const hoy = hoyISO();
+    if (c.end_date < hoy) return { texto: 'VENCIDO', clase: 'text-red-600' };
+    const dias = (new Date(`${c.end_date}T00:00:00`) - new Date(`${hoy}T00:00:00`)) / 86400000;
+    return dias <= 30 ? { texto: `VENCE ${c.end_date.split('-').reverse().join('/')}`, clase: 'text-amber-600' } : null;
+};
+
 function ProductorModal({ tercero, semana, onClose, onGuardado }) {
-    const [form, setForm] = useState({ retention_regime: tercero.retention_regime || 'NORMAL', payment_short_name: tercero.payment_short_name || '' });
+    const [form, setForm] = useState({
+        retention_regime: tercero.retention_regime || 'NORMAL', payment_short_name: tercero.payment_short_name || '',
+        magap_registered_boxes: tercero.magap_registered_boxes == null ? '' : String(tercero.magap_registered_boxes),
+    });
     const [contratos, setContratos] = useState(tercero.contracts.map((c) => ({
         ...c, number: String(c.number), weekly_boxes: String(c.weekly_boxes ?? ''), price: c.price === null ? '' : String(c.price),
         discount_condition: c.discount_condition || '', start_date: c.start_date || '', end_date: c.end_date || '',
         magap_contract_number: c.magap_contract_number || '', notes: c.notes || '',
+        banana_code: c.banana_code || '', farm_name: c.farm_name || '',
     })));
+    // 11/11/2026: cupo semanal de los contratos activos frente a lo registrado en el MAG
+    const cupoContratos = contratos.filter((c) => c.status).reduce((s, c) => s + (Number(c.weekly_boxes) || 0), 0);
     const [guardando, setGuardando] = useState(false);
     const [error, setError] = useState('');
     const cambiar = (i, campo, valor) => setContratos((cs) => cs.map((c, j) => (j === i ? { ...c, [campo]: valor } : c)));
@@ -57,12 +75,14 @@ function ProductorModal({ tercero, semana, onClose, onGuardado }) {
             await guardarContratosProductor(tercero.id, {
                 retention_regime: form.retention_regime,
                 payment_short_name: form.payment_short_name.trim() || null,
+                magap_registered_boxes: form.magap_registered_boxes === '' ? null : Number(form.magap_registered_boxes),
                 contracts: contratos.map((c) => ({
                     id: c.id, number: Number(c.number), weekly_boxes: Number(c.weekly_boxes), price: Number(c.price),
                     discount_condition: c.discount_condition || null,
                     charge_transfer: c.charge_transfer, charge_evaluators: c.charge_evaluators, charge_materials: c.charge_materials, charge_transport: c.charge_transport,
                     start_date: c.start_date || null, end_date: c.end_date || null,
                     magap_contract_number: c.magap_contract_number.trim() || null, notes: c.notes.trim() || null, status: c.status,
+                    banana_code: c.banana_code.trim() || null, farm_name: c.farm_name.trim() || null,
                 })),
             });
             onGuardado();
@@ -91,6 +111,13 @@ function ProductorModal({ tercero, semana, onClose, onGuardado }) {
                         placeholder="EJ. JEHOVA JIREH" className={input} />
                     <p className="text-xs text-gray-400 mt-1">Opcional. Sale en la transferencia: "NOMBRE LIQ 4761 GLOBAL WK43 ROSEHIP".</p>
                 </div>
+                <div>
+                    <label className={label} htmlFor="prod-mag">Cajas registradas en el MAG (por semana)</label>
+                    <CampoNumero id="prod-mag" value={form.magap_registered_boxes} onChange={(e) => setForm((f) => ({ ...f, magap_registered_boxes: e.target.value }))} decimales={0} className={input} />
+                    <p className={`text-xs mt-1 ${form.magap_registered_boxes !== '' && Number(form.magap_registered_boxes) !== cupoContratos ? 'text-amber-600 font-semibold' : 'text-gray-400'}`}>
+                        Cupo de los contratos activos: {dinero(cupoContratos, 0)} cajas{form.magap_registered_boxes !== '' && Number(form.magap_registered_boxes) !== cupoContratos ? ' · NO COINCIDE CON EL MAG' : ''}
+                    </p>
+                </div>
             </div>
 
             <div className="space-y-3">
@@ -107,6 +134,7 @@ function ProductorModal({ tercero, semana, onClose, onGuardado }) {
                         <div className="flex flex-wrap items-center justify-between gap-2">
                             <p className="font-semibold text-gray-800">
                                 CONTRATO {c.number || '?'} {!c.status && <span className="ml-2 text-xs font-semibold text-gray-500">DESACTIVADO</span>}
+                                {c.status && estadoVigencia(c) && <span className={`ml-2 text-xs font-semibold ${estadoVigencia(c).clase}`}>{estadoVigencia(c).texto}</span>}
                             </p>
                             <div className="flex items-center gap-3">
                                 {c.id && (
@@ -162,6 +190,14 @@ function ProductorModal({ tercero, semana, onClose, onGuardado }) {
                             <div>
                                 <label className={label} htmlFor={`c${i}-hasta`}>Hasta</label>
                                 <input id={`c${i}-hasta`} type="date" value={c.end_date} onChange={(e) => cambiar(i, 'end_date', e.target.value)} className={input} />
+                            </div>
+                            <div>
+                                <label className={label} htmlFor={`c${i}-codigo`}>Código único bananero</label>
+                                <input id={`c${i}-codigo`} value={c.banana_code} onChange={(e) => cambiar(i, 'banana_code', e.target.value.toUpperCase())} maxLength={60} placeholder="EJ. C0157" className={input} />
+                            </div>
+                            <div>
+                                <label className={label} htmlFor={`c${i}-finca`}>Finca</label>
+                                <input id={`c${i}-finca`} value={c.farm_name} onChange={(e) => cambiar(i, 'farm_name', e.target.value.toUpperCase())} maxLength={120} placeholder="S/N" className={input} />
                             </div>
                             <div>
                                 <label className={label} htmlFor={`c${i}-magap`}>N° contrato MAGAP</label>
@@ -244,6 +280,7 @@ export default function ProducerContractsPage() {
                                     <p key={c.id} className="text-xs whitespace-nowrap">
                                         <strong>{c.number}</strong> · $ {dinero(c.price)} · {dinero(c.weekly_boxes, 0)} cajas/sem
                                         {Number(c.cajas_semana) > Number(c.weekly_boxes) && <span className="ml-1 font-semibold text-red-600">EXCEDE</span>}
+                                        {estadoVigencia(c) && <span className={`ml-1 font-semibold ${estadoVigencia(c).clase}`}>{estadoVigencia(c).texto}</span>}
                                     </p>
                                 ))}
                             </div>
