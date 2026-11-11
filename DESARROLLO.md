@@ -273,6 +273,25 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 11/11/2026 — Revisión de seguridad y rendimiento: primeros arreglos (puntos 2, 3, 5, 8 y 9)
+- **Revisión general:**
+  - 214 rutas del API: solo el login es público.
+  - 0 vulnerabilidades en npm y composer.
+  - Pantallas pesadas en 25 a 95 ms.
+  - Cuentas bancarias cifradas; CORS y debug bien configurados.
+- **2. Insumo sin costo:** al crearlo, el costo vacío pasa a 0. Al editarlo, si el costo viene vacío se conserva el que tenía. Antes daba error 500, 3 veces en el log del 10/11.
+- **3. LOPDP:** Bodega, Jefe de bodega, Coordinador de inventario y Departamentos reciben la lista de terceros **sin la cédula/RUC de productores y comercializadoras**. Los proveedores se ven igual (órdenes de compra), y con la pantalla Terceros se ve todo.
+- **5.** Las respuestas de **error** del API (401, 403, 404, 422, 500) también llevan nosniff, DENY, no-referrer y no-store. Están en `bootstrap/app.php`.
+- **8.** Índice `producer_quotas (year, week_number)`, migración `2026_11_11_000003`.
+- **9.** El log diario guarda 30 días por defecto. Se activa en el servidor con `LOG_STACK=daily` en el `.env`; ese paso lo hace Peter.
+- **Pruebas:** 10/10 OK, más 14/14 de comerciales y 24/24 de contratos, en transacción revertida.
+- **Pendiente:**
+  - 1. Respaldos cifrados a Backblaze B2 (claves de Peter).
+  - 4. Cabeceras de nginx: HSTS, iframes, ocultar versión (requiere sudo).
+  - 6. `schema:dump`.
+  - 7. Pasar las pruebas a `tests/`.
+  - 10. Monitor de caída.
+
 ### 11/11/2026 — Comerciales de la compra (lista de ADMIN, uno o varios) y tabla de compras de 6 filas
 - **Pedido del usuario:** cada compra puede ser de uno o varios comerciales (MARIA ELENA, ROMAN KOROTKOV, JORGE ZERNA, HEYDI MENDOZA). Ingresan Heydi (asistente) o María Elena (jefa comercial). La lista la maneja solo ADMIN.
 - **Migración** `2026_11_11_000002_comerciales_de_compra`: tabla `purchase_executives` (nombre único, `status`), con los 4 comerciales iniciales. `producer_quota_lines.executive` pasa a 255 caracteres.
