@@ -22,12 +22,16 @@
 // compras nuevas; las de antes sin finca se siguen guardando y muestran lo que se escribió.
 // 10/11/2026: cada compra guardada se ENVÍA A BODEGA (botón por línea o "Enviar bloque"); solo las enviadas
 // salen en Inventario → Por despachar. Las ya enviadas no se repiten; "Quitar envío" mientras no retire nada.
+// 11/11/2026: los COMERCIALES de cada compra (uno o varios) se eligen de una lista que maneja ADMIN (botón
+// "Comerciales"); la tabla de cada bloque muestra ~6 compras y se desplaza dentro de su recuadro.
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, Save, X, Lock, ChevronDown, ChevronRight, AlertTriangle, Truck, Undo2 } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Save, X, Lock, ChevronDown, ChevronRight, AlertTriangle, Truck, Undo2, Users, Ban, RotateCcw } from 'lucide-react';
 import { getOrderPurchases, saveOrderPurchases, createPurchaseFarm, sendPurchasesToWarehouse, unsendPurchase } from '../../api/customerOrders';
 import { getThirdParties } from '../../api/thirdParties';
 import { getPorts } from '../../api/ports';
+import { getComerciales, crearComercial, desactivarComercial, reactivarComercial } from '../../api/purchaseExecutives';
+import { useAuth } from '../../context/AuthContext';
 import DialogoConfirmacion from '../../components/common/DialogoConfirmacion';
 import ToastFlotante from '../../components/common/ToastFlotante';
 import SelectBuscable from '../../components/common/SelectBuscable';
@@ -135,6 +139,58 @@ const compraVacia = (anterior, puertoBloque, precioMag) => ({
   despachada: false, enviada: null, enviada_por: '', cambio_envio: null,
 });
 
+// 11/11/2026: "MARIA ELENA / JORGE ZERNA" ↔ ['MARIA ELENA', 'JORGE ZERNA']
+const SEPARADOR_COMERCIALES = ' / ';
+const listaComerciales = (texto) => (texto || '').split('/').map((x) => x.trim()).filter(Boolean);
+
+// 11/11/2026: lista de comerciales que compran (solo ADMIN): agregar, desactivar y reactivar
+function ComercialesModal({ onClose, onCambio }) {
+  const [lista, setLista] = useState([]);
+  const [nombre, setNombre] = useState('');
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState('');
+  const avisar = (datos) => { setLista(datos); onCambio(datos.filter((x) => x.status).map((x) => x.name)); };
+  const pedir = () => getComerciales().then(avisar).catch(() => setError('NO SE PUDO CARGAR LA LISTA.'));
+  useEffect(() => { pedir(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const mensaje = (err, texto) => {
+    const errs = err.response?.data?.errors;
+    return errs ? Object.values(errs).flat().join(' ') : (err.response?.data?.message || texto);
+  };
+  const agregar = async (e) => {
+    e.preventDefault();
+    if (!nombre.trim()) return setError('ESCRIBE EL NOMBRE DEL COMERCIAL.');
+    setGuardando(true); setError('');
+    try { await crearComercial(nombre.trim()); setNombre(''); await pedir(); } catch (err) { setError(mensaje(err, 'NO SE PUDO AGREGAR.')); } finally { setGuardando(false); }
+  };
+  const cambiarEstado = async (x) => {
+    setError('');
+    try { await (x.status ? desactivarComercial(x.id) : reactivarComercial(x.id)); await pedir(); } catch (err) { setError(mensaje(err, 'NO SE PUDO CAMBIAR.')); }
+  };
+  return (
+    <ModalShell title="Comerciales que compran la fruta" onClose={onClose} onSubmit={agregar} guardando={guardando} error={error} size="sm">
+      <div className="space-y-3">
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-1.5" htmlFor="nuevo-comercial">Agregar comercial</label>
+          <input id="nuevo-comercial" value={nombre} onChange={(e) => setNombre(e.target.value.toUpperCase())} maxLength={60} placeholder="EJ. MARIA ELENA"
+            className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-primario" />
+          <p className="text-xs text-gray-400 mt-1">Escribe el nombre y pulsa Guardar. Desactivar no cambia las compras que ya lo tienen.</p>
+        </div>
+        <ul className="divide-y border rounded-lg">
+          {lista.map((x) => (
+            <li key={x.id} className={`flex items-center justify-between px-3 py-2 text-sm ${x.status ? '' : 'bg-gray-50 text-gray-400'}`}>
+              <span className="font-medium">{x.name}{!x.status && ' · DESACTIVADO'}</span>
+              <button type="button" onClick={() => cambiarEstado(x)} title={x.status ? 'Desactivar' : 'Reactivar'} aria-label={x.status ? `Desactivar ${x.name}` : `Reactivar ${x.name}`}
+                className={`p-1.5 rounded-lg ${x.status ? 'hover:bg-red-50 text-red-600' : 'hover:bg-green-50 text-green-700'}`}>
+                {x.status ? <Ban size={16} /> : <RotateCcw size={16} />}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </ModalShell>
+  );
+}
+
 export default function PurchaseAllocationPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -144,7 +200,9 @@ export default function PurchaseAllocationPage() {
   const [clientes, setClientes] = useState([]);
   const [barcos, setBarcos] = useState([]);
   const [bloques, setBloques] = useState([]);
-  const [ejecutivos, setEjecutivos] = useState([]);
+  const [ejecutivos, setEjecutivos] = useState([]); // 11/11/2026: comerciales activos de la lista de ADMIN
+  const [verComerciales, setVerComerciales] = useState(false);
+  const esAdmin = useAuth()?.user?.role === 'ADMIN';
   const [inicial, setInicial] = useState(null);
   const [abiertos, setAbiertos] = useState({}); // { _key: true }
   const [version, setVersion] = useState(null); // huella de lo guardado (control de cambios simultáneos)
@@ -529,7 +587,7 @@ export default function PurchaseAllocationPage() {
   return (
     <div className="p-6">
       <ToastFlotante toast={toast} onCerrar={() => setToast(null)} />
-      <datalist id="ejecutivos">{ejecutivos.map((e) => <option key={e} value={e} />)}</datalist>
+      {verComerciales && <ComercialesModal onClose={() => setVerComerciales(false)} onCambio={setEjecutivos} />}
 
       {/* Encabezado */}
       <div className="flex items-center gap-3 mb-4">
@@ -540,6 +598,12 @@ export default function PurchaseAllocationPage() {
           <h1 className="text-2xl font-bold text-gray-800">Compra de fruta — Semana {pedido.week} / {pedido.year}</h1>
           <p className="text-sm text-gray-500">Bloques por barco y marca con su meta; dentro, las compras a comerciales y productores</p>
         </div>
+        {esAdmin && (
+          <button type="button" onClick={() => setVerComerciales(true)} title="Lista de comerciales que compran la fruta (solo ADMIN)"
+            className="ml-auto flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold text-primario border border-primario/30 hover:bg-primario-claro">
+            <Users size={16} /> Comerciales
+          </button>
+        )}
       </div>
 
       {/* Avance */}
@@ -718,16 +782,17 @@ export default function PurchaseAllocationPage() {
                   </div>
 
                   {/* Compras del bloque */}
-                  <div className="overflow-x-auto border rounded-lg">
+                  {/* 11/11/2026: ~6 compras visibles; se desplaza dentro del recuadro y la barra horizontal queda a la vista */}
+                  <div className="overflow-auto max-h-[31rem] border rounded-lg">
                     <table className="w-full text-sm min-w-[2340px]">
-                      <thead className="bg-primario text-white">
+                      <thead className="bg-primario text-white sticky top-0 z-30">
                         <tr>
                           <th className={`${th} sticky left-0 z-20 bg-primario w-9 min-w-[36px]`}>#</th>
                           <th className={`${th} sticky left-9 z-20 bg-primario`}>Se le compra a *</th>
                           <th className={th}>Productor real</th>
                           <th className={th}>Finca</th>
                           <th className={th}>MAG</th>
-                          <th className={th}>Ejecutivo</th>
+                          <th className={th} title="Uno o varios comerciales que hicieron la compra">Comerciales</th>
                           <th className={th} title="Semana de compra: lo que llega al puerto hasta el domingo. Si la nave se queda a la semana siguiente, elige esa semana: se liquida y cuenta en el contrato ahí">Día corte · Semana</th>
                           <th className={th}>Entrega en</th>
                           <th className={th}>Retira materiales en *</th>
@@ -789,7 +854,35 @@ export default function PurchaseAllocationPage() {
                                 {/* El código MAG sale de la finca: no se escribe */}
                                 <input value={c.mag_code} readOnly tabIndex={-1} title="Sale de la finca elegida (se corrige en Configuración → Fincas)" className={`${inputClass} bg-gray-200 text-gray-600 cursor-not-allowed`} />
                               </td>
-                              <td className="px-2 py-1.5 min-w-[130px]"><input list="ejecutivos" value={c.executive} maxLength={60} onChange={mayus('executive')} disabled={c.liquidada} className={inputClass} /></td>
+                              <td className="px-2 py-1.5 min-w-[170px]">
+                                {/* 11/11/2026: uno o varios comerciales de la lista (los que ya tenía la compra se respetan) */}
+                                {(() => {
+                                  const elegidos = listaComerciales(c.executive);
+                                  const poner = (lista) => cambiarCompra(b._key, c._key, 'executive', lista.join(SEPARADOR_COMERCIALES));
+                                  const libres = ejecutivos.filter((e) => !elegidos.includes(e));
+                                  return (
+                                    <>
+                                      {elegidos.length > 0 && (
+                                        <div className="flex flex-wrap gap-1 mb-1">
+                                          {elegidos.map((e) => (
+                                            <span key={e} className={`inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap ${ejecutivos.includes(e) ? 'bg-primario-claro text-primario' : 'bg-gray-200 text-gray-600'}`}
+                                              title={ejecutivos.includes(e) ? e : `${e} (no está en la lista activa)`}>
+                                              {e}
+                                              {!c.liquidada && <button type="button" onClick={() => poner(elegidos.filter((x) => x !== e))} aria-label={`Quitar ${e}`} className="hover:text-red-600"><X size={10} /></button>}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      )}
+                                      {!c.liquidada && libres.length > 0 && (
+                                        <select value="" onChange={(ev) => ev.target.value && poner([...elegidos, ev.target.value])} aria-label="Agregar comercial" className={`${inputClass} text-xs`}>
+                                          <option value="">{elegidos.length ? '+ OTRO COMERCIAL' : 'SELECCIONAR...'}</option>
+                                          {libres.map((e) => <option key={e} value={e}>{e}</option>)}
+                                        </select>
+                                      )}
+                                    </>
+                                  );
+                                })()}
+                              </td>
                               <td className="px-2 py-1.5">
                                 <input type="date" value={c.cut_date} onChange={cambiar('cut_date')} disabled={c.liquidada} className={inputClass} />
                                 {semanasCompra.length > 1 && (

@@ -273,6 +273,24 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 11/11/2026 — Comerciales de la compra (lista de ADMIN, uno o varios) y tabla de compras de 6 filas
+- **Pedido del usuario:** cada compra puede ser de uno o varios comerciales (MARIA ELENA, ROMAN KOROTKOV, JORGE ZERNA, HEYDI MENDOZA). Ingresan Heydi (asistente) o María Elena (jefa comercial). La lista la maneja solo ADMIN.
+- **Migración** `2026_11_11_000002_comerciales_de_compra`: tabla `purchase_executives` (nombre único, `status`), con los 4 comerciales iniciales. `producer_quota_lines.executive` pasa a 255 caracteres.
+- **Backend:**
+  - `PurchaseExecutiveController`: rutas `purchase-executives` (GET, POST, PATCH deactivate/reactivate), **solo ADMIN** y con bitácora.
+  - La compra guarda los comerciales como "MARIA ELENA / JORGE ZERNA", en mayúsculas y sin repetir.
+  - Valida que cada nombre esté **activo en la lista**; los que la compra ya tenía se respetan aunque se desactiven.
+  - `executives` del GET = comerciales activos.
+- **Compra de fruta:**
+  - La columna "Comerciales" se llena con etiquetas: "SELECCIONAR…" y luego "+ OTRO COMERCIAL", y cada etiqueta tiene su ✕ para quitarla.
+  - Botón **"Comerciales"** (solo ADMIN) para agregar, desactivar o reactivar.
+  - La tabla de cada bloque muestra **~6 compras** y se desplaza dentro de su recuadro, así la barra horizontal queda a la vista. Los títulos de columna quedan fijos.
+- Las compras existentes no cambian: sus nombres coinciden con la lista.
+- **Pruebas:** 14/14 OK, en transacción revertida:
+  - Varios comerciales, nombre fuera de lista, desactivado ya usado vs. nuevo, agregar y repetido.
+  - Bitácora y 403 para no ADMIN.
+  - Las 24 de contratos y transporte siguen OK.
+
 ### 11/11/2026 — Contratos con vigencia, campos del Excel de contratos y transporte reconocido
 - **Migración** `2026_11_11_000001_contratos_vigencia_transporte_reconocido`:
   - `contracts.banana_code` (código único bananero) y `contracts.farm_name`.
