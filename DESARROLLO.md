@@ -273,6 +273,24 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 11/11/2026 — Reporte RUC/Comercializadora/Productor/Finca de Comercial y 2 uniones más (solo datos, en producción 14:13 UTC)
+- **Respaldo previo:** `~/respaldos/siae_production_20261111_1413_antes_unir_terceros_2.sql` (+ dist).
+- **Revisión del reporte de Comercial:** 3.362 filas, 167 vendedores, 1.368 productores, 2.999 fincas. Cruce solo lectura:
+  - Vendedores: 122 coinciden (89 iguales, 33 por RUC con nombre corto); 25 sin RUC en el reporte ya están en el sistema; 19 no están.
+  - Compras WK40: 191 de 216 con productor real coinciden con el par vendedor → productor del reporte.
+  - **Productores y fincas no se cargan:** 915 productores no están en el sistema, hay 260 filas "SIN PRODUCTOR REGISTRADO" y nombres con errores de tipeo. Se crean cuando compren.
+- **Uniones**, con el mismo PUT de la pantalla. Las cajas totales quedaron iguales (160.304) y los creados quedaron desactivados:
+  - 652 MANUEL BRITO → 438 BRITO CUENCA MANUEL ASCENCIO: 3 compras. Sus productores solo aparecen bajo él en el reporte.
+  - 165 ASOPRODMAR/MADRE ROBUSTA TIERRA → 26 ASOPRODMAR: 17 compras.
+- **Para Comercial:**
+  - RUC de ANDRADEFRESH, CASATEL y COOPROAFRUORO.
+  - Mismo RUC con otra persona en el sistema: ANDRADE RODRIGUEZ ARSENIO WALTER ↔ 8, JOSE MORAN ↔ 12, WIMPER COELLO ↔ 49, RICHARD GARCIA ↔ 78.
+  - RUC distinto de FISCHERT (63).
+  - VEGA BRITO ANGEL bajo ASOPROAREIBA.
+  - TRACTOMIL no aparece en el reporte.
+  - ICAMBAN.
+  - Duplicados sin RUC: 181 CHAMBA y 389 TROPICTRADE.
+
 ### 10/11/2026 — Limpieza de terceros de la carga WK40 (solo datos, en producción 11/11/2026 04:23 UTC)
 - **Respaldo previo:** `~/respaldos/siae_production_20261111_0423_antes_unir_terceros.sql` (+ dist).
 - **Revisión** con la hoja REVISIÓN SRI de Comercial (PRODUCTORES_2026_REVISADO.xlsx), los Excel de liquidación WK41–43 y la lista de contratos del área comercial. Hallazgo: en ACUMULADO, el RUC de la fila de un productor es el del **comercial que factura**. El productor real que compra un comercial no necesita RUC para el pago; el vendedor directo sí.
