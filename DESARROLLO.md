@@ -273,6 +273,34 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 10/11/2026 — Limpieza de terceros de la carga WK40 (solo datos, en producción 11/11/2026 04:23 UTC)
+- **Respaldo previo:** `~/respaldos/siae_production_20261111_0423_antes_unir_terceros.sql` (+ dist).
+- **Revisión** con la hoja REVISIÓN SRI de Comercial (PRODUCTORES_2026_REVISADO.xlsx), los Excel de liquidación WK41–43 y la lista de contratos del área comercial. Hallazgo: en ACUMULADO, el RUC de la fila de un productor es el del **comercial que factura**. El productor real que compra un comercial no necesita RUC para el pago; el vendedor directo sí.
+- **Unión de 13 terceros creados en WK40 sin RUC** con el original que tiene RUC. Las compras se movieron con el mismo PUT de la pantalla (pedido 45: 11, pedido 46: 28), las cajas totales quedaron iguales (160.304) y los creados quedaron desactivados:
+  - ASOPRORITEROS → 24
+  - PROBADECUA ×3, incluidos "(MEDIODIA)" y "(MEDIO DIA)" → 97
+  - BANAGROW → 35 BANANAGROW S.A.
+  - ASOPROBAORE → 450
+  - ASOPROACALI → 28
+  - BANTROPIC → 18
+  - ASOPROBANPAL → 19
+  - AGRIBAJSA → 441
+  - ASOPROAREIBA "(PROCESO 2PM)" → 25
+  - KATTYA SAENZ → 442 (su finca LA KATTIA también pasó a 442)
+  - LUDERSON "(MEDIODIA)" → 80
+  - Las palabras entre paréntesis no se guardaron en ninguna parte.
+- **Antes, el mismo día:**
+  - RUTH GUANGA duplicada (id 370 y su finca 44) desactivada.
+  - RAMON GUANGA (650) recibió su RUC y el nombre del SRI.
+  - YOMAR PALACIOS duplicado (403) desactivado; el bueno es el 93.
+- **Pendiente con Comercial:**
+  - ICAMBAN (661): está como productor real de DEALFRUIT. ICAMBAN S.A.S. (73) es comercializadora y tiene contrato. ¿Se queda así o le vendió directo?
+  - MANUEL BRITO (652): ¿437 o 438?
+  - RUC de ANDRADEFRESH, CASATEL y COOPROAFRUORO.
+  - Casos ROJO de la hoja SRI.
+  - Terceros viejos sin RUC: 161 ASCUPOESPE, 164 ASOPROAREIBA, 165 ASOPRODMAR, 166 ASOPRORITEROS.
+  - Carga de los 38 contratos.
+
 ### 10/11/2026 — Semana de compra por línea: nave que se queda a la semana siguiente (en producción desde 10/11/2026)
 - **Producción** (10/11/2026 20:32 UTC, a pedido del usuario):
   - Respaldos `~/respaldos/siae_production_20261110_2032_antes_semana_compra.sql`, `frontend_dist_20261110_2032_antes_semana_compra.tgz` y los `.env` con la misma hora. Antes se revisó que no hubiera compras sin bloque ni con un cupo de otro pedido (0 en los dos casos). Backend `ec42b71`, frontend `b5d4307`. Ningún archivo ilegible.
