@@ -273,6 +273,17 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 11/11/2026 — Equipo de agentes de Claude Code y base de pruebas `siae_test`
+- **`CLAUDE.md`** (raíz del frontend): reglas comunes del proyecto (límites, datos sensibles, código, UI) y flujo del equipo con los puntos de aprobación de Peter.
+- **`.claude/agents/`**, todos con esfuerzo medio. Solo se usan cuando Peter lo pide.
+  - `siae-architect` (Opus): diseño de tablas y procesos; entrega migraciones de Laravel en `docs/`.
+  - `siae-qa` (Sonnet): pruebas en `siae_test` + revisión antes del commit.
+  - `siae-datos` (Sonnet): cruces de Excel y scripts con simulación.
+  - El desarrollador es la sesión principal (Opus).
+  - Reemplazan a `siae-developer`, `siae-tester` y `siae-reviewer`.
+- **Backend `phpunit.xml`**: las pruebas usan PostgreSQL `siae_test`, una base local con solo la estructura de `SIAE`, en vez de SQLite.
+- **Hallazgo**: las migraciones no arman la base desde cero, porque `shipping_lines` y otras tablas viejas se crearon fuera de ellas. Mejora pendiente: `php artisan schema:dump` para que el repositorio tenga el esquema completo.
+
 ### 11/11/2026 — Reporte RUC/Comercializadora/Productor/Finca de Comercial y 2 uniones más (solo datos, en producción 14:13 UTC)
 - **Respaldo previo:** `~/respaldos/siae_production_20261111_1413_antes_unir_terceros_2.sql` (+ dist).
 - **Revisión del reporte de Comercial:** 3.362 filas, 167 vendedores, 1.368 productores, 2.999 fincas. Cruce solo lectura:
