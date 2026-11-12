@@ -16,7 +16,8 @@ export const menuItems = [
     {
         seccion: "PRINCIPAL",
         items: [
-            { label: "Dashboard", ruta: "/dashboard", icono: LayoutDashboard, pantalla: "dashboard" },
+            // 11/11/2026: el Dashboard de demostración pasa a ser el Tablero de operaciones (datos reales)
+            { label: "Tablero de operaciones", ruta: "/dashboard", icono: LayoutDashboard, pantalla: "dashboard" },
         ],
     },
     {

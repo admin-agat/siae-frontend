@@ -122,6 +122,9 @@ export default function CustomerOrderFormPage() {
   });
   const [lineas, setLineas] = useState([lineaVacia()]);
   const estadoInicialRef = useRef(null);
+  // 11/11/2026: la tabla de líneas tiene su propio desplazamiento; al agregar una línea se baja hasta ella
+  const tablaLineasRef = useRef(null);
+  const bajarAlFinal = useRef(false);
 
   const [clientes, setClientes] = useState([]);
   const [puertos, setPuertos] = useState([]);
@@ -276,7 +279,14 @@ export default function CustomerOrderFormPage() {
       presentation: ultima?.presentation || 'CONVENCIONAL',
       departure_port_id: ultima?.departure_port_id || '',
     }]);
+    bajarAlFinal.current = true;
   };
+
+  useEffect(() => {
+    if (!bajarAlFinal.current || !tablaLineasRef.current) return;
+    bajarAlFinal.current = false;
+    tablaLineasRef.current.scrollTo({ top: tablaLineasRef.current.scrollHeight, behavior: 'smooth' });
+  }, [lineas.length]);
 
   const quitarLinea = (key) => setLineas((prev) => prev.filter((l) => l._key !== key));
 
@@ -404,7 +414,20 @@ export default function CustomerOrderFormPage() {
             onChange={cambiarCabecera} placeholder="Ej: 150000"
             className={`${inputClass} font-semibold`}
           />
-          {totalSemana > 0 && <p className="text-xs text-gray-500 mt-1">{formatoCajas(totalSemana)} cajas</p>}
+          {/* 11/11/2026: avance en vivo junto al total (antes solo se veía abajo, después de la tabla) */}
+          {totalSemana > 0 && (
+            <div className="mt-1">
+              <p className="text-xs text-gray-600">
+                Registrado <strong>{formatoCajas(totalLineas)}</strong> de {formatoCajas(totalSemana)} ·{' '}
+                <span className={`font-semibold ${cuadrado ? 'text-green-700' : diferencia < 0 ? 'text-red-700' : 'text-amber-700'}`}>
+                  {cuadrado ? '✔ CUADRADO' : diferencia > 0 ? `FALTAN ${formatoCajas(diferencia)}` : `SOBRAN ${formatoCajas(-diferencia)}`}
+                </span>
+              </p>
+              <div className="h-1.5 bg-gray-100 rounded-full mt-1 overflow-hidden">
+                <div className={`h-full rounded-full transition-all ${cuadrado ? 'bg-green-600' : diferencia < 0 ? 'bg-red-600' : 'bg-amber-500'}`} style={{ width: `${avance}%` }} />
+              </div>
+            </div>
+          )}
         </div>
         <div>
           <label className={labelClass}>Fecha del correo</label>
@@ -422,9 +445,11 @@ export default function CustomerOrderFormPage() {
       </div>
 
       {/* Líneas del pedido */}
-      <div className="bg-white rounded-xl shadow overflow-x-auto mb-4">
+      {/* 11/11/2026: se ven ~5 líneas y la tabla se desplaza sola (barra ancha), así no hay que bajar toda la página */}
+      <div className="bg-white rounded-xl shadow overflow-hidden mb-4">
+       <div ref={tablaLineasRef} className="overflow-auto max-h-[19rem] scroll-ancho">
         <table className="w-full text-sm min-w-[1550px]">
-          <thead className="bg-primario text-white">
+          <thead className="bg-primario text-white sticky top-0 z-10">
             <tr>
               <th className="text-left px-2 py-3 uppercase w-8">#</th>
               <th className="text-left px-2 py-3 uppercase">Cliente</th>
@@ -538,6 +563,7 @@ export default function CustomerOrderFormPage() {
             })}
           </tbody>
         </table>
+       </div>
         <div className="px-4 py-3 border-t bg-gray-50">
           {/* Botón sólido (antes era solo texto azul y no se notaba) */}
           <button type="button" onClick={agregarLinea} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-primario text-white hover:bg-primario-hover transition">

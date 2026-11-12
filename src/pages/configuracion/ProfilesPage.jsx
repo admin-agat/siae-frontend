@@ -26,7 +26,7 @@ const TIPOS_BASE = {
   COORDINADOR_INVENTARIO: 'Inventario: además corrige y anula movimientos ya registrados y anula despachos.',
   JEFE_BODEGA: 'Inventario: no corrige movimientos ya registrados.',
   BODEGUERO: 'Opera solo SU bodega (se le asigna en Usuarios) y solo los motivos permitidos al bodeguero.',
-  GERENCIA: 'Gerencia: el único tipo que puede ver el Dashboard.',
+  GERENCIA: 'Gerencia: Tablero de operaciones y Ganancia por viaje.',
   FINANZAS: 'Finanzas / Contabilidad: gastos de cada viaje y ganancia.',
   // 05/11/2026
   CONTABILIDAD: 'Contabilidad: aprueba las órdenes de compra de todos los departamentos y genera el archivo de pagos del banco.',

@@ -152,7 +152,7 @@ Leyenda: ✅ terminado · 🟡 parcial · ⏳ pendiente
 | **Liquidar** | ✅ | Nuevo 29/10/2026. Cupo (productor + semana): fruta − materiales − anticipos; código LIQ-00000001; imprimible; anular sin pagos. Solo ADMIN. |
 | **Pagos e historial** | ✅ | Nuevo 29/10/2026. Registrar 1er pago (100 % / 80 %) y 2do pago (20 %) con fecha y comprobante; bandeja de pendientes. Solo ADMIN. |
 | **Notas de crédito** | ✅ | Nuevo 30/10/2026. Bandeja POR RECIBIR / RECIBIDAS con el total que debe cada vendedor; el N° de factura y de NC se registra en el detalle de la liquidación. Solo ADMIN. |
-| Dashboard | ⏳ | Demostración con datos de ejemplo. **Solo GERENCIA** (y ADMIN) desde 02/11/2026. |
+| Tablero de operaciones | ✅ | Datos reales desde 11/11/2026 (fase 1, sin dinero). GERENCIA, EXPORTACIONES y COMERCIAL (y ADMIN). Tablero financiero: fase 2. |
 
 ---
 
@@ -272,6 +272,57 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 ---
 
 ## 7. Historial de cambios
+
+### 11/11/2026 — Pedido semanal: tabla de 5 líneas con barra ancha y avance arriba
+- **Pedido de Peter:** con muchas líneas había que bajar toda la página.
+- **Tabla de líneas:**
+  - Muestra unas 5 líneas y se desplaza dentro de su propio recuadro (`max-h-[19rem]`).
+  - Tiene la barra ancha `scroll-ancho`, la misma de Compra de fruta.
+  - El encabezado queda fijo al desplazar.
+- **Agregar línea:** la tabla baja sola hasta la línea nueva. El botón queda siempre visible, fuera del área que se desplaza.
+- **Total cajas semana:** debajo del total se ve en vivo "Registrado X de Y", con FALTAN, SOBRAN o ✔ CUADRADO y una barrita de avance, con los mismos colores del cuadre de abajo.
+  - El total lo sigue escribiendo el usuario, tal como viene en el correo de Rusia.
+  - El pedido solo se guarda cuando cuadra.
+- **Archivo:** `src/pages/exportaciones/CustomerOrderFormPage.jsx`. No hay cambios en el backend.
+
+### 11/11/2026 — Tablero de operaciones con datos reales (fase 1; reemplaza la maqueta del Dashboard)
+- **Qué es:** un solo tablero con pedido → distribución en barcos → compra de fruta → cierre de embarque, medido por **semana del pedido**.
+  - El cumplimiento de contratos de productores va por **semana de compra**, porque el cupo se cuenta así.
+  - **No muestra dinero** (ni precios ni montos) ni RUC: el dinero irá en el tablero financiero (fase 2).
+  - Diseño: arquitecto, aprobado por Peter.
+- **Backend:**
+  - `GET /api/boards/operations` (`BoardController@operations`, middleware `pantalla:dashboard`).
+  - Filtros: `year`, `week_from`, `week_to` (por defecto la semana actual y las 7 anteriores), `customer_id`, `brand_id`, `negotiation_type`.
+  - Cálculo en `App\Services\Tableros\TableroOperaciones`, con consultas agregadas y sin N+1. Con los datos de producción responde en menos de 130 ms.
+- **Contenido de la pantalla:**
+  - **Tarjetas:** pedido, % distribuido, % comprado (con meta y sobre-compra), % embarcado (solo sobre barcos con cierre) y alertas.
+  - **Gráficos**, cada uno con vista de tabla: cajas por semana (pedido, distribuido, comprado, embarcado), compra CONTRATO vs SPOT, pedido y compra por cliente (con detalle por marca), por puerto de salida, y bajo cubierta vs contenedor.
+  - **Tablas:** barcos del rango con su estado (SIN COMPRA / COMPRANDO / COMPLETO / EMBARCADO), cumplimiento de contratos, los 15 vendedores con más cajas y compra por comercial ("A / B" cuenta para los dos).
+  - **Alertas** por reglas, con detalle y enlace a la pantalla que las corrige:
+    - pedidos sin distribuir;
+    - bloques sobre-comprados;
+    - bloques sin compra con zarpe en 3 días;
+    - CONTRATO sin contrato;
+    - comercializadora sin productor;
+    - sin precio real (solo el conteo);
+    - cambiadas después de enviar a bodega;
+    - corte hoy o mañana sin enviar a bodega;
+    - contratos con menos del 80 % del cupo;
+    - contratos que vencen en 30 días;
+    - pedidos POR VALIDAR;
+    - barcos zarpados sin cierre.
+  - **Aviso de semanas sin compras cargadas:** la pantalla lo muestra cuando una semana con pedido todavía no tiene compras cargadas (hoy WK41–44 y WK46).
+- **Cumplimiento de contratos:** solo cuenta las semanas de compra que ya tienen compras en el sistema. Así una semana todavía no cargada no aparece como incumplimiento.
+- **Permisos:**
+  - La clave de pantalla sigue siendo `dashboard`, ahora con el nombre "Tablero de operaciones".
+  - Ya no es exclusiva de GERENCIA: también la tienen EXPORTACIONES y COMERCIAL.
+  - Migración de datos `2026_11_11_000004_tablero_operaciones`: agrega la pantalla a los perfiles de esos dos tipos.
+- **Frontend:**
+  - `src/pages/dashboard/DashboardPage.jsx` reescrita con recharts, que ya estaba instalado.
+  - `src/api/boards.js`.
+  - Menú "Tablero de operaciones".
+  - Texto de GERENCIA en Perfiles.
+- **Migración:** `2026_11_11_000004_tablero_operaciones`, aplicada en `SIAE` y `siae_test`.
 
 ### 11/11/2026 — Precio oficial $7,50 en todas las compras de 2026 (solo datos, en producción 21:04 UTC)
 - **Precio oficial MAG 2026:** caja 22XU a $7,50 todo el año (Acuerdo Ministerial 107).
@@ -971,7 +1022,7 @@ Pedido del usuario: las jefaturas trabajan con asistentes; dar permisos por pers
 - Catálogo de 30 pantallas en `config/pantallas.php` (clave, sección, nombre y qué tipos base la tienen al inicio). Usuarios, Perfiles y Bitácora no se delegan (solo ADMIN).
 - Migración `2026_10_30_000003_create_profiles_and_user_permissions`: tabla `profiles` (nombre, `base_role`, descripción, `screens` jsonb) y en `users`: `profile_id`, `boss_id` ("asistente de"), `screens_added`, `screens_removed`. Crea un perfil por rol con las pantallas que ese rol veía y se lo asigna a sus usuarios: **nadie gana ni pierde acceso al migrar**.
 - `User::pantallas()` = perfil + agregadas − quitadas (ADMIN: todas; perfil desactivado: ninguna; sin perfil: las iniciales de su tipo base). `User::puede(...)`.
-- **Tipo base** (`users.role`, lo pone el perfil): conserva las reglas internas del rol — BODEGUERO solo su bodega y sus motivos; COORDINADOR/ADMIN corrigen y anulan movimientos y despachos; GERENCIA es el único que puede tener el Dashboard. Un perfil no puede ser de tipo ADMIN (solo ADMINISTRADOR, que no se edita) y no cambia de tipo base si tiene usuarios.
+- **Tipo base** (`users.role`, lo pone el perfil): conserva las reglas internas del rol — BODEGUERO solo su bodega y sus motivos; COORDINADOR/ADMIN corrigen y anulan movimientos y despachos; GERENCIA tenía en exclusiva el Dashboard hasta el 11/11/2026 (ahora Tablero de operaciones, también EXPORTACIONES y COMERCIAL). Un perfil no puede ser de tipo ADMIN (solo ADMINISTRADOR, que no se edita) y no cambia de tipo base si tiene usuarios.
 - API: middleware `pantalla:` reemplaza a `rol:`/`admin` en todas las rutas de pantallas (lectura de exportaciones: cualquier pantalla salvo las 4 del bodeguero, igual que antes). Transferencias pendientes ahora se valida por pantalla. `GET /me` devuelve el usuario con sus pantallas; `GET /screens`, CRUD `/profiles` (ADMIN).
 - Frontend: [menu.js](src/routes/menu.js) (menú + `puede`, `menuDe`, `inicioDe`) usado por Sidebar, AppRouter (`RutaPantalla`) y Login; se borró `routes/roles.js`. Layout pide `/me` al abrir: los cambios de permisos se ven sin volver a iniciar sesión. Pantallas [ProfilesPage](src/pages/configuracion/ProfilesPage.jsx) y [UsersPage](src/pages/configuracion/UsersPage.jsx) con [SelectorPantallas](src/components/common/SelectorPantallas.jsx). Usuario sin pantallas → `/sin-acceso`.
 - Bitácora: los campos JSON (pantallas) se guardan como lista, no como texto.
@@ -1130,7 +1181,7 @@ Menú **LIQUIDACIÓN** (solo ADMIN): *Tarjas*, *Anticipos y préstamos*, *Liquid
 - [x] Pantalla **Bookings** antigua: quitada del menú y de los permisos el 05/11/2026. Falta borrar el código viejo (`BookingsPage`, `BookingModal`, `api/bookings.js`, `BookingController`) y la tabla cuando nadie la extrañe.
 - [ ] Liquidación de cupos **manuales** (despachos sin compra de Comercial): hoy no se liquidan porque no tienen precio real ni tarjas.
 - [ ] Probar la Liquidación en el navegador con datos reales (el backend está probado; las pantallas compilan).
-- [ ] Dashboard: reemplazar los datos de ejemplo por un endpoint `/dashboard` con datos reales.
+- [x] Dashboard con datos reales: Tablero de operaciones (11/11/2026). Pendiente: tablero financiero (fase 2) y venta/margen (fase 3).
 - [ ] Notificaciones por WhatsApp a gerencia (ej. "operación de la semana lista"): por decidir la vía (Meta WhatsApp Cloud API, Twilio o enlace wa.me).
 - [ ] Cargar los **contratos MAGAP** de los productores (tabla `contracts` vacía): hoy la referencia MAGAP muestra "SIN CONTRATO".
 - [ ] Decidir si se elimina el **cupo manual** del despacho (productores sin compra de Comercial) cuando todo el flujo esté en uso.
@@ -1146,7 +1197,7 @@ Menú **LIQUIDACIÓN** (solo ADMIN): *Tarjas*, *Anticipos y préstamos*, *Liquid
 
 ### Limpieza (código sin uso)
 - [ ] En `inventoryMovements.js`: `getInventoryMovements`, `updateInventoryMovement`, `deactivateInventoryMovement` sin uso (se dejan por si se usan en un historial de movimientos).
-- [ ] Dependencia `recharts` (sin uso hasta que exista el Dashboard).
+- [x] Dependencia `recharts`: la usa el Tablero de operaciones.
 
 ---
 
