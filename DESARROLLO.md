@@ -273,6 +273,35 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 12/11/2026 — Campanita de notificaciones: "Enviado a retirar" para la bodega
+- **Pedido de Peter:** cuando Comercial manda a retirar una compra, en Inventario debe aparecer una campanita que diga a qué productor se envió, a qué bodega y para qué nave.
+- **Decisiones de Peter:**
+  - La ven el bodeguero de esa bodega y los coordinadores de inventario.
+  - Por ahora solo avisa del envío nuevo, no de los cambios ni de un envío quitado.
+  - Lo leído se guarda por persona en el sistema.
+  - Es un cambio grande y el diseño quedó aprobado.
+- **Migración** `2026_11_12_000001_notificaciones_usuario`: tabla `user_notifications`. No se llama `notifications` porque `User` usa el trait `Notifiable` de Laravel, que ya reserva ese nombre.
+  - Columnas: usuario, tipo, título, detalle, enlace, `data` (lo que necesita la pantalla que se abre), compra, quién la envió y `read_at`.
+  - Sirve para otros avisos más adelante.
+- **Backend:**
+  - `App\Services\Notificaciones::envioBodega()` se llama desde "Enviar a bodega" (`PurchaseAllocationController::enviarABodega`). Crea **un aviso por compra enviada** para:
+    - el bodeguero responsable de esa bodega;
+    - los coordinadores de inventario que la manejan;
+    - si la compra no tiene bodega fija, todos los bodegueros y coordinadores.
+  - Solo reciben usuarios activos con la pantalla Despacho.
+  - Enviar dos veces no repite el aviso. Si se quita el envío y se vuelve a enviar, sí se avisa de nuevo.
+  - Rutas `GET /notifications` (últimos 30, no leídos primero), `GET /notifications/count`, `PATCH /notifications/{id}/read` y `PATCH /notifications/read-all`. Cada usuario solo ve y marca los suyos; no se borra nada.
+- **Frontend:**
+  - Campanita `src/components/common/Campanita.jsx` en la barra de arriba, solo para BODEGUERO y COORDINADOR_INVENTARIO.
+  - Muestra el número de avisos sin leer y se actualiza cada minuto. Tiene "Marcar todas como leídas".
+  - El aviso dice: vendedor (y productor), nave, WK, marca, cajas, quién lo envió y hace cuánto.
+  - Al hacer clic, el aviso queda leído y se abre **Despacho de materiales** con bodega, vendedor y cupo ya elegidos, igual que "Despachar" en Por despachar. Si hay cambios sin guardar, pregunta antes.
+  - Despacho de materiales toma la compra nueva aunque ya estuviera abierta, y limpia quién retira, la cédula, la guía y el vapor.
+- **Ajustes de la revisión de calidad:**
+  - Si Comercial **quita el envío**, los avisos sin leer de esa compra quedan leídos (`Notificaciones::envioQuitado`).
+  - Las rutas `/notifications` van en el grupo general (con sesión), no en el de Inventario.
+  - La campanita avisa si no puede cargar, y al cerrarla con Escape el foco vuelve al botón.
+
 ### 12/11/2026 — Compra de fruta: contratos de la semana y compra que pasa sola a CONTRATO
 - **Pedido de Peter:** saber cuántos vendedores con contrato faltan para completar la semana, y que la compra muestre el contrato del vendedor (con 2 o más, la lista y el total de cajas).
 - **Decisiones de Peter:**

@@ -4,11 +4,15 @@ import { KeyRound, LogOut, RefreshCw } from 'lucide-react';
 import Sidebar from "./Sidebar";
 import AvisoInactividad from './common/AvisoInactividad';
 import AvisoVersion from './common/AvisoVersion';
+import Campanita from './common/Campanita';
 import { ProveedorAvisoSalida, useIrA, useSoltarAviso } from './common/AvisoSalida';
 import { precargarPaginas } from '../routes/paginas';
 import { useAuth } from '../context/AuthContext';
 import { semanaISO } from '../utils/semana';
 import api from '../api/axios';
+
+// 12/11/2026: la campanita (envíos a bodega de Comercial) la ven el bodeguero y el coordinador de inventario
+const ROLES_CAMPANITA = ['BODEGUERO', 'COORDINADOR_INVENTARIO'];
 
 // 05/11/2026: semana bananera, día y hora en la barra de arriba.
 // 09/11/2026: con segundos (se actualiza cada segundo; solo se vuelve a dibujar el reloj, no la página)
@@ -115,6 +119,7 @@ function LayoutContenido() {
               <p className="text-white text-sm font-semibold">{user?.name || 'Usuario'}</p>
               <p className="text-white text-[11px] opacity-80">{user?.profile_name || user?.role?.replace('_', ' ')}</p>
             </div>
+            {ROLES_CAMPANITA.includes(user?.role) && <Campanita />}
             {/* 09/11/2026: cambiar la propia contraseña cuando quiera (es obligatorio al primer ingreso y cada 3 meses) */}
             <button
               type="button"

@@ -12,7 +12,7 @@
 // las cajas salen de él (no se escriben a mano). Sin cupo de Comercial se sigue como antes.
 // 03/11/2026: el BODEGUERO solo ve su bodega; los valores (costo promedio) solo los ve quien tiene
 // el permiso "Ver costos y valores"; se quitó el campo Motivo (siempre ENTREGA A PRODUCTOR).
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Calculator, AlertTriangle, CheckCircle, Save, Info, X, Lock } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -50,7 +50,9 @@ const comoLista = (res) => (Array.isArray(res?.data) ? res.data : []);
 export default function MaterialDispatchPage() {
     const navigate = useNavigate();
     // 05/11/2026: desde la bandeja "Por despachar" llega { warehouse_id, third_party_id, producer_quota_id, brand_code }
-    const desdeBandeja = useLocation().state || null;
+    // 12/11/2026: también desde la campanita de notificaciones (mismo formato)
+    const ubicacion = useLocation();
+    const desdeBandeja = ubicacion.state || null;
     const { user } = useAuth();
     const esBodeguero = user?.role === 'BODEGUERO';
     const verCostos = puede(user, 'ver_costos');
@@ -133,6 +135,28 @@ export default function MaterialDispatchPage() {
             .catch(() => setCuposComercial([]));
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [thirdPartyId]);
+
+    // 12/11/2026: clic en la campanita estando ya en esta pantalla: no se vuelve a montar, así que se toma
+    // aquí la compra del aviso (bodega, vendedor y cupo). La campanita ya preguntó si había cambios sin guardar.
+    const montada = useRef(false);
+    useEffect(() => {
+        if (!montada.current) { montada.current = true; return; }
+        if (!desdeBandeja) return;
+        // ya aceptó salir sin guardar: no quedan datos de la compra anterior
+        setRetiraNombre('');
+        setRetiraCedula('');
+        setDeliveryNote('');
+        setVapor('');
+        setWarehouseId(desdeBandeja.warehouse_id ? String(desdeBandeja.warehouse_id) : '');
+        if (String(desdeBandeja.third_party_id ?? '') !== thirdPartyId) {
+            setThirdPartyId(desdeBandeja.third_party_id ? String(desdeBandeja.third_party_id) : '');
+        } else {
+            const c = cuposComercial.find((x) => x.producer_quota_id === desdeBandeja.producer_quota_id && x.brand_code === desdeBandeja.brand_code
+                && String(x.warehouse_id ?? '') === String(desdeBandeja.warehouse_id ?? ''));
+            if (c) elegirCupo(c);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [ubicacion.key]);
 
     // Al cambiar la bodega: si el cupo elegido se retira en otra, se elige uno de esta bodega
     const cambiarBodega = (bodega) => {
