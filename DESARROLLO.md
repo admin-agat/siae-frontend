@@ -273,6 +273,26 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 12/11/2026 — Contratos según la lista impresa (foto): JEHOVA JIREH N°3 (solo datos, en producción 17:01 UTC)
+- **Fuente:** foto de la lista impresa de contratos de productores. Un agente de datos la cruzó con producción: 29 filas iguales, 6 con el descuento distinto, 1 nueva y 2 marcadas PENDIENTE.
+- **Decisiones de Peter:**
+  - **Se crea JEHOVA JIREH N°3:** 2.000 cajas a $7,60 CON descuento, finca COROSAL (DANNA), código N24153, vigente del 01/01 al 31/12/2026.
+    - La nota guarda la fecha del contrato (02/07/2026).
+    - Los cobros se copian del N°2, que es de la misma finca y tiene el mismo precio.
+    - Sus cajas MAG pasan a 11.963.
+  - **Descuento:** queda lo que decía el ACUERDO del Excel, no la foto, en ASOPROAREIBA N°3 y N°4, ASOPRODMAR N°1, ASOPRORITEROS N°1, BATALLAS CORDOVA y MASAPANTA.
+  - **Cajas MAG:** quedan las del sistema en BANANAGROW (2.561) y ASOPRODMAR (20.000).
+  - **Siguen activos:** ASOPROAREIBA N°4 y SAENZ VELEZ (PENDIENTE en la foto) y ASOPROMARSU (6.000 cajas a $7,60).
+- **Cómo:** por la pantalla Contratos (`PUT /producer-contracts/{tercero}`), con simulación previa y respaldo `siae_production_20261112_1701_antes_jehova_n3.sql` (más el `dist` y los `.env`).
+- **Resultado:** quedan 40 contratos activos, todos vigentes del 01/01 al 31/12/2026.
+- **Paso 2 de contratos** (ligar las compras WK30–45 a su contrato):
+  - El script `asignar_contratos_v3.php` ya está simulado con las reglas de Peter:
+    - lo que pasa del cupo semanal va a SPOT, partiendo la compra;
+    - vendedor sin contrato → SPOT;
+    - no se cambia la forma de pago;
+    - todo en una sola corrida.
+  - Espera que Comercial responda 22 compras cuyo precio no es de ningún contrato.
+
 ### 12/11/2026 — Asociaciones registradas dos veces: contratos al registro con RUC (solo datos, en producción 15:57 UTC)
 - **Problema:** ASOPRORITEROS, ASOPROAREIBA y ACUPOESPE tenían dos registros cada una:
   - el nombre completo (COMERCIALIZADORA, con RUC y las compras);
