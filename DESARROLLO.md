@@ -273,6 +273,22 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 12/11/2026 — Asociaciones registradas dos veces: contratos al registro con RUC (solo datos, en producción 15:57 UTC)
+- **Problema:** ASOPRORITEROS, ASOPROAREIBA y ACUPOESPE tenían dos registros cada una:
+  - el nombre completo (COMERCIALIZADORA, con RUC y las compras);
+  - el nombre corto (PRODUCTOR, sin RUC, solo con los contratos de la carga del 11/11).
+
+  Por eso las compras no encontraban su contrato y el recuadro "Contratos WKnn" las mostraba como pendientes.
+- **Decisión de Peter:** son tres asociaciones **distintas**; no se juntan entre sí. Cada una se une con su propio registro corto.
+- **Cambio, por los endpoints de las pantallas** (Contratos y retención, Fincas, Terceros), con simulación previa y respaldo `siae_production_20261112_1555_antes_campanita.sql`:
+  - Los contratos activos del registro corto se crean en el registro completo, con el mismo número, cupo, precio y fechas. La nota dice de qué contrato vienen.
+  - En el registro corto los contratos quedan desactivados y el registro también. No se borró nada.
+  - **ASOPRORITEROS:** 3 contratos, la finca LA JULIA y 17.447 cajas MAG.
+  - **ASOPROAREIBA:** 4 contratos y 3.901 cajas MAG.
+  - **ACUPOESPE:** 3 contratos y 5.000 cajas MAG.
+  - El contrato de ACUPOESPE de 3.800 cajas a $8,50, creado el 12/11 por la pantalla, **se desactivó** porque repetía N°1 + N°2 (decisión de Peter, opción A).
+- **Pendiente:** el "paso 2" (asignar el contrato a las compras de la WK30 a la WK45) ya puede cuadrar estas tres asociaciones.
+
 ### 12/11/2026 — Campanita de notificaciones: "Enviado a retirar" para la bodega
 - **Pedido de Peter:** cuando Comercial manda a retirar una compra, en Inventario debe aparecer una campanita que diga a qué productor se envió, a qué bodega y para qué nave.
 - **Decisiones de Peter:**
