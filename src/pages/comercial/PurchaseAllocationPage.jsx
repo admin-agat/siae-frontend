@@ -33,6 +33,7 @@ import { getPorts } from '../../api/ports';
 import { getComerciales, crearComercial, desactivarComercial, reactivarComercial } from '../../api/purchaseExecutives';
 import { useAuth } from '../../context/AuthContext';
 import DialogoConfirmacion from '../../components/common/DialogoConfirmacion';
+import { useAvisoSalida } from '../../components/common/AvisoSalida';
 import ToastFlotante from '../../components/common/ToastFlotante';
 import SelectBuscable from '../../components/common/SelectBuscable';
 import ModalShell from '../../components/common/ModalShell';
@@ -418,6 +419,8 @@ export default function PurchaseAllocationPage() {
   };
 
   const hayCambios = () => inicial !== null && inicial !== JSON.stringify(bloques);
+  // 11/11/2026: también pregunta al ir a otra opción del menú, recargar o usar "atrás" del navegador
+  useAvisoSalida(hayCambios());
   const volver = () => (hayCambios() ? setMostrarConfirmarSalida(true) : navigate('/comercial/compras'));
 
   // ---------------- Guardar ----------------

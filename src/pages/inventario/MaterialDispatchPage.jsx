@@ -22,6 +22,7 @@ import { getWarehouses } from '../../api/warehouses';
 import { getThirdParties } from '../../api/thirdParties';
 import { getBrands } from '../../api/brands';
 import SelectBuscable from '../../components/common/SelectBuscable';
+import { useAvisoSalida } from '../../components/common/AvisoSalida';
 
 // Semana ISO 8601 (semana bananera) — SOLO para mostrarla.
 // La semana real la asigna el backend al guardar.
@@ -86,6 +87,10 @@ export default function MaterialDispatchPage() {
     const [guardando, setGuardando] = useState(false);
     const [toast, setToast] = useState(null); // { tipo: 'exito'|'error', mensaje }
     const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
+
+    // 11/11/2026: pregunta antes de salir (menú, recargar, "atrás") si ya se calculó o escribió algo y no se guardó.
+    // Bodega, productor y cajas no cuentan: vienen puestos desde "Por despachar" o al elegir el cupo.
+    useAvisoSalida(!guardando && Boolean(materiales.length || retiraNombre || retiraCedula || deliveryNote || vapor));
 
     // Semana actual, solo informativa
     const semanaActual = useMemo(() => getISOWeek(new Date()), []);

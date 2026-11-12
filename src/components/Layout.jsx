@@ -4,6 +4,7 @@ import { KeyRound, LogOut, RefreshCw } from 'lucide-react';
 import Sidebar from "./Sidebar";
 import AvisoInactividad from './common/AvisoInactividad';
 import AvisoVersion from './common/AvisoVersion';
+import { ProveedorAvisoSalida, useIrA, useSoltarAviso } from './common/AvisoSalida';
 import { precargarPaginas } from '../routes/paginas';
 import { useAuth } from '../context/AuthContext';
 import { semanaISO } from '../utils/semana';
@@ -34,9 +35,20 @@ function RelojSemana() {
 }
 
 // Layout principal — envuelve todas las páginas privadas
+// 11/11/2026: el aviso de cambios sin guardar envuelve todo (menú, barra de arriba y la página activa)
 export default function Layout() {
+  return (
+    <ProveedorAvisoSalida>
+      <LayoutContenido />
+    </ProveedorAvisoSalida>
+  );
+}
+
+function LayoutContenido() {
   const { user, logout, actualizarUsuario } = useAuth();
   const navigate = useNavigate();
+  const irA = useIrA(); // 11/11/2026: pregunta antes de salir si la pantalla tiene cambios sin guardar
+  const soltarAviso = useSoltarAviso();
   const cerrarSesion = () => {
     logout();
     navigate('/login');
@@ -44,6 +56,7 @@ export default function Layout() {
   // Recarga completa (no navigate): al borrar el token la ruta privada ya redirige a /login sin el aviso
   const cerrarPorInactividad = useCallback(() => {
     logout();
+    soltarAviso(); // 11/11/2026: la sesión ya terminó: sin el aviso de "¿salir del sitio?" del navegador
     window.location.assign('/login?inactividad=1');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -105,7 +118,7 @@ export default function Layout() {
             {/* 09/11/2026: cambiar la propia contraseña cuando quiera (es obligatorio al primer ingreso y cada 3 meses) */}
             <button
               type="button"
-              onClick={() => navigate('/cambiar-clave')}
+              onClick={() => irA(() => navigate('/cambiar-clave'))}
               title="Cambiar contraseña"
               aria-label="Cambiar contraseña"
               className="flex items-center text-white border border-white/50 rounded-lg px-2.5 py-1.5 hover:bg-white hover:text-primario transition shrink-0"
@@ -114,7 +127,7 @@ export default function Layout() {
             </button>
             <button
               type="button"
-              onClick={cerrarSesion}
+              onClick={() => irA(cerrarSesion)}
               title={user?.email ? `Salir de ${user.email}` : 'Cerrar sesión'}
               aria-label="Cerrar sesión"
               className="flex items-center gap-2 text-sm font-semibold text-white border border-white/50 rounded-lg px-2.5 sm:px-3 py-1.5 hover:bg-white hover:text-primario transition shrink-0"

@@ -15,6 +15,7 @@ import { getShippingLines } from '../../api/shippingLines';
 import { getVessels } from '../../api/vessels';
 import { getPorts } from '../../api/ports';
 import DialogoConfirmacion from '../../components/common/DialogoConfirmacion';
+import { useAvisoSalida } from '../../components/common/AvisoSalida';
 import ToastFlotante from '../../components/common/ToastFlotante';
 import DistributionPrint from '../../components/DistributionPrint';
 import { useAuth } from '../../context/AuthContext';
@@ -148,6 +149,8 @@ export default function OrderDistributionPage() {
   const quitarBarco = (key) => setBarcos((prev) => prev.filter((b) => b._key !== key));
 
   const hayCambios = () => inicial !== null && inicial !== JSON.stringify(barcos);
+  // 11/11/2026: también pregunta al ir a otra opción del menú, recargar o usar "atrás" del navegador
+  useAvisoSalida(hayCambios());
   const volver = () => (hayCambios() ? setMostrarConfirmarSalida(true) : navigate('/exportaciones/embarques'));
 
   // ---------------- Guardar ----------------

@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 // 30/10/2026: el menú y los permisos por pantalla están en routes/menu.js (los usa también AppRouter)
 import { menuDe } from "../routes/menu";
+import { useIrA } from "./common/AvisoSalida";
 import { getPorDespacharCuenta } from "../api/materialDispatch";
 
 // 03/11/2026: el menú quedó como una barra angosta de iconos (una por sección) para que la
@@ -77,6 +78,7 @@ const obtenerRutaActiva = (pathname, grupos) => {
 export default function Sidebar() {
     const { user } = useAuth();
     const navigate = useNavigate();
+    const irA = useIrA(); // 11/11/2026: pregunta antes de salir si la pantalla tiene cambios sin guardar
     const location = useLocation();
 
     // 30/10/2026: cada persona ve las pantallas de su perfil + sus excepciones (antes: filtro fijo por rol)
@@ -143,7 +145,7 @@ export default function Sidebar() {
         const opciones = grupo.items.filter((item) => item.ruta && !item.proximamente);
         if (grupo.items.length === 1 && opciones.length === 1) {
             setPanel(null);
-            navigate(opciones[0].ruta);
+            irA(() => navigate(opciones[0].ruta));
             return;
         }
         setPanel((actual) => (actual === grupo.seccion ? null : grupo.seccion));
@@ -178,7 +180,7 @@ export default function Sidebar() {
                 onClick={() => {
                     // al elegir una opción se cierra el panel
                     setPanel(null);
-                    navigate(item.ruta);
+                    irA(() => navigate(item.ruta));
                 }}
                 className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-2 transition border-l-4 ${activo
                     ? "bg-primario-claro text-primario font-semibold border-primario"

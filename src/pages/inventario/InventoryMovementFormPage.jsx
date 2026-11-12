@@ -26,6 +26,7 @@ import api from '../../api/axios';
 import SelectBuscable from '../../components/common/SelectBuscable';
 import { bodegasPermitidas } from '../../routes/menu';
 import CampoNumero from '../../components/common/CampoNumero';
+import { useAvisoSalida, useIrA } from '../../components/common/AvisoSalida';
 import { dinero } from '../../utils/formato';
 import { hoyISO } from '../../utils/fecha';
 
@@ -112,6 +113,14 @@ export default function InventoryMovementFormPage() {
 
     const [guardando, setGuardando] = useState(false);
     const [error, setError] = useState('');
+
+    const irA = useIrA();
+    // 11/11/2026: pregunta antes de salir (menú, recargar, "atrás") si ya se escribió algo y no se guardó.
+    // La bodega, el tipo y la fecha no cuentan: vienen puestos al abrir.
+    useAvisoSalida(!guardando && (
+        lineas.some((l) => l.supply_id || l.quantity || l.unit_cost)
+        || thirdPartyId || movementReasonId || purchaseOrderId || deliveryNote || reference || destinationWarehouseId || cupoDevolucionId
+    ));
 
     // Carga los catálogos una sola vez al entrar a la página.
     useEffect(() => {
@@ -948,7 +957,7 @@ export default function InventoryMovementFormPage() {
                 <div className="flex justify-end gap-4">
                     <button
                         type="button"
-                        onClick={() => navigate('/stock')}
+                        onClick={() => irA(() => navigate('/stock'))} // 11/11/2026: Cancelar también pregunta si hay cambios
                         className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold bg-cancelar text-cancelar-texto rounded-lg hover:bg-cancelar-hover"
                     >
                         <X size={16} />

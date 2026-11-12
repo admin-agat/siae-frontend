@@ -19,6 +19,7 @@ import { getCustomers } from '../../api/customers';
 import { getPorts } from '../../api/ports';
 import { getCustomerContracts } from '../../api/customerContracts';
 import DialogoConfirmacion from '../../components/common/DialogoConfirmacion';
+import { useAvisoSalida } from '../../components/common/AvisoSalida';
 import ToastFlotante from '../../components/common/ToastFlotante';
 import { getMensajeExito, getMensajeError } from '../../utils/toastMessages';
 import SelectBuscable from '../../components/common/SelectBuscable';
@@ -293,6 +294,9 @@ export default function CustomerOrderFormPage() {
   const hayCambiosSinGuardar = () =>
     estadoInicialRef.current !== null
     && estadoInicialRef.current !== JSON.stringify({ cab: cabecera, lin: lineas });
+
+  // 11/11/2026: también pregunta al ir a otra opción del menú, recargar o usar "atrás" del navegador
+  useAvisoSalida(hayCambiosSinGuardar());
 
   const volver = () => {
     if (hayCambiosSinGuardar()) {

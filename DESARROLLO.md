@@ -273,6 +273,23 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 11/11/2026 — Aviso "¿Seguro que deseas salir?" en todo el sistema cuando hay cambios sin guardar
+- **Pedido de Peter:** estaba ingresando un pedido, hizo clic en otra opción del menú y perdió lo escrito sin aviso. Antes solo preguntaba el botón Volver o Cancelar de cada pantalla.
+- **Nuevo componente `src/components/common/AvisoSalida.jsx`:**
+  - Funciones: `ProveedorAvisoSalida`, `useAvisoSalida(hayCambios)`, `useIrA()` y `useSoltarAviso()`.
+  - El sistema usa BrowserRouter, que no tiene `useBlocker`, por eso el aviso se maneja con este componente propio.
+- **Cuándo pregunta:**
+  - Al usar el menú lateral, cambiar la contraseña o cerrar sesión: aparece el diálogo estándar, con "Salir sin guardar" y "Seguir editando".
+  - Al recargar o cerrar la pestaña: el navegador muestra su propio aviso, cuyo texto no se puede cambiar.
+  - Al usar "atrás" del navegador: la pantalla se queda y pregunta.
+  - El cierre de sesión por inactividad no pregunta, porque la sesión ya terminó.
+- **Pantallas con el aviso:**
+  - Ya sabían si tenían cambios: Pedido semanal, Compra de fruta, Distribución en barcos y Cierre de embarque.
+  - Criterio nuevo en Nuevo movimiento: hay cambios si hay líneas escritas, tercero, motivo, OC, guía, referencia, bodega destino o cupo. Su botón Cancelar ahora también pregunta.
+  - Criterio nuevo en Despacho de materiales: hay cambios si hay materiales calculados, quién retira, guía o vapor. Las cajas no cuentan, porque vienen puestas desde "Por despachar".
+- La sesión vencida o la contraseña que debe cambiarse tampoco muestran el aviso del navegador: `axios.js` lo apaga antes de mandar al usuario al login o a cambiar la contraseña.
+- Solo cambia el frontend; el backend no se toca.
+
 ### 11/11/2026 — Pedido semanal: tabla de 5 líneas con barra ancha y avance arriba
 - **Pedido de Peter:** con muchas líneas había que bajar toda la página.
 - **Tabla de líneas:**

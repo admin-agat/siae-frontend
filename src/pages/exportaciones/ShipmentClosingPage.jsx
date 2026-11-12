@@ -19,6 +19,7 @@ import { ArrowLeft, Plus, Trash2, Save, X, Printer, ChevronDown, AlertTriangle, 
 import { getOrderClosing, saveOrderClosing } from '../../api/customerOrders';
 import { useAuth } from '../../context/AuthContext';
 import DialogoConfirmacion from '../../components/common/DialogoConfirmacion';
+import { useAvisoSalida } from '../../components/common/AvisoSalida';
 import ToastFlotante from '../../components/common/ToastFlotante';
 import ClosingPrint from '../../components/ClosingPrint';
 import SelectBuscable from '../../components/common/SelectBuscable';
@@ -257,6 +258,8 @@ export default function ShipmentClosingPage() {
   };
 
   const hayCambios = () => inicial !== null && inicial !== JSON.stringify(barcos);
+  // 11/11/2026: también pregunta al ir a otra opción del menú, recargar o usar "atrás" del navegador
+  useAvisoSalida(hayCambios());
   const volver = () => (hayCambios() ? setMostrarConfirmarSalida(true) : navigate('/exportaciones/cierre'));
 
   const recargar = async () => {

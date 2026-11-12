@@ -30,6 +30,7 @@ api.interceptors.response.use(
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       if (window.location.pathname !== "/login") {
+        window.dispatchEvent(new Event("siae:soltar-aviso")); // 11/11/2026: sesión vencida: sin el aviso de "¿salir del sitio?"
         window.location.assign("/login?expirada=1");
       }
     }
@@ -44,6 +45,7 @@ api.interceptors.response.use(
         // usuario guardado dañado: la pantalla igual lo pide al backend (/me)
       }
       if (window.location.pathname !== "/cambiar-clave") {
+        window.dispatchEvent(new Event("siae:soltar-aviso")); // 11/11/2026: debe cambiar la clave: sin el aviso de "¿salir del sitio?"
         window.location.assign("/cambiar-clave");
       }
     }
