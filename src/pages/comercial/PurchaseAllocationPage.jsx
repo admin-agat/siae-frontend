@@ -212,6 +212,8 @@ export default function PurchaseAllocationPage() {
   const [preciosMag, setPreciosMag] = useState([]); // precios oficiales MAG activos
   const [fincas, setFincas] = useState([]); // fincas del catálogo (activas + las ya usadas)
   const [contratos, setContratos] = useState([]); // 06/11/2026: contratos de los vendedores (Liquidaciones → Contratos y retención)
+  const [usoOtros, setUsoOtros] = useState([]); // 12/11/2026: cajas por contrato y semana en OTROS pedidos
+  const [verContratos, setVerContratos] = useState({}); // 12/11/2026: { semana: true } lista de contratos por completar
   const [nuevaFinca, setNuevaFinca] = useState(null); // { bKey, cKey, third_party_id, dueno, name, magap_code, zone }
   const [errorFinca, setErrorFinca] = useState('');
   const [guardandoFinca, setGuardandoFinca] = useState(false);
@@ -239,6 +241,7 @@ export default function PurchaseAllocationPage() {
     setPreciosMag(data.official_prices || []);
     setFincas(data.farms || []);
     setContratos(data.contracts || []);
+    setUsoOtros(data.contract_usage || []);
     setVersion(data.version);
     const lista = data.blocks.map(bloqueDesdeBackend);
     setBloques(lista);
@@ -304,28 +307,69 @@ export default function PurchaseAllocationPage() {
   // 06/11/2026: contratos del vendedor (activos + el que ya tiene la compra) y cajas compradas por contrato
   // en esta semana (el cupo es semanal; pasarse solo avisa)
   // 11/11/2026: solo los vigentes en la semana de compra de la línea (el que ya tiene la compra siempre se ve)
-  const rangoSemana = (c) => {
-    const w = semanasCompra.find((x) => x.week === semanaDeCompra(c)) || { year: pedido?.year, week: pedido?.week };
-    if (!w.year || !w.week) return null;
-    const lunes = lunesSemana(w.year, w.week);
+  const rangoDe = (anio, semana) => {
+    const lunes = lunesSemana(anio, semana);
     const d = new Date(`${lunes}T00:00:00Z`);
     d.setUTCDate(d.getUTCDate() + 6);
     return { lunes, domingo: d.toISOString().slice(0, 10) };
   };
-  const vigenteEn = (k, c) => {
-    const r = rangoSemana(c);
-    return !r || ((!k.start_date || k.start_date <= r.domingo) && (!k.end_date || k.end_date >= r.lunes));
+  const rangoSemana = (c) => {
+    const w = semanasCompra.find((x) => x.week === semanaDeCompra(c)) || { year: pedido?.year, week: pedido?.week };
+    if (!w.year || !w.week) return null;
+    return rangoDe(w.year, w.week);
   };
+  const vigenteEnRango = (k, r) => !r || ((!k.start_date || k.start_date <= r.domingo) && (!k.end_date || k.end_date >= r.lunes));
+  const vigenteEn = (k, c) => vigenteEnRango(k, rangoSemana(c));
   const contratosDe = (c, actual) => contratos.filter((k) => String(k.third_party_id) === String(c.third_party_id)
     && ((k.status && vigenteEn(k, c)) || String(k.id) === String(actual)));
-  const cajasContrato = (contratoId) => todas.filter((x) => x.negotiation_type === 'CONTRATO' && x.contract_id === String(contratoId)).reduce((s, x) => s + n(x.boxes), 0);
+  // 12/11/2026: el cupo es semanal: cuenta las compras de esta pantalla en esa semana de compra (aunque no estén
+  // guardadas) más las de otros pedidos de la misma semana
+  const cajasContrato = (contratoId, semana, lista = todas) => lista
+    .filter((x) => x.negotiation_type === 'CONTRATO' && x.contract_id === String(contratoId) && semanaDeCompra(x) === semana)
+    .reduce((s, x) => s + n(x.boxes), 0)
+    + usoOtros.filter((u) => u.contract_id === Number(contratoId) && u.week === semana).reduce((s, u) => s + u.boxes, 0);
   // Al cambiar vendedor o pasar a CONTRATO: si el vendedor tiene un solo contrato, se elige solo
-  const conContrato = (c) => {
-    if (c.negotiation_type !== 'CONTRATO') return { ...c, contract_id: '', contract_part: '0' };
+  // 12/11/2026: al elegir un vendedor con contrato vigente la compra pasa sola a CONTRATO (se puede volver a SPOT);
+  // con varios contratos se propone el N° más bajo que todavía tenga saldo en la semana
+  const conContrato = (c, lista = todas, pasarAContrato = false) => {
     const propios = contratosDe(c).filter((k) => k.status);
-    if (propios.some((k) => String(k.id) === c.contract_id)) return c;
-    return { ...c, contract_id: propios.length === 1 ? String(propios[0].id) : '', contract_part: '0' };
+    let nueva = c;
+    if (pasarAContrato && propios.length && c.negotiation_type !== 'CONTRATO') {
+      nueva = { ...c, negotiation_type: 'CONTRATO', payment_scheme: PAGO_POR_TIPO.CONTRATO };
+    }
+    if (nueva.negotiation_type !== 'CONTRATO') return { ...nueva, contract_id: '', contract_part: '0' };
+    if (propios.some((k) => String(k.id) === nueva.contract_id)) return nueva;
+    const semana = semanaDeCompra(nueva);
+    const otras = lista.filter((x) => x._key !== nueva._key);
+    const k = propios.length === 1 ? propios[0] : propios.find((x) => cajasContrato(x.id, semana, otras) < Number(x.weekly_boxes));
+    return { ...nueva, contract_id: k ? String(k.id) : '', contract_part: '0' };
   };
+
+  // 12/11/2026: avance de los contratos por semana de compra (todos los pedidos): cuántos vendedores con
+  // contrato vigente no completan su cupo semanal (suma de sus contratos) y cuántas cajas les faltan
+  const avanceContratos = semanasCompra
+    .filter((s) => s.week === pedido?.week || todas.some((c) => semanaDeCompra(c) === s.week))
+    .map((s) => {
+      const r = rangoDe(s.year, s.week);
+      const porVendedor = {};
+      contratos.filter((k) => k.status && vigenteEnRango(k, r)).forEach((k) => {
+        const v = porVendedor[k.third_party_id] ||= {
+          id: k.third_party_id, cupo: 0, comprado: 0,
+          nombre: vendedores.find((x) => String(x.id) === String(k.third_party_id))?.name || `VENDEDOR ${k.third_party_id}`,
+        };
+        v.cupo += Number(k.weekly_boxes);
+        v.comprado += cajasContrato(k.id, s.week);
+      });
+      const lista = Object.values(porVendedor);
+      const faltan = lista.filter((v) => v.comprado < v.cupo).map((v) => ({ ...v, falta: v.cupo - v.comprado }))
+        .sort((a, b) => b.falta - a.falta);
+      return {
+        week: s.week, total: lista.length, faltan,
+        cupo: lista.reduce((t, v) => t + v.cupo, 0),
+        comprado: lista.reduce((t, v) => t + Math.min(v.comprado, v.cupo), 0),
+        cajasFaltan: faltan.reduce((t, v) => t + v.falta, 0),
+      };
+    });
 
   // Precio MAG vigente para la marca del bloque (según su tipo de caja) en la fecha de corte
   const precioMagDe = (b, c) => {
@@ -366,11 +410,17 @@ export default function PurchaseAllocationPage() {
         let nueva = { ...c, [campo]: valor };
         if (campo === 'negotiation_type') nueva.payment_scheme = PAGO_POR_TIPO[valor];
         // 11/11/2026: también al cambiar la semana de compra (el contrato debe estar vigente en esa semana)
-        if (campo === 'negotiation_type' || campo === 'third_party_id' || campo === 'purchase_week') nueva = conContrato(nueva);
+        // 12/11/2026: al elegir vendedor con contrato pasa a CONTRATO (menos en PACKED, que es siempre SPOT)
+        if (campo === 'negotiation_type' || campo === 'third_party_id' || campo === 'purchase_week') {
+          nueva = conContrato(nueva, prev.flatMap((x) => x.purchases), campo === 'third_party_id' && b.presentation !== 'PACKED');
+        }
         if (campo === 'contract_id') nueva.contract_part = '0';
-        // Al elegir el contrato se propone su precio (si todavía no hay precio real)
-        if (campo === 'contract_id' && c.real_price === '') {
-          const k = contratos.find((x) => String(x.id) === valor);
+        // Al elegir el contrato (a mano o propuesto, 12/11/2026) se propone su precio (si todavía no hay precio real)
+        // (o si el precio era el del contrato anterior: así no queda el de otro vendedor o contrato)
+        const anterior = contratos.find((x) => String(x.id) === c.contract_id);
+        if (nueva.contract_id && nueva.contract_id !== c.contract_id
+          && (nueva.real_price === '' || (anterior && n(nueva.real_price) === n(anterior.price)))) {
+          const k = contratos.find((x) => String(x.id) === nueva.contract_id);
           if (k?.price) nueva.real_price = texto(k.price);
         }
         // Si se le compra directo a un productor, no hay "productor real" aparte
@@ -626,6 +676,53 @@ export default function PurchaseAllocationPage() {
           <div className={`h-full rounded-full transition-all ${hayExceso ? 'bg-amber-600' : avance >= 100 ? 'bg-green-600' : 'bg-amber-500'}`} style={{ width: `${avance}%` }} />
         </div>
       </div>
+
+      {/* 12/11/2026: contratos de la semana de compra (todos los pedidos): cuántos vendedores con contrato faltan por completar su cupo */}
+      {avanceContratos.filter((s) => s.total > 0).map((s) => {
+        const abierto = verContratos[s.week];
+        const completo = s.faltan.length === 0;
+        return (
+          <div key={s.week} className={`rounded-xl border px-4 py-3 mb-4 ${completo ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
+            <button type="button" onClick={() => setVerContratos((v) => ({ ...v, [s.week]: !v[s.week] }))} aria-expanded={Boolean(abierto)}
+              className="w-full flex flex-wrap items-center justify-between gap-2 text-sm text-left">
+              <span className="text-gray-700 flex items-center gap-1">
+                {abierto ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                Contratos WK{s.week}: <strong>{s.total - s.faltan.length}</strong> de <strong>{s.total}</strong> vendedores completos · comprado <strong>{formatoCajas(s.comprado)}</strong> de <strong>{formatoCajas(s.cupo)}</strong> cajas
+              </span>
+              <span className={`font-semibold ${completo ? 'text-green-700' : 'text-amber-700'}`}>
+                {completo ? '✔ CONTRATOS COMPLETOS' : `FALTAN ${s.faltan.length} VENDEDORES · ${formatoCajas(s.cajasFaltan)} CAJAS POR COMPLETAR`}
+              </span>
+            </button>
+            <div className="h-2 bg-white rounded-full mt-2 overflow-hidden">
+              <div className={`h-full rounded-full transition-all ${completo ? 'bg-green-600' : 'bg-amber-500'}`} style={{ width: `${s.cupo ? Math.min(100, (s.comprado / s.cupo) * 100) : 0}%` }} />
+            </div>
+            {abierto && !completo && (
+              <div className="mt-3 max-h-64 overflow-auto scroll-ancho rounded-lg border border-amber-200 bg-white">
+                <table className="w-full text-xs">
+                  <thead className="sticky top-0 bg-gray-50 text-gray-600">
+                    <tr>
+                      <th className="text-left px-3 py-1.5">Vendedor</th>
+                      <th className="text-right px-3 py-1.5">Cupo semanal</th>
+                      <th className="text-right px-3 py-1.5">Comprado</th>
+                      <th className="text-right px-3 py-1.5">Faltan</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {s.faltan.map((v) => (
+                      <tr key={v.id} className="border-t border-gray-100">
+                        <td className="px-3 py-1.5">{v.nombre}</td>
+                        <td className="px-3 py-1.5 text-right">{formatoCajas(v.cupo)}</td>
+                        <td className="px-3 py-1.5 text-right">{formatoCajas(v.comprado)}</td>
+                        <td className="px-3 py-1.5 text-right font-semibold text-amber-700">{formatoCajas(v.falta)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        );
+      })}
 
       {/* Resumen por cliente */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
@@ -942,7 +1039,7 @@ export default function PurchaseAllocationPage() {
                                     return <span className="block text-[10px] font-semibold text-amber-700 mt-1" title="Liquidaciones registra los contratos en Contratos y retención">SIN CONTRATO VIGENTE</span>;
                                   }
                                   const k = propios.find((x) => String(x.id) === c.contract_id);
-                                  const usadas = k ? cajasContrato(k.id) : 0;
+                                  const usadas = k ? cajasContrato(k.id, semanaDeCompra(c)) : 0;
                                   return (
                                     <>
                                       <div className="flex gap-1 mt-1">
@@ -964,9 +1061,31 @@ export default function PurchaseAllocationPage() {
                                         </span>
                                       )}
                                       {k && !vigenteEn(k, c) && <span className="block text-[10px] font-semibold text-red-600" title="La vigencia del contrato no toca la semana de compra">CONTRATO NO VIGENTE EN WK{semanaDeCompra(c)}</span>}
+                                      {/* 12/11/2026: con 2 o más contratos se ven todos con lo comprado en la semana, su saldo y el total */}
+                                      {propios.length > 1 && (() => {
+                                        const semana = semanaDeCompra(c);
+                                        const filas = propios.map((x) => ({ x, u: cajasContrato(x.id, semana) }));
+                                        return (
+                                          <div className="mt-1 rounded-lg border border-gray-200 bg-white px-1.5 py-1 text-[10px] text-gray-600" title={`Contratos del vendedor en la WK${semana}: comprado / cupo semanal`}>
+                                            {filas.map(({ x, u }) => (
+                                              <div key={x.id} className={String(x.id) === c.contract_id ? 'font-semibold text-gray-800' : ''}>
+                                                N° {x.number} · $ {formatoDinero(x.price)}: {formatoCajas(u)} / {formatoCajas(x.weekly_boxes)}
+                                                <span className={u >= Number(x.weekly_boxes) ? ' text-green-700' : ' text-amber-700'}> · SALDO {formatoCajas(Math.max(0, Number(x.weekly_boxes) - u))}</span>
+                                              </div>
+                                            ))}
+                                            <div className="border-t border-gray-200 mt-0.5 pt-0.5 font-semibold text-gray-800">
+                                              TOTAL: {formatoCajas(filas.reduce((t, f) => t + f.u, 0))} / {formatoCajas(filas.reduce((t, f) => t + Number(f.x.weekly_boxes), 0))} CAJAS
+                                            </div>
+                                          </div>
+                                        );
+                                      })()}
                                     </>
                                   );
                                 })()}
+                                {/* 12/11/2026: el vendedor tiene contrato pero esta compra va SPOT */}
+                                {c.negotiation_type === 'SPOT' && c.third_party_id && contratosDe(c).some((k) => k.status) && (
+                                  <span className="block text-[10px] font-semibold text-primario mt-1" title="El vendedor tiene contrato vigente en la semana de compra; esta compra va SPOT">TIENE CONTRATO</span>
+                                )}
                               </td>
                               <td className="px-2 py-1.5 min-w-[110px] align-top">
                                 <CampoNumero decimales={2} value={c.transport_deduction} onChange={cambiar('transport_deduction')} disabled={c.liquidada} placeholder="0" title="Transporte que pusimos nosotros: monto total que se le DESCUENTA al liquidar" aria-label="Transporte a descontar" className={`${inputClass} text-right`} />

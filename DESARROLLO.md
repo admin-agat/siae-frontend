@@ -273,6 +273,27 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 12/11/2026 — Compra de fruta: contratos de la semana y compra que pasa sola a CONTRATO
+- **Pedido de Peter:** saber cuántos vendedores con contrato faltan para completar la semana, y que la compra muestre el contrato del vendedor (con 2 o más, la lista y el total de cajas).
+- **Decisiones de Peter:**
+  - El aviso va solo en Compra de fruta.
+  - "Completo" significa cupo semanal completo, que es la suma de los contratos vigentes del vendedor.
+  - Al elegir un vendedor con contrato, la compra pasa sola a CONTRATO.
+  - Con varios contratos se propone el N° más bajo que todavía tenga saldo.
+- **Backend:** `GET /customer-orders/{id}/purchases` devuelve `contract_usage`: las cajas compradas con cada contrato en **otros pedidos**, en las semanas de compra del pedido (la suya y la siguiente). No hay migración.
+- **Compra de fruta (`PurchaseAllocationPage.jsx`):**
+  - **Recuadro "Contratos WKnn":**
+    - Muestra "Faltan X vendedores · Z cajas por completar" con una barra de avance y la lista desplegable (vendedor, cupo, comprado y lo que falta).
+    - Suma todos los pedidos de la semana más lo que está en pantalla sin guardar.
+    - Si hay compras para la semana siguiente, sale otro recuadro para esa semana.
+  - **Al elegir un vendedor con contrato vigente:**
+    - La compra pasa a CONTRATO con pago 100 % y se propone el precio del contrato, si el precio real está vacío.
+    - En bloques PACKED no cambia, porque siempre son SPOT.
+    - Si se vuelve a SPOT a mano, aparece la etiqueta "TIENE CONTRATO".
+  - **Con 2 o más contratos:** se ve cada contrato con comprado / cupo / saldo de la semana y el total. Se propone el N° más bajo que tenga saldo.
+  - **"Comprado / cupo" de cada contrato:** ahora cuenta solo la semana de compra de la línea y suma los otros pedidos. Antes contaba solo el pedido abierto.
+- **Ojo:** ASOPRORITEROS, ASOPROAREIBA y ACUPOESPE tienen los contratos en el registro PRODUCTOR y las compras en el COMERCIALIZADORA, así que van a aparecer como que faltan hasta que se unan los registros (pendiente de la decisión de Peter).
+
 ### 11/11/2026 — Aviso "¿Seguro que deseas salir?" en todo el sistema cuando hay cambios sin guardar
 - **Pedido de Peter:** estaba ingresando un pedido, hizo clic en otra opción del menú y perdió lo escrito sin aviso. Antes solo preguntaba el botón Volver o Cancelar de cada pantalla.
 - **Nuevo componente `src/components/common/AvisoSalida.jsx`:**
