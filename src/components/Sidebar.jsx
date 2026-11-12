@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
-    ChevronDown, Menu, X, LayoutDashboard, Ship, ShoppingBasket, Boxes, Calculator, Wallet, Settings, Circle, ShoppingCart, Landmark,
+    ChevronDown, Menu, X, LayoutDashboard, Ship, ShoppingBasket, Boxes, Calculator, Wallet, Settings, Circle, ShoppingCart, Landmark, Scale,
 } from "lucide-react";
 // 30/10/2026: el menú y los permisos por pantalla están en routes/menu.js (los usa también AppRouter)
 import { menuDe } from "../routes/menu";
@@ -36,6 +36,7 @@ const ICONO_SECCION = {
     COMERCIAL: ShoppingBasket,
     INVENTARIO: Boxes,
     "LIQUIDACIÓN": Calculator,
+    LEGAL: Scale,            // 12/11/2026: Departamento LEGAL (contratos de productores)
     FINANZAS: Wallet,
     COMPRAS: ShoppingCart,   // 05/11/2026
     CONTABILIDAD: Landmark,  // 05/11/2026

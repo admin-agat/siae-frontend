@@ -184,7 +184,9 @@ export default function AppRouter() {
           {/* ===== Liquidación (dinero al productor) — solo ADMIN ===== */}
           <Route path="/liquidacion" element={P('liquidar', <SettlementsPage />)} />
           <Route path="/liquidacion/parametros" element={P('parametros_liquidacion', <SettlementParametersPage />)} />
-          <Route path="/liquidacion/contratos" element={P('contratos_productores', <ProducerContractsPage />)} />
+          {/* 12/11/2026: Liquidación edita la retención; los contratos los registra LEGAL (misma pantalla, otro modo) */}
+          <Route path="/liquidacion/contratos" element={P('contratos_productores', <ProducerContractsPage key="retencion" modo="retencion" />)} />
+          <Route path="/legal/contratos" element={P('contratos_legal', <ProducerContractsPage key="legal" modo="legal" />)} />
           <Route path="/liquidacion/tarjas" element={P('tarjas', <TalliesPage />)} />
           <Route path="/liquidacion/tarjas/:id" element={P('tarjas', <TallySheetPage />)} />
           <Route path="/liquidacion/anticipos" element={P('anticipos', <ProducerAdvancesPage />)} />

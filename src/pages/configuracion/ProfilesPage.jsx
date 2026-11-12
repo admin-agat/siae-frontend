@@ -32,7 +32,9 @@ const TIPOS_BASE = {
   CONTABILIDAD: 'Contabilidad: aprueba las órdenes de compra de todos los departamentos y genera el archivo de pagos del banco.',
   DEPARTAMENTO: 'Un departamento (Sistemas, Logística...): llena sus órdenes de compra y ve solo las de su departamento (se pone en Usuarios).',
   // 06/11/2026
-  LIQUIDACIONES: 'Departamento de Liquidaciones: contratos y retención de productores, parámetros de la semana, tarjas, liquidaciones y pagos.',
+  // 12/11/2026: los contratos de productores pasaron a LEGAL; Liquidaciones los ve
+  LIQUIDACIONES: 'Departamento de Liquidaciones: retención de productores (ve los contratos), parámetros de la semana, tarjas, liquidaciones y pagos.',
+  LEGAL: 'Departamento Legal: contratos de productores (cupo, precio, fechas, código bananero, finca, N° MAGAP) y cajas registradas en el MAG.',
 };
 
 const formularioVacio = { name: '', base_role: 'COMERCIAL', description: '', screens: [] };

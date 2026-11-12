@@ -12,4 +12,6 @@ export const guardarTramos = (brackets) => axios.put('/retention-brackets', { br
 export const simularRetencion = (params) => axios.get('/retention-brackets/simular', { params }).then((res) => res.data);
 
 export const getContratosProductores = () => axios.get('/producer-contracts').then((res) => res.data);
-export const guardarContratosProductor = (thirdPartyId, data) => axios.put(`/producer-contracts/${thirdPartyId}`, data).then((res) => res.data);
+// 12/11/2026: LEGAL guarda contratos y cajas MAG; Liquidaciones solo la retención (rutas separadas)
+export const guardarContratosProductor = (thirdPartyId, data) => axios.put(`/producer-contracts/${thirdPartyId}/contracts`, data).then((res) => res.data);
+export const guardarRetencionProductor = (thirdPartyId, data) => axios.put(`/producer-contracts/${thirdPartyId}/retention`, data).then((res) => res.data);

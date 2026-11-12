@@ -273,6 +273,32 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 12/11/2026 — Departamento LEGAL: los contratos de productores pasan de Liquidaciones a LEGAL
+- **Pedido de Peter:** Liquidaciones ya no registra contratos; lo hace el Departamento Legal (cupo, precio y fechas). Diseño aprobado.
+- **Decisiones:**
+  - El tipo de usuario se llama LEGAL.
+  - Liquidaciones ve los contratos, pero no los cambia.
+  - Las cajas MAG las edita LEGAL.
+  - Los contratos de clientes siguen en Configuración, con ADMIN.
+- **Migración** `2026_11_12_000002_departamento_legal`:
+  - Agrega el tipo `LEGAL` a `users_role_check` y `profiles_base_role_check`.
+  - Crea el perfil **LEGAL** con la pantalla `contratos_legal`.
+  - Actualiza la descripción del perfil LIQUIDACIONES. No le quita pantallas a nadie.
+- **Backend:**
+  - Pantalla nueva `contratos_legal` (sección LEGAL). `contratos_productores` pasa a llamarse "Retención de productores (ve los contratos)".
+  - El guardado se dividió en dos rutas:
+    - `PUT /producer-contracts/{tercero}/contracts` (solo `contratos_legal`): contratos y cajas MAG. No toca la retención.
+    - `PUT /producer-contracts/{tercero}/retention` (solo `contratos_productores`): régimen y nombre para la referencia de pago.
+  - Se quitó el PUT viejo. `GET /producer-contracts` lo usan las dos pantallas.
+  - `Profile::TIPOS_BASE` incluye LEGAL.
+- **Frontend:**
+  - La misma pantalla `ProducerContractsPage.jsx` tiene dos modos:
+    - **LEGAL → Contratos de productores** (`/legal/contratos`): edita los contratos y las cajas MAG.
+    - **LIQUIDACIÓN → Retención de productores** (`/liquidacion/contratos`): edita el régimen y la referencia de pago. Ve los contratos y las cajas MAG sin poder cambiarlos ("LOS CONTRATOS LOS REGISTRA LEGAL").
+  - Icono de balanza para la sección LEGAL y textos de Perfiles.
+- **Para usarlo:** ADMIN crea al usuario de Legal en Usuarios con el perfil LEGAL.
+- **Scripts de carga:** los scripts de datos que usaban el PUT viejo (`/producer-contracts/{tercero}`) ahora deben usar `/contracts` o `/retention`.
+
 ### 12/11/2026 — Contratos según la lista impresa (foto): JEHOVA JIREH N°3 (solo datos, en producción 17:01 UTC)
 - **Fuente:** foto de la lista impresa de contratos de productores. Un agente de datos la cruzó con producción: 29 filas iguales, 6 con el descuento distinto, 1 nueva y 2 marcadas PENDIENTE.
 - **Decisiones de Peter:**

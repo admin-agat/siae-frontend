@@ -72,7 +72,8 @@ export const menuItems = [
         // 29/10/2026: tarjas (lo recibido en puerto) → liquidar → registrar pagos 80/20 o 100 %
         // 06/11/2026: datos base como el Excel de liquidaciones (Base Productores y PARAMETROS)
         items: [
-            { label: "Contratos y retención", ruta: "/liquidacion/contratos", icono: FileSignature, pantalla: "contratos_productores" },
+            // 12/11/2026: Liquidaciones ya no mete contratos (los registra LEGAL): edita la retención y ve los contratos
+            { label: "Retención de productores", ruta: "/liquidacion/contratos", icono: FileSignature, pantalla: "contratos_productores" },
             { label: "Parámetros de la semana", ruta: "/liquidacion/parametros", icono: SlidersHorizontal, pantalla: "parametros_liquidacion" },
             { label: "Tarjas", ruta: "/liquidacion/tarjas", icono: ClipboardCheck, pantalla: "tarjas" },
             { label: "Anticipos y préstamos", ruta: "/liquidacion/anticipos", icono: HandCoins, pantalla: "anticipos" },
@@ -80,6 +81,13 @@ export const menuItems = [
             { label: "Pagos e historial", ruta: "/liquidacion/pagos", icono: CircleDollarSign, pantalla: "pagos" },
             // 30/10/2026: notas de crédito por recibir de productores/comercializadoras
             { label: "Notas de crédito", ruta: "/liquidacion/notas-credito", icono: Receipt, pantalla: "notas_credito" },
+        ],
+    },
+    {
+        seccion: "LEGAL",
+        // 12/11/2026: Departamento LEGAL: contratos de productores (cupo, precio, fechas) y cajas registradas en el MAG
+        items: [
+            { label: "Contratos de productores", ruta: "/legal/contratos", icono: FileSignature, pantalla: "contratos_legal" },
         ],
     },
     {

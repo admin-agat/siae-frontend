@@ -211,7 +211,7 @@ export default function PurchaseAllocationPage() {
   const [ultimaBodega, setUltimaBodega] = useState({}); // { third_party_id: warehouse_id }
   const [preciosMag, setPreciosMag] = useState([]); // precios oficiales MAG activos
   const [fincas, setFincas] = useState([]); // fincas del catálogo (activas + las ya usadas)
-  const [contratos, setContratos] = useState([]); // 06/11/2026: contratos de los vendedores (Liquidaciones → Contratos y retención)
+  const [contratos, setContratos] = useState([]); // 06/11/2026: contratos de los vendedores (desde 12/11/2026 los registra LEGAL → Contratos de productores)
   const [usoOtros, setUsoOtros] = useState([]); // 12/11/2026: cajas por contrato y semana en OTROS pedidos
   const [verContratos, setVerContratos] = useState({}); // 12/11/2026: { semana: true } lista de contratos por completar
   const [nuevaFinca, setNuevaFinca] = useState(null); // { bKey, cKey, third_party_id, dueno, name, magap_code, zone }
@@ -1036,7 +1036,7 @@ export default function PurchaseAllocationPage() {
                                 {c.negotiation_type === 'CONTRATO' && c.third_party_id && (() => {
                                   const propios = contratosDe(c, c.contract_id);
                                   if (propios.length === 0) {
-                                    return <span className="block text-[10px] font-semibold text-amber-700 mt-1" title="Liquidaciones registra los contratos en Contratos y retención">SIN CONTRATO VIGENTE</span>;
+                                    return <span className="block text-[10px] font-semibold text-amber-700 mt-1" title="LEGAL registra los contratos en Contratos de productores">SIN CONTRATO VIGENTE</span>;
                                   }
                                   const k = propios.find((x) => String(x.id) === c.contract_id);
                                   const usadas = k ? cajasContrato(k.id, semanaDeCompra(c)) : 0;
