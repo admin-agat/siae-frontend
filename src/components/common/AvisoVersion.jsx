@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
+import { useIrA } from './AvisoSalida';
 
 // 09/11/2026: avisa cuando se subió una versión nueva del sistema (sin Ctrl+F5).
 // Cada build lleva el archivo principal con un nombre distinto (/assets/index-XXXX.js). Cada 5 minutos,
@@ -13,6 +14,7 @@ const scriptPrincipal = (doc) =>
 
 export default function AvisoVersion() {
   const [nueva, setNueva] = useState(false);
+  const irA = useIrA();
 
   useEffect(() => {
     const actual = scriptPrincipal(document);
@@ -40,12 +42,13 @@ export default function AvisoVersion() {
   }, []);
 
   if (!nueva) return null;
+  // 13/11/2026: con cambios sin guardar pregunta con el diálogo estándar (no el aviso del navegador)
   return (
     <div role="status" className="bg-amber-100 border-b border-amber-300 text-amber-900 text-sm px-4 sm:px-6 py-2 flex items-center justify-between gap-3">
       <span>Hay una versión nueva del sistema. Guarda lo que estés haciendo y actualiza.</span>
       <button
         type="button"
-        onClick={() => window.location.reload()}
+        onClick={() => irA(() => window.location.reload())}
         className="flex items-center gap-2 font-semibold bg-amber-600 text-white rounded-lg px-3 py-1.5 hover:bg-amber-700 transition shrink-0"
       >
         <RefreshCw size={15} />

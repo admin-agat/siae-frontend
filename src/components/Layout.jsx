@@ -105,7 +105,7 @@ function LayoutContenido() {
                 Junto a la versión (no junto a Cerrar sesión, para no tocar Salir por error) */}
             <button
               type="button"
-              onClick={() => window.location.reload()}
+              onClick={() => irA(() => window.location.reload())} // 13/11/2026: con cambios sin guardar, el diálogo estándar
               title="Actualizar sistema"
               aria-label="Actualizar sistema"
               className="flex items-center text-white border border-white/50 rounded-lg px-2 py-1 hover:bg-white hover:text-primario transition shrink-0"

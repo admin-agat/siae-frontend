@@ -273,6 +273,28 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 13/11/2026 — Compra de fruta: transporte solo "Reconocer" y arreglos del test de usabilidad
+- **Transporte** (pedido de Peter: "solo se reconoce transporte"):
+  - La celda es una casilla RECONOCER con su $/caja.
+  - El campo "DESCONTAR $" ya no se digita. Las 2 compras de producción que lo tenían lo muestran en rojo, con una X para quitarlo.
+  - El backend no cambia.
+- **Test de usabilidad** (Chrome a 1366×768, flujo de una compra nueva):
+  - El recuadro del P. oficial del bloque ahora se cierra con Escape o con un clic afuera.
+  - Los textos de 10–11 px (Meta, Comprado, Falta, P. oficial, CONTRATO/SPOT, 80/20, ÷ CAJAS, OF. $) pasan a 12 px.
+  - El día de corte tiene nombre accesible.
+  - Quedan observaciones para decidir con Peter: la tabla es más ancha que la pantalla y las filas son altas.
+- **Tabla más angosta** (punto 1, aprobado por Peter): pasa de 2.558 a 2.371 px y de 19 a 17 columnas.
+  - La columna MAG pasa a una línea "MAG x" debajo de la finca.
+  - "Entrega en" entra en la celda "Corte · Semana · Entrega".
+
+### 13/11/2026 — Actualizar con cambios sin guardar: diálogo del sistema, no el del navegador
+- **Por qué:** al pulsar el botón ⟳ de la barra con cambios sin guardar, salía el aviso gris del navegador ("Esta página le pide que confirme...") en vez del diálogo estándar del SIAE.
+- **Cambio:**
+  - El botón ⟳ de la barra (`Layout.jsx`) y "Actualizar" del aviso de versión nueva (`AvisoVersion.jsx`) pasan por `irA()`. Si hay cambios, sale "¿Seguro que deseas salir?" con Seguir editando / Salir sin guardar.
+  - F5, Ctrl+R y Cmd+R hacen lo mismo (`AvisoSalida.jsx`).
+  - El botón recargar del propio navegador y cerrar la pestaña siguen con el aviso del navegador: ese no se puede reemplazar.
+- Solo frontend. Probado en el navegador: con un cambio pendiente, ⟳ y F5 muestran el diálogo y la página no se recarga.
+
 ### 13/11/2026 — Compra de fruta: precio oficial en el bloque, columna Negociación y BONO / EXTRA
 - **Por qué:** el precio oficial se repetía en cada fila y la columna Tipo · Pago confundía con la parte del contrato (N°1, N°1.1…). Además faltaba dónde poner un extra por caja al productor, por ejemplo la cinta. Diseño aprobado por Peter: `docs/modulos/compra-columnas-bono.md`.
 - **Precio oficial:** pasa a la esquina del encabezado del bloque, como "P. OFICIAL $ x ✎".

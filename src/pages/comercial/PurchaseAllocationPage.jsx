@@ -573,6 +573,17 @@ export default function PurchaseAllocationPage() {
     }
   });
 
+  // 13/11/2026 (test de usabilidad): el recuadro del P. oficial se cierra con Escape o con un clic afuera
+  const oficialAbierto = Boolean(editOficial);
+  useEffect(() => {
+    if (!oficialAbierto) return undefined;
+    const tecla = (e) => { if (e.key === 'Escape') setEditOficial(null); };
+    const afuera = (e) => { if (!e.target.closest?.('[data-oficial-bloque]')) setEditOficial(null); };
+    document.addEventListener('keydown', tecla);
+    document.addEventListener('mousedown', afuera);
+    return () => { document.removeEventListener('keydown', tecla); document.removeEventListener('mousedown', afuera); };
+  }, [oficialAbierto]);
+
   const seleccionar = (e) => e.target.select();
 
   // 12/11/2026: Enter en cajas o precios baja al mismo campo de la compra siguiente;
@@ -920,14 +931,14 @@ export default function PurchaseAllocationPage() {
               <p className="font-bold text-gray-800">{c.name}</p>
               <p className="text-xs text-gray-500 mb-2">Marcas: {c.brands.map((b) => b.name).join(', ') || <span className="text-red-600">SIN MARCAS (asígnalas en Configuración → Terceros)</span>}</p>
               <div className="grid grid-cols-3 gap-2 text-center text-sm">
-                <div><p className="text-[10px] text-gray-500 uppercase">Pedido</p><p className="font-semibold">{formatoCajas(c.pedido)}</p></div>
-                <div><p className="text-[10px] text-gray-500 uppercase">Comprado</p><p className="font-semibold text-primario">{formatoCajas(comprado)}</p></div>
+                <div><p className="text-xs text-gray-500 uppercase">Pedido</p><p className="font-semibold">{formatoCajas(c.pedido)}</p></div>
+                <div><p className="text-xs text-gray-500 uppercase">Comprado</p><p className="font-semibold text-primario">{formatoCajas(comprado)}</p></div>
                 <div>
-                  <p className="text-[10px] text-gray-500 uppercase">{falta < 0 ? 'De más' : 'Falta'}</p>
+                  <p className="text-xs text-gray-500 uppercase">{falta < 0 ? 'De más' : 'Falta'}</p>
                   <p className={`font-semibold ${falta < 0 ? 'text-amber-800' : falta === 0 ? 'text-green-700' : 'text-amber-700'}`}>{falta === 0 ? '✔' : falta < 0 ? `+${formatoCajas(-falta)}` : formatoCajas(falta)}</p>
                 </div>
               </div>
-              {falta < 0 && <p className="text-[11px] text-amber-800 mt-2">Se compran {formatoCajas(-falta)} cajas más de lo pedido.</p>}
+              {falta < 0 && <p className="text-xs text-amber-800 mt-2">Se compran {formatoCajas(-falta)} cajas más de lo pedido.</p>}
               {(c.pedido_detalle || []).length > 0 && (
                 <div className="mt-2 border-t pt-2 space-y-0.5">
                   {c.pedido_detalle.map((d) => {
@@ -998,10 +1009,10 @@ export default function PurchaseAllocationPage() {
                   </p>
                 </div>
                 <div className="flex gap-4 text-sm text-center">
-                  <div><p className="text-[10px] text-gray-500 uppercase">Meta</p><p className="font-semibold">{formatoCajas(meta)}</p></div>
-                  <div><p className="text-[10px] text-gray-500 uppercase">Comprado</p><p className="font-semibold text-primario">{formatoCajas(comprado)}</p></div>
+                  <div><p className="text-xs text-gray-500 uppercase">Meta</p><p className="font-semibold">{formatoCajas(meta)}</p></div>
+                  <div><p className="text-xs text-gray-500 uppercase">Comprado</p><p className="font-semibold text-primario">{formatoCajas(comprado)}</p></div>
                   <div>
-                    <p className="text-[10px] text-gray-500 uppercase">Falta</p>
+                    <p className="text-xs text-gray-500 uppercase">Falta</p>
                     <p className={`font-semibold ${falta < 0 ? 'text-red-600' : falta === 0 ? 'text-green-700' : 'text-amber-700'}`}>{falta === 0 ? '✔' : formatoCajas(falta)}</p>
                   </div>
                   {/* 13/11/2026: precio oficial del bloque (antes se repetía en cada compra) */}
@@ -1012,15 +1023,15 @@ export default function PurchaseAllocationPage() {
                     const noLiquidadas = b.purchases.filter((c) => !c.liquidada).length;
                     const liquidadas = b.purchases.length - noLiquidadas;
                     return (
-                      <div className="relative" onClick={(e) => e.stopPropagation()}>
-                        <p className="text-[10px] text-gray-500 uppercase">P. oficial</p>
+                      <div className="relative" data-oficial-bloque onClick={(e) => e.stopPropagation()}>
+                        <p className="text-xs text-gray-500 uppercase">P. oficial</p>
                         <button type="button" onClick={() => setEditOficial(editando ? null : { bKey: b._key, valor: of.precio === null ? '' : texto(of.precio) })}
                           title="Precio oficial MAG del bloque: el vendedor factura a este precio. Pulsa para cambiarlo"
                           className="font-semibold text-gray-800 hover:underline whitespace-nowrap">
                           {of.precio === null ? '—' : `$ ${formatoDinero(of.precio)}`} ✎
                         </button>
-                        {of.conOtro > 0 && <p className="text-[10px] font-semibold text-amber-700" title="Compras con otro precio oficial (se ve en la fila, debajo del P. real)">{of.conOtro} CON OTRO</p>}
-                        {mag && of.precio !== null && n(mag.price) !== of.precio && <p className="text-[10px] font-semibold text-amber-700">MAG $ {formatoDinero(mag.price)}</p>}
+                        {of.conOtro > 0 && <p className="text-xs font-semibold text-amber-700" title="Compras con otro precio oficial (se ve en la fila, debajo del P. real)">{of.conOtro} CON OTRO</p>}
+                        {mag && of.precio !== null && n(mag.price) !== of.precio && <p className="text-xs font-semibold text-amber-700">MAG $ {formatoDinero(mag.price)}</p>}
                         {editando && (
                           <div className="absolute right-0 top-full z-40 mt-1 w-64 rounded-xl border bg-white p-3 text-left shadow-xl">
                             <label className={etiqueta}>Precio oficial del bloque</label>
@@ -1041,7 +1052,7 @@ export default function PurchaseAllocationPage() {
                               </button>
                               <button type="button" onClick={() => setEditOficial(null)} className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-cancelar text-cancelar-texto hover:bg-cancelar-hover">Cancelar</button>
                             </div>
-                            {liquidadas > 0 && <p className="mt-1 text-[11px] text-gray-500">{liquidadas} LIQUIDADA{liquidadas > 1 ? 'S' : ''} NO CAMBIA{liquidadas > 1 ? 'N' : ''}.</p>}
+                            {liquidadas > 0 && <p className="mt-1 text-xs text-gray-500">{liquidadas} LIQUIDADA{liquidadas > 1 ? 'S' : ''} NO CAMBIA{liquidadas > 1 ? 'N' : ''}.</p>}
                           </div>
                         )}
                       </div>
@@ -1113,23 +1124,21 @@ export default function PurchaseAllocationPage() {
                   {/* Compras del bloque */}
                   {/* 11/11/2026: ~6 compras visibles; se desplaza dentro del recuadro y la barra horizontal queda a la vista */}
                   <div className="overflow-auto max-h-[31rem] border rounded-lg scroll-ancho">
-                    <table className="w-full text-sm min-w-[2340px]">
+                    <table className="w-full text-sm min-w-[2100px]">
                       <thead className="bg-primario text-white sticky top-0 z-30">
                         <tr>
                           <th className={`${th} sticky left-0 z-20 bg-primario w-9 min-w-[36px]`}>#</th>
                           <th className={`${th} sticky left-9 z-20 bg-primario`}>Se le compra a *</th>
                           <th className={th}>Productor real</th>
                           <th className={th}>Finca</th>
-                          <th className={th}>MAG</th>
                           <th className={th} title="Uno o varios comerciales que hicieron la compra">Comerciales</th>
-                          <th className={th} title="Semana de compra: lo que llega al puerto hasta el domingo. Si la nave se queda a la semana siguiente, elige esa semana: se liquida y cuenta en el contrato ahí">Día corte · Semana</th>
-                          <th className={th}>Entrega en</th>
+                          <th className={th} title="Semana de compra: lo que llega al puerto hasta el domingo. Si la nave se queda a la semana siguiente, elige esa semana: se liquida y cuenta en el contrato ahí. Debajo, el puerto donde entrega">Corte · Semana · Entrega</th>
                           <th className={th}>Retira materiales en *</th>
                           <th className={`${th} text-right`}>Cajas *</th>
                           {/* 13/11/2026: el P. oficial pasó al encabezado del bloque; Tipo · Pago → Negociación; columna Bono / extra */}
                           <th className={`${th} text-right`} title="Precio real pagado al productor. Debajo, OF. $ si esta compra tiene otro precio oficial que el del bloque">P. real</th>
                           <th className={th} title="CONTRATO o SPOT, forma de pago y contrato del vendedor">Negociación</th>
-                          <th className={`${th} text-right`} title="DESCONTAR: transporte que pusimos nosotros (monto). RECONOCER: transporte que puso el productor ($/caja, según tarja)">Transporte</th>
+                          <th className={`${th} text-right`} title="Marca RECONOCER cuando el productor puso el transporte y escribe el $/caja (se paga por las cajas de la tarja)">Transporte</th>
                           <th className={`${th} text-right`} title="Bono / extra al productor: $/caja que se paga aparte (cinta, empaque especial...), por las cajas de la tarja. No toca la nota de crédito">Bono / extra</th>
                           <th className={`${th} text-right`} title="Cajas × (precio real + bono)">Total real</th>
                           <th className={`${th} text-right`} title="Cajas × (precio oficial − precio real): la entrega el vendedor">Nota créd. $</th>
@@ -1140,7 +1149,7 @@ export default function PurchaseAllocationPage() {
                       </thead>
                       <tbody>
                         {b.purchases.length === 0 ? (
-                          <tr><td colSpan={19} className="text-center py-5 text-gray-400">Agrega la primera compra de este bloque</td></tr>
+                          <tr><td colSpan={17} className="text-center py-5 text-gray-400">Agrega la primera compra de este bloque</td></tr>
                         ) : b.purchases.map((c, j) => {
                           const fijo = Boolean(c.bloqueo);
                           const esComercial = tipoDe(c.third_party_id) === 'COMERCIALIZADORA';
@@ -1189,10 +1198,8 @@ export default function PurchaseAllocationPage() {
                                   {fincasDe(duenoFinca(c), c.farm_id).map((f) => <option key={f.id} value={String(f.id)}>{f.name}{f.magap_code ? ` · ${f.magap_code}` : ''}</option>)}
                                   <option value="__nueva">+ NUEVA FINCA</option>
                                 </SelectBuscable>
-                              </td>
-                              <td className="px-2 py-1.5 min-w-[90px]">
-                                {/* El código MAG sale de la finca: no se escribe */}
-                                <input value={c.mag_code} readOnly tabIndex={-1} title="Sale de la finca elegida (se corrige en Configuración → Fincas)" className={`${inputClass} bg-gray-200 text-gray-600 cursor-not-allowed`} />
+                                {/* 13/11/2026 (test de usabilidad): el código MAG va debajo de la finca (sale de ella; ya no es columna) */}
+                                {c.mag_code && <span className="block mt-0.5 text-xs text-gray-500" title="Código MAG: sale de la finca elegida (se corrige en Configuración → Fincas)">MAG {c.mag_code}</span>}
                               </td>
                               <td className="px-2 py-1.5 min-w-[170px]">
                                 {/* 11/11/2026: uno o varios comerciales de la lista (los que ya tenía la compra se respetan) */}
@@ -1205,7 +1212,7 @@ export default function PurchaseAllocationPage() {
                                       {elegidos.length > 0 && (
                                         <div className="flex flex-wrap gap-1 mb-1">
                                           {elegidos.map((e) => (
-                                            <span key={e} className={`inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap ${ejecutivos.includes(e) ? 'bg-primario-claro text-primario' : 'bg-gray-200 text-gray-600'}`}
+                                            <span key={e} className={`inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs font-semibold whitespace-nowrap ${ejecutivos.includes(e) ? 'bg-primario-claro text-primario' : 'bg-gray-200 text-gray-600'}`}
                                               title={ejecutivos.includes(e) ? e : `${e} (no está en la lista activa)`}>
                                               {e}
                                               {!c.liquidada && <button type="button" onClick={() => poner(elegidos.filter((x) => x !== e))} aria-label={`Quitar ${e}`} className="hover:text-red-600"><X size={10} /></button>}
@@ -1224,7 +1231,7 @@ export default function PurchaseAllocationPage() {
                                 })()}
                               </td>
                               <td className="px-2 py-1.5">
-                                <input type="date" value={c.cut_date} onChange={cambiar('cut_date')} disabled={c.liquidada} className={inputClass} />
+                                <input type="date" value={c.cut_date} onChange={cambiar('cut_date')} disabled={c.liquidada} aria-label={`Compra ${j + 1}: día de corte`} className={inputClass} />
                                 {semanasCompra.length > 1 && (
                                   <select value={c.purchase_week || String(pedido.week)} onChange={cambiar('purchase_week')} disabled={Boolean(c.bloqueo)}
                                     aria-label="Semana de compra"
@@ -1233,10 +1240,10 @@ export default function PurchaseAllocationPage() {
                                     {semanasCompra.map((w) => <option key={w.week} value={String(w.week)}>COMPRA WK{w.week}</option>)}
                                   </select>
                                 )}
-                              </td>
-                              <td className="px-2 py-1.5 min-w-[130px]">
-                                <SelectBuscable value={c.delivery_port_id} onChange={cambiar('delivery_port_id')} disabled={c.liquidada} className={inputClass}>
-                                  <option value="">—</option>
+                                {/* 13/11/2026 (test de usabilidad): "Entrega en" ya no es columna aparte */}
+                                <SelectBuscable value={c.delivery_port_id} onChange={cambiar('delivery_port_id')} disabled={c.liquidada}
+                                  aria-label={`Compra ${j + 1}: entrega en`} title="Puerto donde entrega la fruta" className={`${inputClass} mt-1 text-xs`}>
+                                  <option value="">ENTREGA EN…</option>
                                   {puertosSalida.map((p) => <option key={p.id} value={String(p.id)}>{p.name}</option>)}
                                 </SelectBuscable>
                               </td>
@@ -1255,16 +1262,16 @@ export default function PurchaseAllocationPage() {
                                   <div className="mt-0.5">
                                     <CampoNumero decimales={2} value={c.official_price} autoFocus onChange={cambiar('official_price')} onBlur={() => setEditOfFila(null)}
                                       onKeyDown={(e) => e.key === 'Enter' && setEditOfFila(null)} aria-label={`Compra ${j + 1}: precio oficial`} title="Precio oficial de esta compra" className={`${inputClass} text-right text-xs`} />
-                                    {mag && <button type="button" onMouseDown={(e) => { e.preventDefault(); cambiarCompra(b._key, c._key, 'official_price', texto(mag.price)); setEditOfFila(null); }} className="block w-full text-right text-[11px] font-semibold text-primario hover:underline">MAG {formatoDinero(mag.price)}</button>}
+                                    {mag && <button type="button" onMouseDown={(e) => { e.preventDefault(); cambiarCompra(b._key, c._key, 'official_price', texto(mag.price)); setEditOfFila(null); }} className="block w-full text-right text-xs font-semibold text-primario hover:underline">MAG {formatoDinero(mag.price)}</button>}
                                   </div>
                                 ) : c.official_price === '' ? (
                                   <button type="button" disabled={c.liquidada} onClick={() => cambiarCompra(b._key, c._key, 'official_price', ofBloque !== null ? texto(ofBloque) : '')}
-                                    title="Esta compra no tiene precio oficial: pulsa para poner el del bloque" className="block w-full text-right text-[11px] font-semibold text-amber-700 hover:underline mt-0.5">
+                                    title="Esta compra no tiene precio oficial: pulsa para poner el del bloque" className="block w-full text-right text-xs font-semibold text-amber-700 hover:underline mt-0.5">
                                     SIN OFICIAL
                                   </button>
                                 ) : ofBloque !== null && n(c.official_price) !== ofBloque ? (
                                   <button type="button" disabled={c.liquidada} onClick={() => setEditOfFila(c._key)}
-                                    title="Esta compra tiene otro precio oficial que el del bloque: pulsa para cambiarlo" className="block w-full text-right text-[11px] font-semibold text-amber-700 hover:underline mt-0.5">
+                                    title="Esta compra tiene otro precio oficial que el del bloque: pulsa para cambiarlo" className="block w-full text-right text-xs font-semibold text-amber-700 hover:underline mt-0.5">
                                     OF. $ {formatoDinero(c.official_price)}
                                   </button>
                                 ) : null}
@@ -1276,7 +1283,7 @@ export default function PurchaseAllocationPage() {
                                   {b.presentation === 'PACKED' ? (
                                     <span className="text-xs font-semibold text-gray-500" title="La fruta packed se compra siempre SPOT">SPOT</span>
                                   ) : (
-                                    <div className="inline-flex rounded-lg border border-primario/30 overflow-hidden text-[11px] font-semibold" role="group" aria-label={`Compra ${j + 1}: tipo`}>
+                                    <div className="inline-flex rounded-lg border border-primario/30 overflow-hidden text-xs font-semibold" role="group" aria-label={`Compra ${j + 1}: tipo`}>
                                       {['CONTRATO', 'SPOT'].map((t) => (
                                         <button key={t} type="button" disabled={c.liquidada} onClick={() => c.negotiation_type !== t && cambiarCompra(b._key, c._key, 'negotiation_type', t)}
                                           aria-pressed={c.negotiation_type === t}
@@ -1288,7 +1295,7 @@ export default function PurchaseAllocationPage() {
                                   )}
                                   <button type="button" disabled={c.liquidada} onClick={() => cambiarCompra(b._key, c._key, 'payment_scheme', c.payment_scheme === '100' ? '80_20' : '100')}
                                     title="Forma de pago: 100 % en el 1er pago, o 80 % y 20 % después. Pulsa para cambiarla"
-                                    className="rounded-full bg-gray-200 px-2 py-0.5 text-[11px] font-semibold text-gray-700 hover:bg-gray-300 disabled:opacity-60 whitespace-nowrap">
+                                    className="rounded-full bg-gray-200 px-2 py-0.5 text-xs font-semibold text-gray-700 hover:bg-gray-300 disabled:opacity-60 whitespace-nowrap">
                                     {c.payment_scheme === '100' ? '100 %' : '80/20'}
                                   </button>
                                 </div>
@@ -1324,7 +1331,7 @@ export default function PurchaseAllocationPage() {
                                           </SelectBuscable>
                                         )}
                                         <button type="button" onClick={() => setVerContratosFila(verContratosFila === c._key ? null : c._key)} title="Ver los contratos del vendedor en la semana"
-                                          aria-label="Ver contratos del vendedor" className="shrink-0 rounded-full border border-primario/30 w-5 h-5 text-[11px] font-bold text-primario hover:bg-primario-claro">i</button>
+                                          aria-label="Ver contratos del vendedor" className="shrink-0 rounded-full border border-primario/30 w-5 h-5 text-xs font-bold text-primario hover:bg-primario-claro">i</button>
                                       </div>
                                       {/* Un solo aviso, el más grave */}
                                       {k && !vigenteEn(k, c) ? (
@@ -1337,7 +1344,7 @@ export default function PurchaseAllocationPage() {
                                         </span>
                                       ) : null}
                                       {/* La parte (1.1, 1.2) ya no se elige aquí: si una compra vieja la tiene, solo se muestra */}
-                                      {k && Number(c.contract_part) > 0 && <span className="block text-[11px] text-gray-500" title="Contrato liquidado en partes (lo decide Liquidaciones)">PARTE {k.number}.{c.contract_part}</span>}
+                                      {k && Number(c.contract_part) > 0 && <span className="block text-xs text-gray-500" title="Contrato liquidado en partes (lo decide Liquidaciones)">PARTE {k.number}.{c.contract_part}</span>}
                                       {verContratosFila === c._key && (() => {
                                         const semana = semanaDeCompra(c);
                                         const filas = propios.map((x) => ({ x, u: cajasContrato(x.id, semana) }));
@@ -1364,13 +1371,19 @@ export default function PurchaseAllocationPage() {
                                 )}
                               </td>
                               <td className="px-2 py-1.5 min-w-[110px] align-top">
-                                <span className="block text-[11px] text-gray-500">DESCONTAR $</span>
-                                <CampoNumero decimales={2} value={c.transport_deduction} onChange={cambiar('transport_deduction')} disabled={c.liquidada} placeholder="0" title="Transporte que pusimos nosotros: monto total que se le DESCUENTA al liquidar" aria-label="Transporte a descontar" className={`${inputClass} text-right`} />
+                                {/* 13/11/2026 (Peter): solo se RECONOCE transporte: una casilla y el $/caja. El "descontar" ya no se
+                                    digita; las compras viejas que lo tienen lo muestran para verlo o quitarlo. */}
+                                {n(c.transport_deduction) > 0 && (
+                                  <span className="flex items-center justify-end gap-1 text-xs font-semibold text-red-600" title="Transporte a descontar registrado antes (monto total que se descuenta al liquidar)">
+                                    DESCONTAR $ {formatoDinero(c.transport_deduction)}
+                                    {!c.liquidada && <button type="button" onClick={() => cambiarCompra(b._key, c._key, 'transport_deduction', '')} aria-label="Quitar transporte a descontar" title="Quitar" className="hover:text-red-800"><X size={11} /></button>}
+                                  </span>
+                                )}
                                 {/* 11/11/2026: cuando el productor pone el transporte, se le reconoce $/caja (se paga por las cajas que llegan según tarja) */}
-                                <label className="flex items-center gap-1 mt-1 text-xs text-gray-600 whitespace-nowrap" title="El productor puso el transporte: se le paga $/caja por las cajas que lleguen según tarja">
+                                <label className="flex items-center gap-1 text-xs text-gray-600 whitespace-nowrap" title="El productor puso el transporte: se le paga $/caja por las cajas que lleguen según tarja">
                                   <input type="checkbox" checked={c.reconoce_transporte} disabled={c.liquidada}
                                     onChange={(e) => { cambiar('reconoce_transporte')({ target: { value: e.target.checked } }); if (!e.target.checked) cambiar('transport_recognized_rate')({ target: { value: '' } }); }} />
-                                  RECONOCER $/CAJA
+                                  RECONOCER
                                 </label>
                                 {c.reconoce_transporte && (
                                   <>
@@ -1419,7 +1432,7 @@ export default function PurchaseAllocationPage() {
                                   </div>
                                 ) : (
                                   <button type="button" onClick={() => setBonoTotal({ cKey: c._key, valor: '' })} title="Tengo un monto total: dividirlo entre las cajas compradas"
-                                    className="block w-full text-right text-[11px] text-primario hover:underline mt-0.5">÷ CAJAS</button>
+                                    className="block w-full text-right text-xs text-primario hover:underline mt-0.5">÷ CAJAS</button>
                                 ))}
                               </td>
                               <td className="px-2 py-1.5 text-right whitespace-nowrap"

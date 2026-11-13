@@ -6,6 +6,7 @@
 // El sistema usa BrowserRouter (sin useBlocker), así que se cubre así:
 //   - Menú lateral, cambiar contraseña y cerrar sesión: pasan por irA() → si hay cambios, el diálogo estándar.
 //   - Recargar o cerrar la pestaña: 'beforeunload' (el navegador muestra su propio aviso; su texto no se cambia).
+//     13/11/2026: el botón ⟳ de la barra, "Actualizar" del aviso de versión y F5 / Ctrl+R usan el diálogo estándar.
 //   - "Atrás" del navegador: se agrega una entrada repetida al historial mientras hay cambios; al volver se
 //     queda en la pantalla y pregunta. "Salir sin guardar" vuelve de verdad a la página anterior.
 //
@@ -53,14 +54,24 @@ export function ProveedorAvisoSalida({ children }) {
             window.history.pushState(window.history.state, '', window.location.href);
             setPendiente(() => () => window.history.go(-2));
         };
+        // 13/11/2026: F5 / Ctrl+R / Cmd+R con cambios → el diálogo del sistema (no el aviso gris del navegador).
+        // El botón recargar del propio navegador sigue con su aviso: ese no se puede reemplazar.
+        const alTecla = (e) => {
+            const recarga = e.key === 'F5' || ((e.ctrlKey || e.metaKey) && (e.key === 'r' || e.key === 'R'));
+            if (!recarga || !cambios.current) return;
+            e.preventDefault();
+            setPendiente(() => () => window.location.reload());
+        };
         window.addEventListener('beforeunload', alRecargar);
         window.addEventListener('popstate', alVolver);
+        window.addEventListener('keydown', alTecla);
         // 11/11/2026: src/api/axios.js lo dispara antes de mandar al login (sesión vencida) o a cambiar la clave
         const alSoltar = () => { cambios.current = false; };
         window.addEventListener('siae:soltar-aviso', alSoltar);
         return () => {
             window.removeEventListener('beforeunload', alRecargar);
             window.removeEventListener('popstate', alVolver);
+            window.removeEventListener('keydown', alTecla);
             window.removeEventListener('siae:soltar-aviso', alSoltar);
         };
     }, []);
