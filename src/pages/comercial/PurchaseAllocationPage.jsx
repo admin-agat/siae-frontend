@@ -64,6 +64,8 @@ const COLORES_BARCO = [
 const SIN_BARCO = { cabecera: 'bg-gray-100', borde: 'border-gray-300', punto: 'bg-gray-400' };
 
 const PAGO_POR_TIPO = { CONTRATO: '100', SPOT: '80_20' };
+// 13/11/2026: motivos del bono / extra al productor (pago aparte por caja, según tarja)
+const MOTIVOS_BONO = { CINTA: 'CINTA', EMPAQUE_ESPECIAL: 'EMPAQUE ESPECIAL', FRUTA_ADICIONAL: 'FRUTA ADICIONAL', OTRO: 'OTRO' };
 
 let contador = 0;
 const nuevaClave = (p) => `${p}-${++contador}`;
@@ -76,7 +78,9 @@ const lunesSemana = (anio, semana) => {
   return d.toISOString().slice(0, 10);
 };
 // Nota de crédito de una compra: cajas × (oficial − real); null si falta algún precio
-const notaCredito = (c) => (c.official_price === '' || c.real_price === '' ? null : n(c.boxes) * (n(c.official_price) - n(c.real_price)));
+// 13/11/2026: nunca negativa (si el real pasa el oficial, la NC es 0); el bono no la toca
+const notaCredito = (c) => (c.official_price === '' || c.real_price === '' ? null : Math.max(0, n(c.boxes) * (n(c.official_price) - n(c.real_price))));
+const realPasaOficial = (c) => c.official_price !== '' && c.real_price !== '' && n(c.real_price) > n(c.official_price);
 
 const compraDesdeBackend = (c) => ({
   _key: `c-${c.id}`,
@@ -115,6 +119,10 @@ const compraDesdeBackend = (c) => ({
   dividida_el: c.split_at || null,
   dividida_por: c.split_by || '',
   con_tarjas: Boolean(c.con_tarjas),
+  // 13/11/2026: bono / extra al productor
+  bonus_rate: Number(c.bonus_rate) ? texto(Number(c.bonus_rate)) : '',
+  bonus_reason: c.bonus_reason || '',
+  bonus_detail: texto(c.bonus_detail),
 });
 
 const bloqueDesdeBackend = (b) => ({
@@ -146,6 +154,7 @@ const compraVacia = (anterior, puertoBloque, precioMag) => ({
   bloqueo: null, liquidada: false,
   despachada: false, enviada: null, enviada_por: '', cambio_envio: null,
   pending_split: false, dividida_de: null, dividida_el: null, dividida_por: '', con_tarjas: false,
+  bonus_rate: '', bonus_reason: '', bonus_detail: '',
 });
 
 // 12/11/2026: duplicar fila. Copia vendedor, productor, finca, comerciales, corte, semana, entrega, bodega,
@@ -157,6 +166,7 @@ const compraDuplicada = (c) => ({
   negotiation_type: c.negotiation_type, payment_scheme: c.payment_scheme,
   contract_id: c.contract_id, contract_part: c.contract_part,
   pending_split: c.pending_split, // 13/11/2026
+  bonus_rate: c.bonus_rate, bonus_reason: c.bonus_reason, bonus_detail: c.bonus_detail,
 });
 
 // 13/11/2026: valor del selector "Productor real" para la compra global POR DIVIDIR (no es un tercero)
@@ -262,6 +272,12 @@ export default function PurchaseAllocationPage() {
   const [enviando, setEnviando] = useState(false);
   const [quitarEnvio, setQuitarEnvio] = useState(null); // compra a la que se le quita el envío
   const [dividir, setDividir] = useState(null); // 13/11/2026: { bloque, compra } que se está dividiendo
+  // 13/11/2026: precio oficial en el encabezado del bloque y celdas con detalle a pedido
+  const [editOficial, setEditOficial] = useState(null);     // { bKey, valor } popover del oficial del bloque
+  const [oficialNuevas, setOficialNuevas] = useState({});   // bKey → oficial que toman las compras nuevas
+  const [editOfFila, setEditOfFila] = useState(null);       // _key de la compra con su oficial abierto
+  const [verContratosFila, setVerContratosFila] = useState(null); // _key de la compra con el popover (i)
+  const [bonoTotal, setBonoTotal] = useState(null);         // { cKey, valor } monto total a repartir ÷ cajas
   const semanaDeCompra = (c) => Number(c.purchase_week) || pedido?.week;
 
   const aplicarRespuesta = (data) => {
@@ -313,7 +329,8 @@ export default function PurchaseAllocationPage() {
   const todas = bloques.flatMap((b) => b.purchases);
   const totalPedido = clientes.reduce((s, c) => s + c.pedido, 0);
   const totalComprado = todas.reduce((s, c) => s + n(c.boxes), 0);
-  const totalReal = todas.reduce((s, c) => s + n(c.boxes) * n(c.real_price), 0);
+  // 13/11/2026: incluye el bono / extra (pago aparte, pero es costo de la fruta)
+  const totalReal = todas.reduce((s, c) => s + n(c.boxes) * (n(c.real_price) + n(c.bonus_rate)), 0);
   const totalTransporte = todas.reduce((s, c) => s + n(c.transport_deduction), 0);
   const totalNotaCredito = todas.reduce((s, c) => s + (notaCredito(c) || 0), 0);
   const hayExceso = clientes.some((c) => compradoCliente(c.id) > c.pedido);
@@ -413,6 +430,29 @@ export default function PurchaseAllocationPage() {
     return preciosMag.find((p) => p.box_type_id === marca.box_type_id && p.valid_from <= fecha && (!p.valid_to || p.valid_to >= fecha)) || null;
   };
 
+  // 13/11/2026: oficial del bloque = el que más se repite en sus compras (sin compras: el MAG vigente).
+  // Es solo una forma de verlo y cambiarlo en grupo: cada compra guarda el suyo (la NC es por compra).
+  const oficialBloque = (b) => {
+    const cuenta = {};
+    b.purchases.forEach((c) => { if (c.official_price !== '') cuenta[n(c.official_price)] = (cuenta[n(c.official_price)] || 0) + 1; });
+    const lista = Object.entries(cuenta).sort((x, y) => y[1] - x[1]);
+    if (!lista.length) {
+      const mag = precioMagDe(b, null);
+      return { precio: oficialNuevas[b._key] ? n(oficialNuevas[b._key]) : (mag ? n(mag.price) : null), conOtro: 0 };
+    }
+    const precio = Number(lista[0][0]);
+    return { precio, conOtro: b.purchases.filter((c) => c.official_price !== '' && n(c.official_price) !== precio).length };
+  };
+
+  // Aplica el oficial a todas las compras no liquidadas del bloque (y a las nuevas que se agreguen)
+  const aplicarOficial = (bKey, valor) => {
+    setBloques((prev) => prev.map((b) => (b._key !== bKey ? b : {
+      ...b, purchases: b.purchases.map((c) => (c.liquidada ? c : { ...c, official_price: valor })),
+    })));
+    setOficialNuevas((p) => ({ ...p, [bKey]: valor }));
+    setEditOficial(null);
+  };
+
   // ---------------- Cambios ----------------
 
   const cambiarBloque = (key, campo, valor) => {
@@ -498,7 +538,9 @@ export default function PurchaseAllocationPage() {
 
   const agregarCompra = (bKey) => {
     const b = bloques.find((x) => x._key === bKey);
-    const nueva = compraVacia(b.purchases[b.purchases.length - 1], b.departure_port_id, precioMagDe(b, b.purchases[b.purchases.length - 1]));
+    // 13/11/2026: si se fijó un oficial "solo para compras nuevas" en el encabezado del bloque, se usa ese
+    const nueva = compraVacia(b.purchases[b.purchases.length - 1], b.departure_port_id,
+      oficialNuevas[bKey] ? { price: oficialNuevas[bKey] } : precioMagDe(b, b.purchases[b.purchases.length - 1]));
     setBloques((prev) => prev.map((x) => (x._key !== bKey ? x : { ...x, purchases: [...x.purchases, nueva] })));
     // 12/11/2026: el cursor pasa a "Se le compra a" de la compra nueva
     setEnfocar({ fila: nueva._key, campo: 'vendedor' });
@@ -600,6 +642,13 @@ export default function PurchaseAllocationPage() {
         if (c.negotiation_type === 'CONTRATO' && !c.contract_id && contratosDe(c).some((k) => k.status)) {
           faltan.push(`BLOQUE ${i + 1}, COMPRA ${j + 1}: ELIGE QUÉ CONTRATO DEL VENDEDOR ES.`);
         }
+        // 13/11/2026: bono / extra (tarifa y motivo juntos; OTRO con detalle; CINTA solo en PACKED)
+        if (n(c.bonus_rate) && !c.bonus_reason) faltan.push(`BLOQUE ${i + 1}, COMPRA ${j + 1}: ELIGE EL MOTIVO DEL BONO (CINTA, EMPAQUE ESPECIAL, FRUTA ADICIONAL U OTRO).`);
+        if (n(c.bonus_rate) > 5) faltan.push(`BLOQUE ${i + 1}, COMPRA ${j + 1}: EL BONO DEBE SER MAYOR A 0 Y HASTA $ 5,00 POR CAJA.`);
+        if (n(c.bonus_rate) && c.bonus_reason === 'OTRO' && !c.bonus_detail.trim()) faltan.push(`BLOQUE ${i + 1}, COMPRA ${j + 1}: ESCRIBE EL DETALLE DEL BONO (MOTIVO OTRO).`);
+        if (n(c.bonus_rate) && c.bonus_reason === 'CINTA' && b.presentation !== 'PACKED' && !c.liquidada) {
+          faltan.push(`BLOQUE ${i + 1}, COMPRA ${j + 1}: EL BONO POR CINTA SOLO VA EN BLOQUES PACKED.`);
+        }
         if (c.reconoce_transporte && !n(c.transport_recognized_rate)) {
           faltan.push(`BLOQUE ${i + 1}, COMPRA ${j + 1}: ESCRIBE CUÁNTO SE LE RECONOCE DE TRANSPORTE POR CAJA.`);
         }
@@ -646,6 +695,9 @@ export default function PurchaseAllocationPage() {
             contract_id: c.negotiation_type === 'CONTRATO' ? num(c.contract_id) : null,
             contract_part: c.negotiation_type === 'CONTRATO' ? Number(c.contract_part || 0) : 0,
             pending_split: c.pending_split, // 13/11/2026
+            bonus_rate: n(c.bonus_rate) ? Number(c.bonus_rate) : null,
+            bonus_reason: n(c.bonus_rate) ? (c.bonus_reason || null) : null,
+            bonus_detail: n(c.bonus_rate) ? (c.bonus_detail || null) : null,
           })),
         })),
       });
@@ -952,6 +1004,49 @@ export default function PurchaseAllocationPage() {
                     <p className="text-[10px] text-gray-500 uppercase">Falta</p>
                     <p className={`font-semibold ${falta < 0 ? 'text-red-600' : falta === 0 ? 'text-green-700' : 'text-amber-700'}`}>{falta === 0 ? '✔' : formatoCajas(falta)}</p>
                   </div>
+                  {/* 13/11/2026: precio oficial del bloque (antes se repetía en cada compra) */}
+                  {(() => {
+                    const of = oficialBloque(b);
+                    const mag = precioMagDe(b, null);
+                    const editando = editOficial?.bKey === b._key;
+                    const noLiquidadas = b.purchases.filter((c) => !c.liquidada).length;
+                    const liquidadas = b.purchases.length - noLiquidadas;
+                    return (
+                      <div className="relative" onClick={(e) => e.stopPropagation()}>
+                        <p className="text-[10px] text-gray-500 uppercase">P. oficial</p>
+                        <button type="button" onClick={() => setEditOficial(editando ? null : { bKey: b._key, valor: of.precio === null ? '' : texto(of.precio) })}
+                          title="Precio oficial MAG del bloque: el vendedor factura a este precio. Pulsa para cambiarlo"
+                          className="font-semibold text-gray-800 hover:underline whitespace-nowrap">
+                          {of.precio === null ? '—' : `$ ${formatoDinero(of.precio)}`} ✎
+                        </button>
+                        {of.conOtro > 0 && <p className="text-[10px] font-semibold text-amber-700" title="Compras con otro precio oficial (se ve en la fila, debajo del P. real)">{of.conOtro} CON OTRO</p>}
+                        {mag && of.precio !== null && n(mag.price) !== of.precio && <p className="text-[10px] font-semibold text-amber-700">MAG $ {formatoDinero(mag.price)}</p>}
+                        {editando && (
+                          <div className="absolute right-0 top-full z-40 mt-1 w-64 rounded-xl border bg-white p-3 text-left shadow-xl">
+                            <label className={etiqueta}>Precio oficial del bloque</label>
+                            <CampoNumero decimales={2} value={editOficial.valor} autoFocus onChange={(e) => setEditOficial((p) => ({ ...p, valor: e.target.value }))} aria-label="Precio oficial del bloque" className={`${inputClass} text-right`} />
+                            {mag && (
+                              <button type="button" onClick={() => setEditOficial((p) => ({ ...p, valor: texto(mag.price) }))} className="mt-1 text-xs font-semibold text-primario hover:underline">
+                                Usar MAG $ {formatoDinero(mag.price)}{mag.agreement_number ? ` · ${mag.agreement_number}` : ''}
+                              </button>
+                            )}
+                            <div className="mt-2 flex flex-col gap-1">
+                              <button type="button" disabled={editOficial.valor === ''} onClick={() => aplicarOficial(b._key, editOficial.valor)}
+                                className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-guardar text-guardar-texto hover:bg-guardar-hover disabled:opacity-40">
+                                Aplicar a {noLiquidadas === 1 ? 'la compra' : `las ${noLiquidadas} compras`} del bloque
+                              </button>
+                              <button type="button" disabled={editOficial.valor === ''} onClick={() => { setOficialNuevas((p) => ({ ...p, [b._key]: editOficial.valor })); setEditOficial(null); }}
+                                className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-primario/30 text-primario hover:bg-primario-claro disabled:opacity-40">
+                                Solo para compras nuevas
+                              </button>
+                              <button type="button" onClick={() => setEditOficial(null)} className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-cancelar text-cancelar-texto hover:bg-cancelar-hover">Cancelar</button>
+                            </div>
+                            {liquidadas > 0 && <p className="mt-1 text-[11px] text-gray-500">{liquidadas} LIQUIDADA{liquidadas > 1 ? 'S' : ''} NO CAMBIA{liquidadas > 1 ? 'N' : ''}.</p>}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
                 {porEnviar.length > 0 && (
                   <button type="button" onClick={() => enviarABodega(porEnviar.map((c) => c.id))} disabled={enviando}
@@ -1031,11 +1126,12 @@ export default function PurchaseAllocationPage() {
                           <th className={th}>Entrega en</th>
                           <th className={th}>Retira materiales en *</th>
                           <th className={`${th} text-right`}>Cajas *</th>
-                          <th className={`${th} text-right`}>P. oficial</th>
-                          <th className={`${th} text-right`}>P. real</th>
-                          <th className={th}>Tipo · Pago</th>
-                          <th className={`${th} text-right`} title="Arriba: transporte que se le descuenta (monto). Abajo: transporte que se le reconoce por caja, según tarja">Transp. $</th>
-                          <th className={`${th} text-right`}>Total real</th>
+                          {/* 13/11/2026: el P. oficial pasó al encabezado del bloque; Tipo · Pago → Negociación; columna Bono / extra */}
+                          <th className={`${th} text-right`} title="Precio real pagado al productor. Debajo, OF. $ si esta compra tiene otro precio oficial que el del bloque">P. real</th>
+                          <th className={th} title="CONTRATO o SPOT, forma de pago y contrato del vendedor">Negociación</th>
+                          <th className={`${th} text-right`} title="DESCONTAR: transporte que pusimos nosotros (monto). RECONOCER: transporte que puso el productor ($/caja, según tarja)">Transporte</th>
+                          <th className={`${th} text-right`} title="Bono / extra al productor: $/caja que se paga aparte (cinta, empaque especial...), por las cajas de la tarja. No toca la nota de crédito">Bono / extra</th>
+                          <th className={`${th} text-right`} title="Cajas × (precio real + bono)">Total real</th>
                           <th className={`${th} text-right`} title="Cajas × (precio oficial − precio real): la entrega el vendedor">Nota créd. $</th>
                           <th className={th}>Notas</th>
                           <th className={th}>Bodega</th>
@@ -1052,6 +1148,7 @@ export default function PurchaseAllocationPage() {
                           const mayus = (campo) => (e) => cambiarCompra(b._key, c._key, campo, e.target.value.toUpperCase());
                           const mag = precioMagDe(b, c);
                           const nc = notaCredito(c);
+                          const ofBloque = oficialBloque(b).precio; // 13/11/2026
                           return (
                             <tr key={c._key} data-fila={c._key}
                               className={filaMarcada === c._key ? 'bg-red-50 outline outline-2 -outline-offset-2 outline-red-500' : j % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
@@ -1151,31 +1248,50 @@ export default function PurchaseAllocationPage() {
                               </td>
                               {/* 12/11/2026: al entrar se selecciona lo escrito (se digita encima) y Enter baja a la compra siguiente */}
                               <td data-campo="cajas" className="px-2 py-1.5 min-w-[90px]"><CampoNumero decimales={0} value={c.boxes} onChange={cambiar('boxes')} disabled={c.liquidada} onFocus={seleccionar} onKeyDown={enterBaja(b._key, c._key, 'cajas')} aria-label={`Compra ${j + 1}: cajas`} className={`${inputClass} text-right font-semibold ${n(c.boxes) ? '' : 'ring-1 ring-amber-400'}`} /></td>
-                              <td data-campo="oficial" className="px-2 py-1.5 min-w-[90px]">
-                                <CampoNumero decimales={2} value={c.official_price} onChange={cambiar('official_price')} disabled={c.liquidada} onFocus={seleccionar} onKeyDown={enterBaja(b._key, c._key, 'oficial')} aria-label={`Compra ${j + 1}: precio oficial`} title="Precio oficial MAG: el vendedor factura a este precio" className={`${inputClass} text-right`} />
-                                {mag && c.official_price !== '' && n(c.official_price) !== n(mag.price) && !c.liquidada && (
-                                  <button type="button" onClick={() => cambiarCompra(b._key, c._key, 'official_price', texto(mag.price))} title="Usar el precio oficial MAG vigente" className="block w-full text-right text-xs font-semibold text-amber-700 hover:underline mt-0.5">
-                                    MAG: {formatoDinero(mag.price)}
+                              <td data-campo="real" className="px-2 py-1.5 min-w-[90px]">
+                                <CampoNumero decimales={2} value={c.real_price} onChange={cambiar('real_price')} disabled={c.liquidada} onFocus={seleccionar} onKeyDown={enterBaja(b._key, c._key, 'real')} aria-label={`Compra ${j + 1}: precio real`} className={`${inputClass} text-right font-semibold`} />
+                                {/* 13/11/2026: el oficial va en el encabezado del bloque; aquí solo si esta compra tiene otro (o no tiene) */}
+                                {editOfFila === c._key ? (
+                                  <div className="mt-0.5">
+                                    <CampoNumero decimales={2} value={c.official_price} autoFocus onChange={cambiar('official_price')} onBlur={() => setEditOfFila(null)}
+                                      onKeyDown={(e) => e.key === 'Enter' && setEditOfFila(null)} aria-label={`Compra ${j + 1}: precio oficial`} title="Precio oficial de esta compra" className={`${inputClass} text-right text-xs`} />
+                                    {mag && <button type="button" onMouseDown={(e) => { e.preventDefault(); cambiarCompra(b._key, c._key, 'official_price', texto(mag.price)); setEditOfFila(null); }} className="block w-full text-right text-[11px] font-semibold text-primario hover:underline">MAG {formatoDinero(mag.price)}</button>}
+                                  </div>
+                                ) : c.official_price === '' ? (
+                                  <button type="button" disabled={c.liquidada} onClick={() => cambiarCompra(b._key, c._key, 'official_price', ofBloque !== null ? texto(ofBloque) : '')}
+                                    title="Esta compra no tiene precio oficial: pulsa para poner el del bloque" className="block w-full text-right text-[11px] font-semibold text-amber-700 hover:underline mt-0.5">
+                                    SIN OFICIAL
                                   </button>
-                                )}
-                                {mag && c.official_price === '' && !c.liquidada && (
-                                  <button type="button" onClick={() => cambiarCompra(b._key, c._key, 'official_price', texto(mag.price))} className="block w-full text-right text-xs font-semibold text-primario hover:underline mt-0.5">
-                                    USAR MAG {formatoDinero(mag.price)}
+                                ) : ofBloque !== null && n(c.official_price) !== ofBloque ? (
+                                  <button type="button" disabled={c.liquidada} onClick={() => setEditOfFila(c._key)}
+                                    title="Esta compra tiene otro precio oficial que el del bloque: pulsa para cambiarlo" className="block w-full text-right text-[11px] font-semibold text-amber-700 hover:underline mt-0.5">
+                                    OF. $ {formatoDinero(c.official_price)}
                                   </button>
-                                )}
+                                ) : null}
                               </td>
-                              <td data-campo="real" className="px-2 py-1.5 min-w-[80px]"><CampoNumero decimales={2} value={c.real_price} onChange={cambiar('real_price')} disabled={c.liquidada} onFocus={seleccionar} onKeyDown={enterBaja(b._key, c._key, 'real')} aria-label={`Compra ${j + 1}: precio real`} className={`${inputClass} text-right font-semibold`} /></td>
                               <td className="px-2 py-1.5 min-w-[170px]">
                                 {/* 02/11/2026: la fruta PACKED se compra siempre SPOT (precio negociado con cada productor) */}
-                                <SelectBuscable value={c.negotiation_type} onChange={cambiar('negotiation_type')} disabled={c.liquidada || b.presentation === 'PACKED'}
-                                  title={b.presentation === 'PACKED' ? 'La fruta packed se compra siempre SPOT' : ''} className={`${inputClass} text-xs mb-1`}>
-                                  <option value="CONTRATO">CONTRATO</option>
-                                  <option value="SPOT">SPOT</option>
-                                </SelectBuscable>
-                                <SelectBuscable value={c.payment_scheme} onChange={cambiar('payment_scheme')} disabled={c.liquidada} className={`${inputClass} text-xs`}>
-                                  <option value="100">PAGO 100 %</option>
-                                  <option value="80_20">PAGO 80 / 20</option>
-                                </SelectBuscable>
+                                {/* 13/11/2026: un clic para CONTRATO/SPOT y la forma de pago como insignia (se cambia con un clic) */}
+                                <div className="flex items-center gap-1">
+                                  {b.presentation === 'PACKED' ? (
+                                    <span className="text-xs font-semibold text-gray-500" title="La fruta packed se compra siempre SPOT">SPOT</span>
+                                  ) : (
+                                    <div className="inline-flex rounded-lg border border-primario/30 overflow-hidden text-[11px] font-semibold" role="group" aria-label={`Compra ${j + 1}: tipo`}>
+                                      {['CONTRATO', 'SPOT'].map((t) => (
+                                        <button key={t} type="button" disabled={c.liquidada} onClick={() => c.negotiation_type !== t && cambiarCompra(b._key, c._key, 'negotiation_type', t)}
+                                          aria-pressed={c.negotiation_type === t}
+                                          className={`px-2 py-1 ${c.negotiation_type === t ? 'bg-primario text-white' : 'bg-white text-primario hover:bg-primario-claro'} disabled:opacity-60`}>
+                                          {t}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+                                  <button type="button" disabled={c.liquidada} onClick={() => cambiarCompra(b._key, c._key, 'payment_scheme', c.payment_scheme === '100' ? '80_20' : '100')}
+                                    title="Forma de pago: 100 % en el 1er pago, o 80 % y 20 % después. Pulsa para cambiarla"
+                                    className="rounded-full bg-gray-200 px-2 py-0.5 text-[11px] font-semibold text-gray-700 hover:bg-gray-300 disabled:opacity-60 whitespace-nowrap">
+                                    {c.payment_scheme === '100' ? '100 %' : '80/20'}
+                                  </button>
+                                </div>
                                 {/* 06/11/2026: qué contrato del vendedor es y, si se liquida partido, qué parte (1, 1.1, 1.2) */}
                                 {c.negotiation_type === 'CONTRATO' && c.third_party_id && (() => {
                                   const propios = contratosDe(c, c.contract_id);
@@ -1186,31 +1302,47 @@ export default function PurchaseAllocationPage() {
                                   const usadas = k ? cajasContrato(k.id, semanaDeCompra(c)) : 0;
                                   return (
                                     <>
-                                      <div className="flex gap-1 mt-1">
-                                        <SelectBuscable value={c.contract_id} onChange={cambiar('contract_id')} disabled={c.liquidada} aria-label="Contrato del vendedor"
-                                          title={k ? `Contrato ${k.number} · $ ${formatoDinero(k.price)}` : 'Elige qué contrato del vendedor es'}
-                                          className={`${inputClass} text-xs flex-1 min-w-[96px] ${c.contract_id ? '' : 'ring-1 ring-amber-400'}`}>
-                                          <option value="">¿CONTRATO?</option>
-                                          {propios.map((x) => <option key={x.id} value={String(x.id)}>{x.number} · $ {formatoDinero(x.price)}</option>)}
-                                        </SelectBuscable>
-                                        {k && (
-                                          <SelectBuscable value={c.contract_part} onChange={cambiar('contract_part')} disabled={c.liquidada} aria-label="Parte del contrato" title="Para liquidar el contrato partido (una parte pagada y otra pendiente)" className={`${inputClass} text-xs w-14 shrink-0`}>
-                                            {[0, 1, 2, 3].map((p) => <option key={p} value={String(p)}>{p === 0 ? k.number : `${k.number}.${p}`}</option>)}
+                                      {/* 13/11/2026: sin el N° ni la parte del contrato (1, 1.1, 1.2): con un solo contrato solo
+                                          se ve su precio y cupo; con varios se elige por precio y saldo. El detalle va en (i). */}
+                                      <div className="flex items-center gap-1 mt-1">
+                                        {propios.length === 1 && k ? (
+                                          <span className={`flex-1 text-xs whitespace-nowrap ${usadas > k.weekly_boxes ? 'font-semibold text-red-600' : 'text-gray-600'}`} title={`Contrato N° ${k.number}: cajas compradas esta semana / cupo semanal`}>
+                                            $ {formatoDinero(k.price)} · {formatoCajas(usadas)} / {formatoCajas(k.weekly_boxes)}
+                                          </span>
+                                        ) : (
+                                          <SelectBuscable value={c.contract_id} onChange={cambiar('contract_id')} disabled={c.liquidada} aria-label="Contrato del vendedor"
+                                            title={k ? `Contrato N° ${k.number} · $ ${formatoDinero(k.price)}` : 'Elige qué contrato del vendedor es'}
+                                            className={`${inputClass} text-xs flex-1 min-w-[110px] ${c.contract_id ? '' : 'ring-1 ring-amber-400'}`}>
+                                            <option value="">¿CONTRATO?</option>
+                                            {propios.map((x) => {
+                                              const semana = semanaDeCompra(c);
+                                              const saldo = Math.max(0, Number(x.weekly_boxes) - cajasContrato(x.id, semana));
+                                              // El N° solo si hay otro contrato con el mismo precio (11/11: "preguntar cuál")
+                                              const repetido = propios.some((y) => y.id !== x.id && n(y.price) === n(x.price));
+                                              return <option key={x.id} value={String(x.id)}>$ {formatoDinero(x.price)}{repetido ? ` · N° ${x.number}` : ''} · SALDO {formatoCajas(saldo)}</option>;
+                                            })}
                                           </SelectBuscable>
                                         )}
+                                        <button type="button" onClick={() => setVerContratosFila(verContratosFila === c._key ? null : c._key)} title="Ver los contratos del vendedor en la semana"
+                                          aria-label="Ver contratos del vendedor" className="shrink-0 rounded-full border border-primario/30 w-5 h-5 text-[11px] font-bold text-primario hover:bg-primario-claro">i</button>
                                       </div>
-                                      {k && (
-                                        <span className={`block text-xs mt-0.5 ${usadas > k.weekly_boxes ? 'font-semibold text-red-600' : 'text-gray-500'}`} title="Cajas compradas esta semana con este contrato / cupo semanal">
-                                          {usadas.toLocaleString('es-EC')} / {Number(k.weekly_boxes).toLocaleString('es-EC')} CAJAS{usadas > k.weekly_boxes ? ' · EXCEDE CUPO' : ''}
+                                      {/* Un solo aviso, el más grave */}
+                                      {k && !vigenteEn(k, c) ? (
+                                        <span className="block text-xs font-semibold text-red-600" title="La vigencia del contrato no toca la semana de compra">NO VIGENTE EN WK{semanaDeCompra(c)}</span>
+                                      ) : k && usadas > k.weekly_boxes ? (
+                                        <span className="block text-xs font-semibold text-red-600" title="Cajas compradas esta semana con este contrato pasan su cupo semanal">EXCEDE CUPO</span>
+                                      ) : propios.length > 1 && k ? (
+                                        <span className={`block text-xs ${usadas > k.weekly_boxes ? 'font-semibold text-red-600' : 'text-gray-500'}`} title="Cajas compradas esta semana con este contrato / cupo semanal">
+                                          {formatoCajas(usadas)} / {formatoCajas(k.weekly_boxes)} CAJAS
                                         </span>
-                                      )}
-                                      {k && !vigenteEn(k, c) && <span className="block text-xs font-semibold text-red-600" title="La vigencia del contrato no toca la semana de compra">CONTRATO NO VIGENTE EN WK{semanaDeCompra(c)}</span>}
-                                      {/* 12/11/2026: con 2 o más contratos se ven todos con lo comprado en la semana, su saldo y el total */}
-                                      {propios.length > 1 && (() => {
+                                      ) : null}
+                                      {/* La parte (1.1, 1.2) ya no se elige aquí: si una compra vieja la tiene, solo se muestra */}
+                                      {k && Number(c.contract_part) > 0 && <span className="block text-[11px] text-gray-500" title="Contrato liquidado en partes (lo decide Liquidaciones)">PARTE {k.number}.{c.contract_part}</span>}
+                                      {verContratosFila === c._key && (() => {
                                         const semana = semanaDeCompra(c);
                                         const filas = propios.map((x) => ({ x, u: cajasContrato(x.id, semana) }));
                                         return (
-                                          <div className="mt-1 rounded-lg border border-gray-200 bg-white px-1.5 py-1 text-xs text-gray-600" title={`Contratos del vendedor en la WK${semana}: comprado / cupo semanal`}>
+                                          <div className="mt-1 rounded-lg border border-gray-200 bg-white px-1.5 py-1 text-xs text-gray-600 shadow" title={`Contratos del vendedor en la WK${semana}: comprado / cupo semanal`}>
                                             {filas.map(({ x, u }) => (
                                               <div key={x.id} className={String(x.id) === c.contract_id ? 'font-semibold text-gray-800' : ''}>
                                                 N° {x.number} · $ {formatoDinero(x.price)}: {formatoCajas(u)} / {formatoCajas(x.weekly_boxes)}
@@ -1232,6 +1364,7 @@ export default function PurchaseAllocationPage() {
                                 )}
                               </td>
                               <td className="px-2 py-1.5 min-w-[110px] align-top">
+                                <span className="block text-[11px] text-gray-500">DESCONTAR $</span>
                                 <CampoNumero decimales={2} value={c.transport_deduction} onChange={cambiar('transport_deduction')} disabled={c.liquidada} placeholder="0" title="Transporte que pusimos nosotros: monto total que se le DESCUENTA al liquidar" aria-label="Transporte a descontar" className={`${inputClass} text-right`} />
                                 {/* 11/11/2026: cuando el productor pone el transporte, se le reconoce $/caja (se paga por las cajas que llegan según tarja) */}
                                 <label className="flex items-center gap-1 mt-1 text-xs text-gray-600 whitespace-nowrap" title="El productor puso el transporte: se le paga $/caja por las cajas que lleguen según tarja">
@@ -1249,10 +1382,54 @@ export default function PurchaseAllocationPage() {
                                   </>
                                 )}
                               </td>
-                              <td className="px-2 py-1.5 text-right whitespace-nowrap">{c.real_price === '' ? <span className="text-xs text-amber-600 font-semibold">SIN PRECIO</span> : `$ ${formatoDinero(n(c.boxes) * n(c.real_price))}`}</td>
+                              {/* 13/11/2026: BONO / EXTRA al productor ($/caja aparte de la fruta; se paga por tarja) */}
+                              <td data-campo="bono" className="px-2 py-1.5 min-w-[130px] align-top">
+                                <CampoNumero decimales={4} max={5} value={c.bonus_rate} disabled={c.liquidada} onFocus={seleccionar} onKeyDown={enterBaja(b._key, c._key, 'bono')} placeholder="0,00"
+                                  onChange={(e) => {
+                                    cambiar('bonus_rate')(e);
+                                    // Al poner bono en un bloque PACKED se propone CINTA
+                                    if (n(e.target.value) && !c.bonus_reason && b.presentation === 'PACKED') cambiarCompra(b._key, c._key, 'bonus_reason', 'CINTA');
+                                  }}
+                                  aria-label={`Compra ${j + 1}: bono por caja`} title="$ por caja que se le paga aparte del precio" className={`${inputClass} text-right`} />
+                                {n(c.bonus_rate) > 0 && (
+                                  <>
+                                    <SelectBuscable value={c.bonus_reason} onChange={cambiar('bonus_reason')} disabled={c.liquidada} aria-label={`Compra ${j + 1}: motivo del bono`}
+                                      className={`${inputClass} text-xs mt-0.5 ${c.bonus_reason ? '' : 'ring-1 ring-amber-400'}`}>
+                                      <option value="">¿MOTIVO?</option>
+                                      {Object.entries(MOTIVOS_BONO).filter(([k]) => k !== 'CINTA' || b.presentation === 'PACKED' || c.bonus_reason === 'CINTA')
+                                        .map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                                    </SelectBuscable>
+                                    {c.bonus_reason === 'OTRO' && (
+                                      <input value={c.bonus_detail} maxLength={100} onChange={mayus('bonus_detail')} disabled={c.liquidada} placeholder="DETALLE"
+                                        aria-label={`Compra ${j + 1}: detalle del bono`} className={`${inputClass} text-xs mt-0.5 ${c.bonus_detail.trim() ? '' : 'ring-1 ring-amber-400'}`} />
+                                    )}
+                                    {n(c.boxes) > 0 && (
+                                      <span className="block text-xs text-green-700 text-right" title="Estimado con las cajas compradas; se paga por las que lleguen según tarja">≈ + $ {formatoDinero(n(c.boxes) * n(c.bonus_rate))}</span>
+                                    )}
+                                  </>
+                                )}
+                                {/* Si Comercial tiene un monto total: se reparte entre las cajas */}
+                                {!c.liquidada && n(c.boxes) > 0 && (bonoTotal?.cKey === c._key ? (
+                                  <div className="mt-0.5 flex gap-1">
+                                    <CampoNumero decimales={2} value={bonoTotal.valor} autoFocus placeholder="TOTAL $" aria-label="Monto total del bono"
+                                      onChange={(e) => setBonoTotal((p) => ({ ...p, valor: e.target.value }))} className={`${inputClass} text-right text-xs`} />
+                                    <button type="button" disabled={!n(bonoTotal.valor)}
+                                      onClick={() => { cambiarCompra(b._key, c._key, 'bonus_rate', String(Math.round((n(bonoTotal.valor) / n(c.boxes)) * 10000) / 10000)); setBonoTotal(null); }}
+                                      className="px-2 rounded-lg text-xs font-semibold bg-guardar text-guardar-texto hover:bg-guardar-hover disabled:opacity-40">OK</button>
+                                  </div>
+                                ) : (
+                                  <button type="button" onClick={() => setBonoTotal({ cKey: c._key, valor: '' })} title="Tengo un monto total: dividirlo entre las cajas compradas"
+                                    className="block w-full text-right text-[11px] text-primario hover:underline mt-0.5">÷ CAJAS</button>
+                                ))}
+                              </td>
+                              <td className="px-2 py-1.5 text-right whitespace-nowrap"
+                                title={n(c.bonus_rate) ? `Fruta $ ${formatoDinero(n(c.boxes) * n(c.real_price))} · Bono $ ${formatoDinero(n(c.boxes) * n(c.bonus_rate))}` : undefined}>
+                                {c.real_price === '' ? <span className="text-xs text-amber-600 font-semibold">SIN PRECIO</span> : `$ ${formatoDinero(n(c.boxes) * (n(c.real_price) + n(c.bonus_rate)))}`}
+                              </td>
                               <td className="px-2 py-1.5 text-right whitespace-nowrap">
+                                {/* 13/11/2026: si el real pasa el oficial la NC es 0 (se avisa) */}
                                 {nc === null ? <span className="text-gray-400">—</span>
-                                  : nc < 0 ? <span className="text-xs font-semibold text-red-600" title="El precio real es mayor al oficial">REAL &gt; OFICIAL</span>
+                                  : realPasaOficial(c) ? <span className="text-xs font-semibold text-amber-700" title="El precio real es mayor al oficial: la nota de crédito queda en 0">$ 0,00 · REAL &gt; OFICIAL</span>
                                     : <span className="font-semibold text-gray-700">$ {formatoDinero(nc)}</span>}
                               </td>
                               <td className="px-2 py-1.5 min-w-[160px]"><input value={c.notes} maxLength={255} onChange={mayus('notes')} placeholder="EJ. CONSOLIDADO EN PTO" className={inputClass} /></td>

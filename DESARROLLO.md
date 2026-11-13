@@ -273,6 +273,34 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 13/11/2026 — Compra de fruta: precio oficial en el bloque, columna Negociación y BONO / EXTRA
+- **Por qué:** el precio oficial se repetía en cada fila y la columna Tipo · Pago confundía con la parte del contrato (N°1, N°1.1…). Además faltaba dónde poner un extra por caja al productor, por ejemplo la cinta. Diseño aprobado por Peter: `docs/modulos/compra-columnas-bono.md`.
+- **Precio oficial:** pasa a la esquina del encabezado del bloque, como "P. OFICIAL $ x ✎".
+  - El recuadro permite "Aplicar a las N compras" (las liquidadas no cambian) o fijarlo "Solo para compras nuevas", y avisa si el MAG vigente es distinto.
+  - Cada compra sigue guardando su oficial. Si una tiene otro, debajo del P. real se ve "OF. $ x" o "SIN OFICIAL".
+- **Negociación** (antes Tipo · Pago):
+  - Un clic elige CONTRATO o SPOT, y la insignia del pago (100 % u 80/20) se cambia con otro clic.
+  - Con un solo contrato se ve "$ precio · usadas / cupo". Con varios, se elige por precio y saldo; el N° solo aparece si dos contratos tienen el mismo precio.
+  - **Se quitó el selector de la parte del contrato.** En producción ninguna compra la usaba. Si una compra vieja la tiene, se muestra como solo lectura.
+  - Hay un solo aviso, el más grave. El detalle de todos los contratos del vendedor se ve con el botón (i).
+- **Transporte:** sin cambios de lógica; las etiquetas pasan a DESCONTAR $ y RECONOCER $/CAJA.
+- **Bono / extra** (columna nueva):
+  - Es un $/caja con motivo: CINTA (solo en bloques PACKED), EMPAQUE ESPECIAL, FRUTA ADICIONAL u OTRO (con detalle). El botón "÷ CAJAS" reparte un monto total entre las cajas.
+  - **Es un pago aparte:** se paga por las cajas de la tarja, completo en el 1er pago como el transporte reconocido. **No toca la nota de crédito ni la base de retención.**
+  - Se copia al duplicar y al dividir, salvo en las filas que pasan a PACKED desde una compra convencional.
+  - Suma al total real y a la ganancia por viaje.
+- **Nota de crédito:** ya no puede quedar negativa. Si el real pasa el oficial, queda en 0 (máx(0, oficial − real)).
+- **Candado:** en un cupo LIQUIDADO tampoco se puede cambiar el precio oficial ni el bono.
+- **Migración** `2026_11_13_000002_compra_bono_extra`. No cambia datos.
+  - `producer_quota_lines`: `bonus_rate`, `bonus_reason` y `bonus_detail`, con 4 CHECK.
+  - `settlement_lines`: `bonus_rate`, `bonus_reason` y `bonus_amount`.
+  - `settlements`: `bonus_amount`.
+- **Liquidación:** el preview, la pantalla Liquidar y el detalle muestran "(+) Bono / extra" y el bono de cada línea.
+- **Archivos:**
+  - Backend: `PurchaseAllocationController`, `SettlementController`, `VoyageCostController`; los modelos `ProducerQuotaLine`, `SettlementLine` y `Settlement`; la migración.
+  - Frontend: `PurchaseAllocationPage.jsx`, `SettlementFormPage.jsx`, `SettlementDetailPage.jsx`.
+- **Pruebas:** `tests/Feature/CompraBonoTest.php` (siae-qa). La suite completa pasa: 47 pruebas.
+
 ### 13/11/2026 — Compra de fruta: compra global POR DIVIDIR y "Dividir compra" (cuadro de despacho)
 - **Por qué:** ASCUPOESPE (y otras asociaciones) avisan el retiro de material para N cajas y esa noche mandan el CUADRO DE DESPACHO con productor, finca, marca y cajas. Antes el sistema obligaba a poner productor real y finca al registrar la compra. Diseño aprobado por Peter con todas las recomendaciones: `docs/modulos/compra-global-division.md`.
 - **Migración** `2026_11_13_000001_compra_por_dividir`: en `producer_quota_lines` agrega `pending_split`, `split_from_line_id`, `split_at` y `split_by`, 2 CHECK (POR DIVIDIR sin productor ni finca; una fila no sale de sí misma) y un índice parcial. Corrige la FK de `user_notifications.producer_quota_line_id` a `ON DELETE SET NULL` (antes, quitar una compra enviada con avisos daba error 500). No cambia datos.
