@@ -286,6 +286,12 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 - **Tabla más angosta** (punto 1, aprobado por Peter): pasa de 2.558 a 2.371 px y de 19 a 17 columnas.
   - La columna MAG pasa a una línea "MAG x" debajo de la finca.
   - "Entrega en" entra en la celda "Corte · Semana · Entrega".
+- **Todo en una línea** (pedido de Peter: "no uno sobre otro"):
+  - Corte, semana de compra y entrega van lado a lado.
+  - Transporte: la casilla RECONOCER y el $/caja en la misma línea.
+  - **Bono / extra** tiene ahora una casilla **BONO**, como la de Transporte. Al marcarla aparecen en la misma línea el $/caja (el cursor va ahí), "÷ CAJAS", el motivo y, con OTRO, el detalle. Si se marca sin escribir monto, pide "ESCRIBE EL BONO POR CAJA O QUITA LA CASILLA BONO".
+  - Los estimados (≈ + $) pasan al aviso que sale al pasar el mouse.
+  - Resultado: la fila baja de 82 a 64 px de alto y la tabla queda más ancha (unos 2.900 px), con más compras visibles a la vez.
 
 ### 13/11/2026 — Actualizar con cambios sin guardar: diálogo del sistema, no el del navegador
 - **Por qué:** al pulsar el botón ⟳ de la barra con cambios sin guardar, salía el aviso gris del navegador ("Esta página le pide que confirme...") en vez del diálogo estándar del SIAE.
