@@ -46,6 +46,8 @@ export const sendPurchasesToWarehouse = (id, purchaseIds) => axios.post(`/custom
 
 // Quitar el envío (enviada por error): solo si la bodega no entregó materiales todavía
 export const unsendPurchase = (id, lineId) => axios.patch(`/customer-orders/${id}/purchases/${lineId}/unsend`);
+// 13/11/2026: dividir una compra según el cuadro de despacho { version, remainder: REDUCE|KEEP, rows: [...] }
+export const splitPurchase = (id, lineId, data) => axios.post(`/customer-orders/${id}/purchases/${lineId}/split`, data);
 
 // 29/10/2026 — Cierre de embarque (Exportaciones): bookings con lo realmente embarcado y documentos
 // Devuelve { order, customers, shipments (con bookings), tallies, parties, version }

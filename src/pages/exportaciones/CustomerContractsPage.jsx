@@ -87,6 +87,8 @@ export default function CustomerContractsPage() {
                             {marcaConPresentacion(p.brand?.name, p.presentation)}: <span className="font-semibold">${dinero(p.box_price)}</span>
                         </div>
                     ))}
+                    {/* 13/11/2026: contrato solo de cantidad */}
+                    {!c.prices?.length && <span className="font-semibold text-amber-600">SIN PRECIO</span>}
                 </div>
             ),
         },

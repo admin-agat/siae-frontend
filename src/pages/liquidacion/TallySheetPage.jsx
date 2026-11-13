@@ -12,6 +12,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Plus, Trash2, Save, X, Lock } from 'lucide-react';
 import { getOrderTallies, saveOrderTallies } from '../../api/settlements';
 import DialogoConfirmacion from '../../components/common/DialogoConfirmacion';
+import { useAvisoSalida } from '../../components/common/AvisoSalida';
 import ToastFlotante from '../../components/common/ToastFlotante';
 import SelectBuscable from '../../components/common/SelectBuscable';
 import CampoNumero from '../../components/common/CampoNumero';
@@ -118,6 +119,8 @@ export default function TallySheetPage() {
   const quitarTarja = (key) => setTarjas((prev) => prev.filter((t) => t._key !== key));
 
   const hayCambios = () => inicial !== null && inicial !== JSON.stringify(tarjas);
+  // 12/11/2026: también pregunta al ir a otra opción del menú, recargar o usar "atrás" del navegador (antes se perdía lo digitado)
+  useAvisoSalida(hayCambios());
   const volver = () => (hayCambios() ? setMostrarConfirmarSalida(true) : navigate('/liquidacion/tarjas'));
 
   // ---------------- Guardar ----------------

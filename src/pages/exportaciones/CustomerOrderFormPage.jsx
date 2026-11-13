@@ -543,7 +543,10 @@ export default function CustomerOrderFormPage() {
                     ) : origen === 'SIN_CONTRATO' ? (
                       <span className="text-xs font-semibold text-red-600">{l.customer_id ? 'SIN CONTRATO VIGENTE' : '—'}</span>
                     ) : origen === 'SIN_PRECIO' ? (
-                      <span className="text-xs font-semibold text-red-600">{l.brand_id ? 'EL CONTRATO NO TIENE PRECIO PARA ESTA MARCA Y PRESENTACIÓN' : 'ELIGE LA MARCA'}</span>
+                      // 13/11/2026: ya no es error; la línea se guarda SIN PRECIO (solo cantidad)
+                      l.brand_id
+                        ? <span className="text-xs font-semibold text-amber-600" title="El contrato no tiene precio para esta marca y presentación">SIN PRECIO</span>
+                        : <span className="text-xs font-semibold text-red-600">ELIGE LA MARCA</span>
                     ) : (
                       <span className="text-sm font-semibold text-primario" title={origen === 'CONGELADO' ? 'Precio guardado en el pedido' : 'Precio del contrato vigente'}>
                         $ {formatoDinero(precio)}

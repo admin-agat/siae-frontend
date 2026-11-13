@@ -273,6 +273,45 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 13/11/2026 — Compra de fruta: compra global POR DIVIDIR y "Dividir compra" (cuadro de despacho)
+- **Por qué:** ASCUPOESPE (y otras asociaciones) avisan el retiro de material para N cajas y esa noche mandan el CUADRO DE DESPACHO con productor, finca, marca y cajas. Antes el sistema obligaba a poner productor real y finca al registrar la compra. Diseño aprobado por Peter con todas las recomendaciones: `docs/modulos/compra-global-division.md`.
+- **Migración** `2026_11_13_000001_compra_por_dividir`: en `producer_quota_lines` agrega `pending_split`, `split_from_line_id`, `split_at` y `split_by`, 2 CHECK (POR DIVIDIR sin productor ni finca; una fila no sale de sí misma) y un índice parcial. Corrige la FK de `user_notifications.producer_quota_line_id` a `ON DELETE SET NULL` (antes, quitar una compra enviada con avisos daba error 500). No cambia datos.
+- **Compra POR DIVIDIR:** en "Productor real" hay una opción nueva, POR DIVIDIR (CUADRO PENDIENTE). Solo existe para vendedores COMERCIALIZADORA. No pide productor ni finca y se puede enviar a bodega igual que cualquier compra. Si después se completan productor y finca a mano, deja de estar por dividir.
+- **Dividir compra** (botón nuevo junto a Duplicar; `POST /customer-orders/{id}/purchases/{lineId}/split`, pantalla `compra_fruta`, control de versión):
+  - Se pega el cuadro desde Excel o WhatsApp (`src/utils/cuadroDespacho.js`). Cruza productor, finca y marca; si hay celdas combinadas, repite la zona, la marca, el MAGAP y la ubicación de la fila de arriba. La zona, el código del acopio y la ubicación quedan en las notas. Las filas que no se reconocen salen en rojo para elegirlas a mano.
+  - La compra original se convierte en la primera fila de su bloque y conserva su id, su envío a bodega y sus avisos. Las demás filas copian vendedor, semana de compra, comerciales, corte, entrega, bodega, precios, tipo, pago, contrato y envío. El transporte negociado queda solo en la original.
+  - Las filas BANDA van al bloque PACKED como SPOT, sin contrato y con el precio real obligatorio.
+  - Si el cuadro suma menos que la compra, se elige entre BAJAR la compra (por defecto) o DEJAR el saldo POR DIVIDIR (solo comercializadora). Si suma más, solo avisa.
+  - Si la compra ya estaba enviada y cambia el total de la marca, la bodega la ve como CAMBIÓ. Una marca nueva genera su aviso en la campanita.
+  - No se puede dividir con el cupo LIQUIDADO ni con tarjas. Los productores que no están en Terceros no se crean desde aquí.
+- **Tablero:** AL5 ya no cuenta las compras POR DIVIDIR. Hay una alerta nueva, AL5b "Compras POR DIVIDIR".
+- **Liquidar:** el preview devuelve `avisos` ("HAY X CAJAS POR DIVIDIR…"). Solo avisa, no bloquea.
+- **Tarjas:** una compra POR DIVIDIR muestra "POR DIVIDIR" en la finca.
+- **Archivos:**
+  - Backend: `PurchaseAllocationController`, `ProducerQuotaLine`, `routes/api.php`, `TableroOperaciones`, `SettlementController`, `TallySheetController`.
+  - Frontend: `PurchaseAllocationPage.jsx`, `DividirCompraModal.jsx` (nuevo), `cuadroDespacho.js` (nuevo), `api/customerOrders.js`.
+- **Pruebas:** `tests/Feature/CompraPorDividirTest.php` (siae-qa).
+
+### 13/11/2026 — Clientes de Rusia: contratos solo de cantidad (precio opcional)
+- **Por qué:** Peter todavía no maneja los precios de venta con los clientes rusos. Por ahora solo se registra la cantidad (cupo semanal en cajas). El precio de los productores sigue igual.
+- **Contratos de clientes:** los precios por marca + presentación son **opcionales**. Un contrato puede guardarse solo con cliente, incoterm, vigencia y cajas por semana. Las filas de precio vacías se ignoran; una fila a medias (marca sin precio o al revés) sí da error. La lista muestra "SIN PRECIO".
+- **Pedido semanal:** una línea CONTRATO cuyo contrato no tiene precio para esa marca + presentación ya no da error: se guarda con el contrato y `box_price` vacío, y en pantalla dice "SIN PRECIO" (antes: "EL CONTRATO NO TIENE PRECIO PARA…"). Si después se pone el precio en el contrato, las líneas nuevas o cambiadas lo toman.
+- Ganancia por viaje ya separa las cajas con y sin precio. La factura de exportación (en diseño) sí necesitará el precio.
+- Backend: `CustomerContractController` (`prices` pasa de `required|min:1` a `present|array`), `CustomerOrderController` (sin el error de precio faltante). Frontend: `CustomerContractModal.jsx`, `CustomerContractsPage.jsx`, `CustomerOrderFormPage.jsx`. Sin migraciones.
+- Probado en local dentro de una transacción revertida: contrato sin precios → 201; pedido CONTRATO sin precio → 201 con precio NULL.
+
+### 12/11/2026 — Compra de fruta: captura más rápida (revisión de UI/UX)
+- **Por qué:** la revisión de interfaz encontró que cada compra costaba de 12 a 20 clics, que Guardar y los errores quedaban al final de una página larga y que en Tarjas se perdía lo digitado al cambiar de menú.
+- **Compra de fruta** (`PurchaseAllocationPage.jsx`), solo frontend:
+  - **Barra fija abajo** con lo comprado contra lo pedido, lo que falta, el total real, el aviso "CAMBIOS SIN GUARDAR" y los botones Cancelar y Guardar.
+  - **Duplicar compra** (botón al lado de quitar). Copia vendedor, productor, finca, comerciales, corte, semana, entrega, bodega, precios, tipo, pago y contrato. No copia cajas, notas, transporte ni el envío a bodega. El cursor queda en las cajas.
+  - **Agregar compra** deja el cursor en "Se le compra a" de la fila nueva.
+  - **Cajas, P. oficial y P. real** seleccionan lo escrito al entrar, para digitar encima. **Enter** baja al mismo campo de la compra siguiente; en la última compra pasa al botón "Agregar compra", y otro Enter la agrega.
+  - **Errores** en la barra fija, con "Ir a la fila": abre el bloque, baja a la compra y la marca en rojo. Al guardar se abren solos los bloques con error, también con los errores del servidor.
+  - Avisos de contrato, MAG, transporte y bodega en 12 px (antes 10 px). Botones "Agregar compra" y "Agregar bloque" en verde, según el estándar. Etiquetas de accesibilidad en vendedor, cajas y precios.
+- **Tarjas** (`TallySheetPage.jsx`): pregunta antes de salir con cambios sin guardar (menú, recarga o "atrás").
+- **Sin migraciones.**
+
 ### 12/11/2026 — Departamento LEGAL: los contratos de productores pasan de Liquidaciones a LEGAL
 - **Pedido de Peter:** Liquidaciones ya no registra contratos; lo hace el Departamento Legal (cupo, precio y fechas). Diseño aprobado.
 - **Decisiones:**

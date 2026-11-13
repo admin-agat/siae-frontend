@@ -130,10 +130,12 @@ export default function CustomerContractModal({ contract, onClose, onGuardado })
         if (!form.customer_id) return setError('DEBES SELECCIONAR UN CLIENTE');
         if (!form.start_date || !form.end_date) return setError('INGRESA LA FECHA DE INICIO Y DE FIN');
         if (form.end_date < form.start_date) return setError('LA FECHA DE FIN NO PUEDE SER ANTERIOR A LA DE INICIO');
-        if (form.prices.length === 0) return setError('AGREGA AL MENOS UN PRECIO (MARCA, PRESENTACIÓN Y PRECIO POR CAJA)');
-        const incompleto = form.prices.findIndex((p) => !p.brand_id || p.box_price === '');
-        if (incompleto >= 0) return setError(`PRECIO ${incompleto + 1}: FALTA LA MARCA O EL PRECIO POR CAJA`);
-        const claves = form.prices.map((p) => `${p.brand_id}|${p.presentation}`);
+        // 13/11/2026: los precios son opcionales (con Rusia por ahora solo se maneja la cantidad).
+        // Las filas vacías (sin marca ni precio) se ignoran; una fila a medias sí se corrige.
+        const precios = form.prices.filter((p) => p.brand_id || p.box_price !== '');
+        const incompleto = form.prices.findIndex((p) => (p.brand_id || p.box_price !== '') && (!p.brand_id || p.box_price === ''));
+        if (incompleto >= 0) return setError(`PRECIO ${incompleto + 1}: FALTA LA MARCA O EL PRECIO POR CAJA (O QUITA LA FILA)`);
+        const claves = precios.map((p) => `${p.brand_id}|${p.presentation}`);
         if (new Set(claves).size !== claves.length) return setError('HAY UNA MARCA CON LA MISMA PRESENTACIÓN REPETIDA EN LOS PRECIOS');
 
         setGuardando(true);
@@ -146,7 +148,7 @@ export default function CustomerContractModal({ contract, onClose, onGuardado })
                 incoterm: form.incoterm || null,
                 start_date: form.start_date,
                 end_date: form.end_date,
-                prices: form.prices.map((p) => ({ brand_id: Number(p.brand_id), presentation: p.presentation, box_price: Number(p.box_price) })),
+                prices: precios.map((p) => ({ brand_id: Number(p.brand_id), presentation: p.presentation, box_price: Number(p.box_price) })),
                 weekly_boxes: form.weekly_boxes === '' ? null : form.weekly_boxes,
                 comment: form.comment.trim() || null,
             };
@@ -228,7 +230,7 @@ export default function CustomerContractModal({ contract, onClose, onGuardado })
                     {/* Precios por marca + presentación */}
                     <div className="col-span-2">
                         <div className="flex items-center justify-between mb-1.5">
-                            <label className="text-sm font-semibold text-gray-700">Precios por caja (USD) *</label>
+                            <label className="text-sm font-semibold text-gray-700">Precios por caja (USD) — opcional</label>
                             {marcasCliente.length > 0 && (
                                 <button type="button" onClick={completarPrecios} className="text-xs font-semibold text-primario hover:underline">
                                     Poner todas las marcas del cliente
@@ -264,7 +266,7 @@ export default function CustomerContractModal({ contract, onClose, onGuardado })
                             </div>
                         )}
                         <p className="text-xs text-gray-500 mt-1">
-                            Este precio se usa en las líneas del pedido marcadas como CONTRATO. Las SPOT no usan contrato: su precio se escribe en el pedido.
+                            Este precio se usa en las líneas del pedido marcadas como CONTRATO. Si no lo pones, esas líneas quedan SIN PRECIO (solo cantidad). Las SPOT no usan contrato: su precio se escribe en el pedido.
                         </p>
                     </div>
                     <div>

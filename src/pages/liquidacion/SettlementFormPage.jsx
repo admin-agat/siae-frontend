@@ -147,6 +147,14 @@ export default function SettlementFormPage() {
         </div>
       )}
 
+      {/* 13/11/2026: avisos que no impiden liquidar (ej. compras POR DIVIDIR de una comercializadora) */}
+      {datos.avisos?.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-lg px-4 py-3 mb-4 flex gap-2">
+          <AlertTriangle size={18} className="shrink-0 mt-0.5" />
+          <div>{datos.avisos.map((p) => <p key={p}>{p}</p>)}</div>
+        </div>
+      )}
+
       {/* 1. Fruta */}
       <div className="bg-white rounded-xl shadow overflow-x-auto mb-4">
         <h2 className="px-4 py-3 font-semibold text-gray-800 border-b">1. Fruta (según tarjas)</h2>

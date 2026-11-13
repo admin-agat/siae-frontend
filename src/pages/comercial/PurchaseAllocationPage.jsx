@@ -24,10 +24,11 @@
 // salen en Inventario → Por despachar. Las ya enviadas no se repiten; "Quitar envío" mientras no retire nada.
 // 11/11/2026: los COMERCIALES de cada compra (uno o varios) se eligen de una lista que maneja ADMIN (botón
 // "Comerciales"); la tabla de cada bloque muestra ~6 compras y se desplaza dentro de su recuadro.
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, Save, X, Lock, ChevronDown, ChevronRight, AlertTriangle, Truck, Undo2, Users, Ban, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Save, X, Lock, ChevronDown, ChevronRight, AlertTriangle, Truck, Undo2, Users, Ban, RotateCcw, Copy, Split } from 'lucide-react';
 import { getOrderPurchases, saveOrderPurchases, createPurchaseFarm, sendPurchasesToWarehouse, unsendPurchase } from '../../api/customerOrders';
+import DividirCompraModal from '../../components/DividirCompraModal';
 import { getThirdParties } from '../../api/thirdParties';
 import { getPorts } from '../../api/ports';
 import { getComerciales, crearComercial, desactivarComercial, reactivarComercial } from '../../api/purchaseExecutives';
@@ -108,6 +109,12 @@ const compraDesdeBackend = (c) => ({
   enviada: c.sent_at || null,
   enviada_por: c.sent_by || '',
   cambio_envio: c.changed_after_sent_at || null,
+  // 13/11/2026: compra global de comercializadora POR DIVIDIR y traza de la división
+  pending_split: Boolean(c.pending_split),
+  dividida_de: c.split_from_line_id || null,
+  dividida_el: c.split_at || null,
+  dividida_por: c.split_by || '',
+  con_tarjas: Boolean(c.con_tarjas),
 });
 
 const bloqueDesdeBackend = (b) => ({
@@ -138,7 +145,28 @@ const compraVacia = (anterior, puertoBloque, precioMag) => ({
   contract_id: '', contract_part: '0',
   bloqueo: null, liquidada: false,
   despachada: false, enviada: null, enviada_por: '', cambio_envio: null,
+  pending_split: false, dividida_de: null, dividida_el: null, dividida_por: '', con_tarjas: false,
 });
+
+// 12/11/2026: duplicar fila. Copia vendedor, productor, finca, comerciales, corte, semana, entrega, bodega,
+// precios, tipo/pago y contrato; quedan vacías las cajas y las notas, y no copia envío, transporte ni bloqueos
+const compraDuplicada = (c) => ({
+  ...compraVacia(c, c.delivery_port_id, null),
+  third_party_id: c.third_party_id, producer_id: c.producer_id, farm_id: c.farm_id, farm_name: c.farm_name, mag_code: c.mag_code,
+  official_price: c.official_price, real_price: c.real_price,
+  negotiation_type: c.negotiation_type, payment_scheme: c.payment_scheme,
+  contract_id: c.contract_id, contract_part: c.contract_part,
+  pending_split: c.pending_split, // 13/11/2026
+});
+
+// 13/11/2026: valor del selector "Productor real" para la compra global POR DIVIDIR (no es un tercero)
+const POR_DIVIDIR = '__por_dividir';
+
+// 12/11/2026: "BLOQUE 2 (NAVE), COMPRA 5: ..." → { bloque: 2, compra: 5 } para el enlace "Ir a la fila"
+const ubicacionError = (texto) => {
+  const m = /BLOQUE (\d+)(?: \([^)]*\))?(?:, COMPRA (\d+))?/.exec(texto || '');
+  return m ? { bloque: Number(m[1]), compra: m[2] ? Number(m[2]) : null } : null;
+};
 
 // 11/11/2026: "MARIA ELENA / JORGE ZERNA" ↔ ['MARIA ELENA', 'JORGE ZERNA']
 const SEPARADOR_COMERCIALES = ' / ';
@@ -225,9 +253,15 @@ export default function PurchaseAllocationPage() {
   const [guardando, setGuardando] = useState(false);
   const [errores, setErrores] = useState([]);
   const [toast, setToast] = useState(null);
+  // 12/11/2026: campo a enfocar después de pintar ({ fila: _key de la compra, campo }) y fila resaltada al ir a un error
+  const enfocarRef = useRef(null);
+  const [, setPintar] = useState(0);
+  const setEnfocar = (destino) => { enfocarRef.current = destino; setPintar((x) => x + 1); };
+  const [filaMarcada, setFilaMarcada] = useState(null);
   const [mostrarConfirmarSalida, setMostrarConfirmarSalida] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [quitarEnvio, setQuitarEnvio] = useState(null); // compra a la que se le quita el envío
+  const [dividir, setDividir] = useState(null); // 13/11/2026: { bloque, compra } que se está dividiendo
   const semanaDeCompra = (c) => Number(c.purchase_week) || pedido?.week;
 
   const aplicarRespuesta = (data) => {
@@ -424,7 +458,12 @@ export default function PurchaseAllocationPage() {
           if (k?.price) nueva.real_price = texto(k.price);
         }
         // Si se le compra directo a un productor, no hay "productor real" aparte
-        if (campo === 'third_party_id' && tipoDe(valor) === 'PRODUCTOR') nueva.producer_id = '';
+        if (campo === 'third_party_id' && tipoDe(valor) === 'PRODUCTOR') { nueva.producer_id = ''; nueva.pending_split = false; }
+        // 13/11/2026: POR DIVIDIR (comercializadora): sin productor ni finca hasta que llegue el cuadro
+        if (campo === 'producer_id') {
+          nueva.pending_split = valor === POR_DIVIDIR;
+          if (nueva.pending_split) return conFinca({ ...nueva, producer_id: '' }, null);
+        }
         // Al elegir vendedor se propone la última bodega donde retiró materiales
         if (campo === 'third_party_id' && ultimaBodega[valor]) nueva.pickup_warehouse_id = String(ultimaBodega[valor]);
         if (campo === 'third_party_id' || campo === 'producer_id') {
@@ -458,14 +497,81 @@ export default function PurchaseAllocationPage() {
   const quitarBloque = (key) => setBloques((prev) => prev.filter((b) => b._key !== key));
 
   const agregarCompra = (bKey) => {
-    setBloques((prev) => prev.map((b) => (b._key !== bKey ? b : {
-      ...b,
-      purchases: [...b.purchases, compraVacia(b.purchases[b.purchases.length - 1], b.departure_port_id, precioMagDe(b, b.purchases[b.purchases.length - 1]))],
-    })));
+    const b = bloques.find((x) => x._key === bKey);
+    const nueva = compraVacia(b.purchases[b.purchases.length - 1], b.departure_port_id, precioMagDe(b, b.purchases[b.purchases.length - 1]));
+    setBloques((prev) => prev.map((x) => (x._key !== bKey ? x : { ...x, purchases: [...x.purchases, nueva] })));
+    // 12/11/2026: el cursor pasa a "Se le compra a" de la compra nueva
+    setEnfocar({ fila: nueva._key, campo: 'vendedor' });
+  };
+
+  // 12/11/2026: copia la compra debajo de ella y deja el cursor en las cajas
+  const duplicarCompra = (bKey, c) => {
+    const copia = compraDuplicada(c);
+    setBloques((prev) => prev.map((x) => {
+      if (x._key !== bKey) return x;
+      const i = x.purchases.findIndex((p) => p._key === c._key);
+      return { ...x, purchases: [...x.purchases.slice(0, i + 1), copia, ...x.purchases.slice(i + 1)] };
+    }));
+    setEnfocar({ fila: copia._key, campo: 'cajas' });
+  };
+
+  // 12/11/2026: enfoca (y selecciona) el campo pedido cuando la fila ya está pintada
+  useEffect(() => {
+    const enfocar = enfocarRef.current;
+    if (!enfocar) return;
+    enfocarRef.current = null;
+    const celda = document.querySelector(`tr[data-fila="${enfocar.fila}"] [data-campo="${enfocar.campo}"]`);
+    const campo = celda?.matches('input, button') ? celda : celda?.querySelector('input:not([type="hidden"]):not([tabindex="-1"]), button');
+    if (campo && enfocar.soloVer) {
+      campo.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
+    } else if (campo) {
+      campo.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      campo.focus();
+      if (campo.select) campo.select();
+    }
+  });
+
+  const seleccionar = (e) => e.target.select();
+
+  // 12/11/2026: Enter en cajas o precios baja al mismo campo de la compra siguiente;
+  // en la última compra pasa al botón "Agregar compra" (otro Enter la agrega)
+  const enterBaja = (bKey, cKey, campo) => (e) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const compras = bloques.find((x) => x._key === bKey)?.purchases || [];
+    const i = compras.findIndex((p) => p._key === cKey);
+    if (i >= 0 && i < compras.length - 1) setEnfocar({ fila: compras[i + 1]._key, campo });
+    else document.querySelector(`[data-agregar-compra="${bKey}"]`)?.focus();
+  };
+
+  // 12/11/2026: abre el bloque del error, baja a la compra y la resalta
+  const irAError = (texto) => {
+    const u = ubicacionError(texto);
+    const b = u && bloques[u.bloque - 1];
+    if (!b) return;
+    setAbiertos((p) => ({ ...p, [b._key]: true }));
+    const c = u.compra ? b.purchases[u.compra - 1] : null;
+    if (c) {
+      setFilaMarcada(c._key);
+      setEnfocar({ fila: c._key, campo: 'vendedor', soloVer: true });
+    } else {
+      setTimeout(() => document.querySelector(`[data-bloque="${b._key}"]`)?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 0);
+    }
   };
 
   const quitarCompra = (bKey, cKey) => {
     setBloques((prev) => prev.map((b) => (b._key !== bKey ? b : { ...b, purchases: b.purchases.filter((c) => c._key !== cKey) })));
+  };
+
+  // 12/11/2026: muestra los errores y abre los bloques que los tienen (los guardados arrancan cerrados)
+  const mostrarErrores = (lista) => {
+    setErrores(lista);
+    const abrir = {};
+    lista.forEach((t) => {
+      const b = bloques[(ubicacionError(t)?.bloque || 0) - 1];
+      if (b) abrir[b._key] = true;
+    });
+    if (Object.keys(abrir).length) setAbiertos((p) => ({ ...p, ...abrir }));
   };
 
   const hayCambios = () => inicial !== null && inicial !== JSON.stringify(bloques);
@@ -477,13 +583,14 @@ export default function PurchaseAllocationPage() {
 
   const handleGuardar = async () => {
     setErrores([]);
+    setFilaMarcada(null);
     const faltan = [];
     bloques.forEach((b, i) => {
       if (!b.shipment_id || !b.customer_id || !b.brand_id) faltan.push(`BLOQUE ${i + 1}: ELIGE BARCO, CLIENTE Y MARCA.`);
       b.purchases.forEach((c, j) => {
         if (!c.third_party_id) faltan.push(`BLOQUE ${i + 1}, COMPRA ${j + 1}: FALTA A QUIÉN SE LE COMPRA.`);
         if (!n(c.boxes)) faltan.push(`BLOQUE ${i + 1}, COMPRA ${j + 1}: FALTAN LAS CAJAS.`);
-        if (!c.id && !c.farm_id) {
+        if (!c.id && !c.farm_id && !c.pending_split) { // 13/11/2026: POR DIVIDIR no pide finca
           faltan.push(tipoDe(c.third_party_id) === 'COMERCIALIZADORA' && !c.producer_id
             ? `BLOQUE ${i + 1}, COMPRA ${j + 1}: ELIGE EL PRODUCTOR REAL Y SU FINCA.`
             : `BLOQUE ${i + 1}, COMPRA ${j + 1}: FALTA LA FINCA.`);
@@ -499,7 +606,7 @@ export default function PurchaseAllocationPage() {
       });
     });
     if (faltan.length) {
-      setErrores(faltan);
+      mostrarErrores(faltan);
       return;
     }
 
@@ -538,6 +645,7 @@ export default function PurchaseAllocationPage() {
             pickup_warehouse_id: num(c.pickup_warehouse_id),
             contract_id: c.negotiation_type === 'CONTRATO' ? num(c.contract_id) : null,
             contract_part: c.negotiation_type === 'CONTRATO' ? Number(c.contract_part || 0) : 0,
+            pending_split: c.pending_split, // 13/11/2026
           })),
         })),
       });
@@ -546,7 +654,7 @@ export default function PurchaseAllocationPage() {
     } catch (err) {
       console.error('ERROR AL GUARDAR LAS COMPRAS:', err);
       const e = err.response?.data?.errors;
-      setErrores(e ? Object.values(e).flat() : [err.response?.data?.message || 'Error al guardar las compras']);
+      mostrarErrores(e ? Object.values(e).flat() : [err.response?.data?.message || 'Error al guardar las compras']);
     } finally {
       setGuardando(false);
     }
@@ -595,6 +703,32 @@ export default function PurchaseAllocationPage() {
     } finally {
       setEnviando(false);
     }
+  };
+
+  // ---------------- Dividir compra (13/11/2026) ----------------
+
+  // "NAVE · GLOBAL VILLAGE PACKED · CLIENTE" (soloMarca: "GLOBAL VILLAGE", para cruzar la marca del cuadro)
+  const etiquetaBloque = (b, soloMarca = false) => {
+    const cliente = clientes.find((x) => String(x.id) === String(b.customer_id));
+    const marca = cliente?.brands?.find((m) => String(m.id) === String(b.brand_id))?.name || '';
+    if (soloMarca) return marca;
+    return `${nombreBarco(b.shipment_id)} · ${marcaConPresentacion(marca, b.presentation)} · ${cliente?.name || ''}`;
+  };
+
+  // Se divide lo GUARDADO: con cambios pendientes, primero hay que guardar
+  const abrirDividir = (b, c) => {
+    if (hayCambios()) {
+      setErrores(['GUARDA LOS CAMBIOS ANTES DE DIVIDIR.']);
+      return;
+    }
+    setErrores([]);
+    setDividir({ bloque: b, compra: c });
+  };
+
+  const alDividir = (data) => {
+    setDividir(null);
+    aplicarRespuesta(data);
+    setToast({ tipo: 'exito', mensaje: `Compra dividida en ${data.divididas} filas${data.saldo ? ` · ${data.saldo} cajas quedan por dividir` : ''}` });
   };
 
   const abrirNuevaFinca = (bKey, c) => {
@@ -797,7 +931,7 @@ export default function PurchaseAllocationPage() {
           const porSemana = semanasCompra.map((w) => ({ week: w.week, cajas: b.purchases.filter((c) => semanaDeCompra(c) === w.week).reduce((t, c) => t + n(c.boxes), 0) }));
           const conSiguiente = porSemana.some((w) => w.week !== pedido.week && w.cajas > 0);
           return (
-            <div key={b._key} className={`bg-white rounded-xl shadow overflow-hidden border-l-8 ${colorBarco(b.shipment_id).borde}`}
+            <div key={b._key} data-bloque={b._key} className={`bg-white rounded-xl shadow overflow-hidden scroll-mt-4 border-l-8 ${colorBarco(b.shipment_id).borde}`}
               title={!meta ? 'Sin meta' : falta === 0 ? 'Meta cumplida' : falta > 0 ? `Faltan ${formatoCajas(falta)} cajas` : `${formatoCajas(-falta)} cajas sobre la meta`}>
               {/* Cabecera del bloque (como la fila de título de la hoja) */}
               <div className={`flex flex-wrap items-center gap-3 px-4 py-3 border-b ${colorBarco(b.shipment_id).cabecera}`}>
@@ -919,10 +1053,11 @@ export default function PurchaseAllocationPage() {
                           const mag = precioMagDe(b, c);
                           const nc = notaCredito(c);
                           return (
-                            <tr key={c._key} className={j % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                            <tr key={c._key} data-fila={c._key}
+                              className={filaMarcada === c._key ? 'bg-red-50 outline outline-2 -outline-offset-2 outline-red-500' : j % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
                               <td className="sticky left-0 z-10 bg-inherit w-9 min-w-[36px] px-2 py-1.5 text-gray-400">{j + 1}</td>
-                              <td className="sticky left-9 z-10 bg-inherit shadow-[2px_0_0_#e5e7eb] px-2 py-1.5 min-w-[220px]">
-                                <SelectBuscable value={c.third_party_id} onChange={cambiar('third_party_id')} disabled={fijo} className={`${inputClass} ${c.third_party_id ? '' : 'ring-1 ring-amber-400'}`}>
+                              <td data-campo="vendedor" className="sticky left-9 z-10 bg-inherit shadow-[2px_0_0_#e5e7eb] px-2 py-1.5 min-w-[220px]">
+                                <SelectBuscable value={c.third_party_id} onChange={cambiar('third_party_id')} disabled={fijo} aria-label={`Compra ${j + 1}: se le compra a`} className={`${inputClass} ${c.third_party_id ? '' : 'ring-1 ring-amber-400'}`}>
                                   <option value="">SELECCIONAR...</option>
                                   <optgroup label="COMERCIALES / COMERCIALIZADORAS">
                                     {comercializadoras.map((v) => <option key={v.id} value={String(v.id)}>{v.name}</option>)}
@@ -931,20 +1066,28 @@ export default function PurchaseAllocationPage() {
                                     {productores.map((v) => <option key={v.id} value={String(v.id)}>{v.name}</option>)}
                                   </optgroup>
                                 </SelectBuscable>
-                                {fijo && <span className="flex items-center gap-1 text-[10px] text-gray-500 mt-0.5"><Lock size={10} /> {c.bloqueo}</span>}
+                                {fijo && <span className="flex items-center gap-1 text-xs text-gray-500 mt-0.5"><Lock size={12} /> {c.bloqueo}</span>}
                               </td>
                               <td className="px-2 py-1.5 min-w-[200px]">
-                                <SelectBuscable value={c.producer_id} onChange={cambiar('producer_id')} disabled={!esComercial || c.liquidada} title={esComercial ? 'Productor que realmente cosecha' : 'Compra directa al productor'} className={inputClass}>
+                                <SelectBuscable value={c.pending_split ? POR_DIVIDIR : c.producer_id} onChange={cambiar('producer_id')} disabled={!esComercial || c.liquidada} title={esComercial ? 'Productor que realmente cosecha' : 'Compra directa al productor'} className={inputClass}>
                                   <option value="">{esComercial ? '—' : 'COMPRA DIRECTA'}</option>
+                                  {/* 13/11/2026: compra global; se divide cuando llega el cuadro de despacho */}
+                                  {esComercial && <option value={POR_DIVIDIR}>POR DIVIDIR (CUADRO PENDIENTE)</option>}
                                   {productores.map((v) => <option key={v.id} value={String(v.id)}>{v.name}</option>)}
                                 </SelectBuscable>
+                                {c.pending_split && <span className="inline-block mt-0.5 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">POR DIVIDIR</span>}
+                                {c.dividida_de && (
+                                  <span className="block mt-0.5 text-xs text-gray-500" title={`Dividida el ${fechaHora(c.dividida_el)}${c.dividida_por ? ` por ${c.dividida_por}` : ''}`}>
+                                    DE LA COMPRA #{c.dividida_de}
+                                  </span>
+                                )}
                               </td>
                               <td className="px-2 py-1.5 min-w-[190px]">
                                 <SelectBuscable value={c.farm_id}
                                   onChange={(e) => (e.target.value === '__nueva' ? abrirNuevaFinca(b._key, c) : cambiarCompra(b._key, c._key, 'farm_id', e.target.value))}
-                                  disabled={c.liquidada || !duenoFinca(c)}
-                                  title={!duenoFinca(c) ? 'Elige primero a quién se le compra' : 'Fincas del productor real (o del vendedor si es compra directa)'}
-                                  className={`${inputClass} ${!c.farm_id && !c.liquidada && duenoFinca(c) ? 'ring-1 ring-amber-400' : ''}`}>
+                                  disabled={c.liquidada || !duenoFinca(c) || c.pending_split}
+                                  title={c.pending_split ? 'La finca se elige al dividir la compra' : !duenoFinca(c) ? 'Elige primero a quién se le compra' : 'Fincas del productor real (o del vendedor si es compra directa)'}
+                                  className={`${inputClass} ${!c.farm_id && !c.liquidada && duenoFinca(c) && !c.pending_split ? 'ring-1 ring-amber-400' : ''}`}>
                                   <option value="">{c.farm_name && !c.farm_id ? `${c.farm_name} (SIN CATÁLOGO)` : 'SELECCIONAR...'}</option>
                                   {fincasDe(duenoFinca(c), c.farm_id).map((f) => <option key={f.id} value={String(f.id)}>{f.name}{f.magap_code ? ` · ${f.magap_code}` : ''}</option>)}
                                   <option value="__nueva">+ NUEVA FINCA</option>
@@ -1006,21 +1149,22 @@ export default function PurchaseAllocationPage() {
                                   {bodegas.filter((w) => w.status || String(w.id) === c.pickup_warehouse_id).map((w) => <option key={w.id} value={String(w.id)}>{w.name}</option>)}
                                 </SelectBuscable>
                               </td>
-                              <td className="px-2 py-1.5 min-w-[90px]"><CampoNumero decimales={0} value={c.boxes} onChange={cambiar('boxes')} disabled={c.liquidada} className={`${inputClass} text-right font-semibold ${n(c.boxes) ? '' : 'ring-1 ring-amber-400'}`} /></td>
-                              <td className="px-2 py-1.5 min-w-[90px]">
-                                <CampoNumero decimales={2} value={c.official_price} onChange={cambiar('official_price')} disabled={c.liquidada} title="Precio oficial MAG: el vendedor factura a este precio" className={`${inputClass} text-right`} />
+                              {/* 12/11/2026: al entrar se selecciona lo escrito (se digita encima) y Enter baja a la compra siguiente */}
+                              <td data-campo="cajas" className="px-2 py-1.5 min-w-[90px]"><CampoNumero decimales={0} value={c.boxes} onChange={cambiar('boxes')} disabled={c.liquidada} onFocus={seleccionar} onKeyDown={enterBaja(b._key, c._key, 'cajas')} aria-label={`Compra ${j + 1}: cajas`} className={`${inputClass} text-right font-semibold ${n(c.boxes) ? '' : 'ring-1 ring-amber-400'}`} /></td>
+                              <td data-campo="oficial" className="px-2 py-1.5 min-w-[90px]">
+                                <CampoNumero decimales={2} value={c.official_price} onChange={cambiar('official_price')} disabled={c.liquidada} onFocus={seleccionar} onKeyDown={enterBaja(b._key, c._key, 'oficial')} aria-label={`Compra ${j + 1}: precio oficial`} title="Precio oficial MAG: el vendedor factura a este precio" className={`${inputClass} text-right`} />
                                 {mag && c.official_price !== '' && n(c.official_price) !== n(mag.price) && !c.liquidada && (
-                                  <button type="button" onClick={() => cambiarCompra(b._key, c._key, 'official_price', texto(mag.price))} title="Usar el precio oficial MAG vigente" className="block w-full text-right text-[10px] font-semibold text-amber-700 hover:underline mt-0.5">
+                                  <button type="button" onClick={() => cambiarCompra(b._key, c._key, 'official_price', texto(mag.price))} title="Usar el precio oficial MAG vigente" className="block w-full text-right text-xs font-semibold text-amber-700 hover:underline mt-0.5">
                                     MAG: {formatoDinero(mag.price)}
                                   </button>
                                 )}
                                 {mag && c.official_price === '' && !c.liquidada && (
-                                  <button type="button" onClick={() => cambiarCompra(b._key, c._key, 'official_price', texto(mag.price))} className="block w-full text-right text-[10px] font-semibold text-primario hover:underline mt-0.5">
+                                  <button type="button" onClick={() => cambiarCompra(b._key, c._key, 'official_price', texto(mag.price))} className="block w-full text-right text-xs font-semibold text-primario hover:underline mt-0.5">
                                     USAR MAG {formatoDinero(mag.price)}
                                   </button>
                                 )}
                               </td>
-                              <td className="px-2 py-1.5 min-w-[80px]"><CampoNumero decimales={2} value={c.real_price} onChange={cambiar('real_price')} disabled={c.liquidada} className={`${inputClass} text-right font-semibold`} /></td>
+                              <td data-campo="real" className="px-2 py-1.5 min-w-[80px]"><CampoNumero decimales={2} value={c.real_price} onChange={cambiar('real_price')} disabled={c.liquidada} onFocus={seleccionar} onKeyDown={enterBaja(b._key, c._key, 'real')} aria-label={`Compra ${j + 1}: precio real`} className={`${inputClass} text-right font-semibold`} /></td>
                               <td className="px-2 py-1.5 min-w-[170px]">
                                 {/* 02/11/2026: la fruta PACKED se compra siempre SPOT (precio negociado con cada productor) */}
                                 <SelectBuscable value={c.negotiation_type} onChange={cambiar('negotiation_type')} disabled={c.liquidada || b.presentation === 'PACKED'}
@@ -1036,7 +1180,7 @@ export default function PurchaseAllocationPage() {
                                 {c.negotiation_type === 'CONTRATO' && c.third_party_id && (() => {
                                   const propios = contratosDe(c, c.contract_id);
                                   if (propios.length === 0) {
-                                    return <span className="block text-[10px] font-semibold text-amber-700 mt-1" title="LEGAL registra los contratos en Contratos de productores">SIN CONTRATO VIGENTE</span>;
+                                    return <span className="block text-xs font-semibold text-amber-700 mt-1" title="LEGAL registra los contratos en Contratos de productores">SIN CONTRATO VIGENTE</span>;
                                   }
                                   const k = propios.find((x) => String(x.id) === c.contract_id);
                                   const usadas = k ? cajasContrato(k.id, semanaDeCompra(c)) : 0;
@@ -1056,17 +1200,17 @@ export default function PurchaseAllocationPage() {
                                         )}
                                       </div>
                                       {k && (
-                                        <span className={`block text-[10px] mt-0.5 ${usadas > k.weekly_boxes ? 'font-semibold text-red-600' : 'text-gray-500'}`} title="Cajas compradas esta semana con este contrato / cupo semanal">
+                                        <span className={`block text-xs mt-0.5 ${usadas > k.weekly_boxes ? 'font-semibold text-red-600' : 'text-gray-500'}`} title="Cajas compradas esta semana con este contrato / cupo semanal">
                                           {usadas.toLocaleString('es-EC')} / {Number(k.weekly_boxes).toLocaleString('es-EC')} CAJAS{usadas > k.weekly_boxes ? ' · EXCEDE CUPO' : ''}
                                         </span>
                                       )}
-                                      {k && !vigenteEn(k, c) && <span className="block text-[10px] font-semibold text-red-600" title="La vigencia del contrato no toca la semana de compra">CONTRATO NO VIGENTE EN WK{semanaDeCompra(c)}</span>}
+                                      {k && !vigenteEn(k, c) && <span className="block text-xs font-semibold text-red-600" title="La vigencia del contrato no toca la semana de compra">CONTRATO NO VIGENTE EN WK{semanaDeCompra(c)}</span>}
                                       {/* 12/11/2026: con 2 o más contratos se ven todos con lo comprado en la semana, su saldo y el total */}
                                       {propios.length > 1 && (() => {
                                         const semana = semanaDeCompra(c);
                                         const filas = propios.map((x) => ({ x, u: cajasContrato(x.id, semana) }));
                                         return (
-                                          <div className="mt-1 rounded-lg border border-gray-200 bg-white px-1.5 py-1 text-[10px] text-gray-600" title={`Contratos del vendedor en la WK${semana}: comprado / cupo semanal`}>
+                                          <div className="mt-1 rounded-lg border border-gray-200 bg-white px-1.5 py-1 text-xs text-gray-600" title={`Contratos del vendedor en la WK${semana}: comprado / cupo semanal`}>
                                             {filas.map(({ x, u }) => (
                                               <div key={x.id} className={String(x.id) === c.contract_id ? 'font-semibold text-gray-800' : ''}>
                                                 N° {x.number} · $ {formatoDinero(x.price)}: {formatoCajas(u)} / {formatoCajas(x.weekly_boxes)}
@@ -1084,13 +1228,13 @@ export default function PurchaseAllocationPage() {
                                 })()}
                                 {/* 12/11/2026: el vendedor tiene contrato pero esta compra va SPOT */}
                                 {c.negotiation_type === 'SPOT' && c.third_party_id && contratosDe(c).some((k) => k.status) && (
-                                  <span className="block text-[10px] font-semibold text-primario mt-1" title="El vendedor tiene contrato vigente en la semana de compra; esta compra va SPOT">TIENE CONTRATO</span>
+                                  <span className="block text-xs font-semibold text-primario mt-1" title="El vendedor tiene contrato vigente en la semana de compra; esta compra va SPOT">TIENE CONTRATO</span>
                                 )}
                               </td>
                               <td className="px-2 py-1.5 min-w-[110px] align-top">
                                 <CampoNumero decimales={2} value={c.transport_deduction} onChange={cambiar('transport_deduction')} disabled={c.liquidada} placeholder="0" title="Transporte que pusimos nosotros: monto total que se le DESCUENTA al liquidar" aria-label="Transporte a descontar" className={`${inputClass} text-right`} />
                                 {/* 11/11/2026: cuando el productor pone el transporte, se le reconoce $/caja (se paga por las cajas que llegan según tarja) */}
-                                <label className="flex items-center gap-1 mt-1 text-[10px] text-gray-600 whitespace-nowrap" title="El productor puso el transporte: se le paga $/caja por las cajas que lleguen según tarja">
+                                <label className="flex items-center gap-1 mt-1 text-xs text-gray-600 whitespace-nowrap" title="El productor puso el transporte: se le paga $/caja por las cajas que lleguen según tarja">
                                   <input type="checkbox" checked={c.reconoce_transporte} disabled={c.liquidada}
                                     onChange={(e) => { cambiar('reconoce_transporte')({ target: { value: e.target.checked } }); if (!e.target.checked) cambiar('transport_recognized_rate')({ target: { value: '' } }); }} />
                                   RECONOCER $/CAJA
@@ -1100,7 +1244,7 @@ export default function PurchaseAllocationPage() {
                                     <CampoNumero decimales={4} max={5} value={c.transport_recognized_rate} onChange={cambiar('transport_recognized_rate')} disabled={c.liquidada} placeholder="0,30" aria-label="Transporte reconocido por caja"
                                       className={`${inputClass} text-right mt-0.5 ${n(c.transport_recognized_rate) ? '' : 'ring-1 ring-amber-400'}`} />
                                     {n(c.transport_recognized_rate) > 0 && n(c.boxes) > 0 && (
-                                      <span className="block text-[10px] text-green-700 text-right" title="Estimado con las cajas compradas; se paga por las que lleguen según tarja">≈ + $ {formatoDinero(n(c.boxes) * n(c.transport_recognized_rate))}</span>
+                                      <span className="block text-xs text-green-700 text-right" title="Estimado con las cajas compradas; se paga por las que lleguen según tarja">≈ + $ {formatoDinero(n(c.boxes) * n(c.transport_recognized_rate))}</span>
                                     )}
                                   </>
                                 )}
@@ -1114,29 +1258,45 @@ export default function PurchaseAllocationPage() {
                               <td className="px-2 py-1.5 min-w-[160px]"><input value={c.notes} maxLength={255} onChange={mayus('notes')} placeholder="EJ. CONSOLIDADO EN PTO" className={inputClass} /></td>
                               <td className="px-2 py-1.5 min-w-[150px]">
                                 {!c.id ? (
-                                  <span className="text-[10px] text-gray-400" title="Primero guarda las compras">GUARDA PARA ENVIAR</span>
+                                  <span className="text-xs text-gray-400" title="Primero guarda las compras">GUARDA PARA ENVIAR</span>
                                 ) : c.enviada ? (
                                   <div className="leading-tight">
-                                    <span className="text-[11px] font-semibold text-green-700 whitespace-nowrap" title={c.enviada_por ? `Enviada por ${c.enviada_por}` : 'Ya estaba en la bodega antes del botón (10/11/2026)'}>✔ ENVIADA {fechaHora(c.enviada)}</span>
-                                    {c.enviada_por && <span className="block text-[10px] text-gray-500">{c.enviada_por}</span>}
-                                    {c.cambio_envio && <span className="block text-[10px] font-semibold text-amber-700" title="La bodega lo ve como CAMBIÓ">CAMBIÓ {fechaHora(c.cambio_envio)}</span>}
+                                    <span className="text-xs font-semibold text-green-700 whitespace-nowrap" title={c.enviada_por ? `Enviada por ${c.enviada_por}` : 'Ya estaba en la bodega antes del botón (10/11/2026)'}>✔ ENVIADA {fechaHora(c.enviada)}</span>
+                                    {c.enviada_por && <span className="block text-xs text-gray-500">{c.enviada_por}</span>}
+                                    {c.cambio_envio && <span className="block text-xs font-semibold text-amber-700" title="La bodega lo ve como CAMBIÓ">CAMBIÓ {fechaHora(c.cambio_envio)}</span>}
                                     {!c.despachada && !c.liquidada && (
-                                      <button type="button" onClick={() => setQuitarEnvio(c)} disabled={enviando} className="flex items-center gap-1 text-[10px] text-gray-500 hover:text-red-600 hover:underline mt-0.5">
+                                      <button type="button" onClick={() => setQuitarEnvio(c)} disabled={enviando} className="flex items-center gap-1 text-xs text-gray-500 hover:text-red-600 hover:underline mt-0.5">
                                         <Undo2 size={10} /> Quitar envío
                                       </button>
                                     )}
                                   </div>
                                 ) : c.liquidada ? (
-                                  <span className="text-[10px] text-gray-400">—</span>
+                                  <span className="text-xs text-gray-400">—</span>
                                 ) : (
                                   <button type="button" onClick={() => enviarABodega([c.id])} disabled={enviando}
                                     title="La bodega la verá en Por despachar para entregar los materiales"
-                                    className="flex items-center gap-1 px-2 py-1 text-[11px] font-semibold rounded-lg shadow-sm bg-guardar text-guardar-texto hover:bg-guardar-hover disabled:opacity-50 whitespace-nowrap transition">
+                                    className="flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-lg shadow-sm bg-guardar text-guardar-texto hover:bg-guardar-hover disabled:opacity-50 whitespace-nowrap transition">
                                     <Truck size={13} /> Enviar a bodega
                                   </button>
                                 )}
                               </td>
-                              <td className="px-2 py-1.5">
+                              <td className="px-2 py-1.5 whitespace-nowrap">
+                                {/* 12/11/2026: copia la compra debajo (mismo vendedor, finca, precios y contrato; solo faltan las cajas) */}
+                                <button type="button" onClick={() => duplicarCompra(b._key, c)} title="Duplicar compra (copia todo menos cajas y notas)" aria-label={`Duplicar compra ${j + 1}`}
+                                  className="mr-1 p-1.5 rounded-lg border border-primario/30 text-primario hover:bg-primario-claro">
+                                  <Copy size={16} />
+                                </button>
+                                {/* 13/11/2026: divide la compra según el cuadro de despacho (solo compras guardadas) */}
+                                {c.id && (() => {
+                                  const motivo = c.liquidada ? 'CUPO LIQUIDADO' : c.con_tarjas ? 'YA TIENE TARJAS' : null;
+                                  return (
+                                    <button type="button" onClick={() => abrirDividir(b, c)} disabled={Boolean(motivo)}
+                                      title={motivo ? `No se puede dividir: ${motivo}` : 'Dividir compra según el cuadro de despacho'} aria-label={`Dividir compra ${j + 1}`}
+                                      className={`mr-1 p-1.5 rounded-lg border disabled:opacity-40 ${c.pending_split ? 'border-amber-500 bg-amber-100 text-amber-800 hover:bg-amber-200' : 'border-primario/30 text-primario hover:bg-primario-claro'}`}>
+                                      <Split size={16} />
+                                    </button>
+                                  );
+                                })()}
                                 <button type="button" onClick={() => quitarCompra(b._key, c._key)} disabled={fijo} title={fijo ? `No se puede quitar: ${c.bloqueo}` : 'Quitar compra'} className="text-white p-1.5 rounded-lg shadow-sm bg-red-600 hover:bg-red-700 disabled:opacity-40">
                                   <Trash2 size={16} />
                                 </button>
@@ -1147,7 +1307,7 @@ export default function PurchaseAllocationPage() {
                       </tbody>
                     </table>
                   </div>
-                  <button type="button" onClick={() => agregarCompra(b._key)} className="mt-3 flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-primario text-white hover:bg-primario-hover transition">
+                  <button type="button" onClick={() => agregarCompra(b._key)} data-agregar-compra={b._key} className="mt-3 flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-guardar text-guardar-texto hover:bg-guardar-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primario transition">
                     <Plus size={18} /> Agregar compra
                   </button>
                 </div>
@@ -1157,23 +1317,43 @@ export default function PurchaseAllocationPage() {
         })}
       </div>
 
-      <button type="button" onClick={agregarBloque} disabled={barcos.length === 0} className="mb-4 flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-primario text-white hover:bg-primario-hover disabled:opacity-50 transition">
+      <button type="button" onClick={agregarBloque} disabled={barcos.length === 0} className="mb-4 flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-guardar text-guardar-texto hover:bg-guardar-hover disabled:opacity-50 transition">
         <Plus size={18} /> Agregar bloque (barco + marca)
       </button>
 
-      {errores.length > 0 && (
-        <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3 mb-4 max-h-48 overflow-y-auto">
-          {errores.map((e) => <p key={e}>{e}</p>)}
+      {/* 12/11/2026: barra fija abajo: avance, errores con "Ir a la fila" y Guardar/Cancelar siempre a la vista */}
+      <div className="sticky bottom-0 z-40 -mx-6 px-6 py-3 bg-white/95 backdrop-blur border-t shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
+        {errores.length > 0 && (
+          <div role="alert" className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-2 mb-3 max-h-36 overflow-y-auto">
+            <p className="font-semibold mb-1">{errores.length === 1 ? 'HAY 1 ERROR POR CORREGIR' : `HAY ${errores.length} ERRORES POR CORREGIR`}</p>
+            {errores.map((e) => (
+              <p key={e} className="flex items-start justify-between gap-3">
+                <span>{e}</span>
+                {ubicacionError(e) && bloques[ubicacionError(e).bloque - 1] && (
+                  <button type="button" onClick={() => irAError(e)} className="shrink-0 text-xs font-semibold underline hover:text-red-900">Ir a la fila</button>
+                )}
+              </p>
+            ))}
+          </div>
+        )}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <span className="text-sm text-gray-700">
+            Comprado <strong>{formatoCajas(totalComprado)}</strong> de <strong>{formatoCajas(totalPedido)}</strong> cajas
+            <span className={`ml-2 font-semibold ${hayExceso ? 'text-amber-800' : avance >= 100 ? 'text-green-700' : 'text-amber-700'}`}>
+              {hayExceso ? '· HAY CAJAS DE MÁS' : avance >= 100 ? '· ✔ COMPLETA' : `· FALTAN ${formatoCajas(totalPedido - totalComprado)}`}
+            </span>
+            <span className="ml-2">· Total real <strong>$ {formatoDinero(totalReal)}</strong></span>
+            {hayCambios() && <span className="ml-2 text-xs font-semibold text-amber-700">· CAMBIOS SIN GUARDAR</span>}
+          </span>
+          <div className="flex gap-3">
+            <button type="button" onClick={volver} className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-lg bg-cancelar text-cancelar-texto hover:bg-cancelar-hover transition">
+              <X size={16} /> Cancelar
+            </button>
+            <button type="button" onClick={handleGuardar} disabled={guardando} className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-lg bg-guardar text-guardar-texto hover:bg-guardar-hover disabled:opacity-50 disabled:hover:bg-guardar transition">
+              <Save size={16} /> {guardando ? 'Guardando...' : 'Guardar compras'}
+            </button>
+          </div>
         </div>
-      )}
-
-      <div className="flex justify-end gap-3">
-        <button type="button" onClick={volver} className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-lg bg-cancelar text-cancelar-texto hover:bg-cancelar-hover transition">
-          <X size={16} /> Cancelar
-        </button>
-        <button type="button" onClick={handleGuardar} disabled={guardando} className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-lg bg-guardar text-guardar-texto hover:bg-guardar-hover disabled:opacity-50 disabled:hover:bg-guardar transition">
-          <Save size={16} /> {guardando ? 'Guardando...' : 'Guardar compras'}
-        </button>
       </div>
 
       {nuevaFinca && (
@@ -1195,6 +1375,24 @@ export default function PurchaseAllocationPage() {
             <input value={nuevaFinca.zone} maxLength={100} onChange={(e) => setNuevaFinca((p) => ({ ...p, zone: e.target.value.toUpperCase() }))} placeholder="EJ. MACHALA" className={inputClass} />
           </div>
         </ModalShell>
+      )}
+
+      {dividir && (
+        <DividirCompraModal
+          orderId={id}
+          version={version}
+          compra={dividir.compra}
+          bloque={dividir.bloque}
+          bloques={bloques}
+          etiquetaBloque={etiquetaBloque}
+          vendedor={vendedores.find((v) => String(v.id) === dividir.compra.third_party_id)?.name || ''}
+          esComercializadora={tipoDe(dividir.compra.third_party_id) === 'COMERCIALIZADORA'}
+          productores={productores}
+          fincas={fincas}
+          onFincaCreada={(f) => setFincas((prev) => [...prev, f].sort((a, b) => a.name.localeCompare(b.name)))}
+          onClose={() => setDividir(null)}
+          onDividido={alDividir}
+        />
       )}
 
       {quitarEnvio && (
