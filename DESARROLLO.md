@@ -273,6 +273,10 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 14/11/2026 — Pedido semanal: Presentación con un clic
+- En las líneas del pedido, **Presentación** pasa de lista desplegable a barra de dos botones **CONVENCIONAL | PACKED** (igual que CONTRATO | SPOT en Compra de fruta). Solo pantalla, sin migraciones.
+- PALLET SUR: se crea en Configuración → Puertos como tipo **SALIDA** (dato, no código); así aparece en Puerto del pedido y en "Entrega en" de Compra de fruta.
+
 ### 13/11/2026 — Compra de fruta: transporte solo "Reconocer" y arreglos del test de usabilidad
 - **Transporte** (pedido de Peter: "solo se reconoce transporte"):
   - La celda es una casilla RECONOCER con su $/caja.

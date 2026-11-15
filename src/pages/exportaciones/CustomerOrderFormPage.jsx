@@ -493,9 +493,16 @@ export default function CustomerOrderFormPage() {
                     </SelectBuscable>
                   </td>
                   <td className="px-2 py-2 min-w-[175px]">
-                    <SelectBuscable value={l.presentation} onChange={(e) => cambiarLinea(l._key, 'presentation', e.target.value)} className={inputClass}>
-                      {PRESENTACIONES.map((p) => <option key={p} value={p}>{p}</option>)}
-                    </SelectBuscable>
+                    {/* 14/11/2026: un clic para CONVENCIONAL/PACKED (como CONTRATO/SPOT en Compra de fruta), sin abrir lista */}
+                    <div className="inline-flex rounded-lg border border-primario/30 overflow-hidden text-xs font-semibold" role="group" aria-label={`Línea ${i + 1}: presentación`}>
+                      {PRESENTACIONES.map((p) => (
+                        <button key={p} type="button" onClick={() => l.presentation !== p && cambiarLinea(l._key, 'presentation', p)}
+                          aria-pressed={l.presentation === p}
+                          className={`px-2.5 py-2 ${l.presentation === p ? 'bg-primario text-white' : 'bg-white text-primario hover:bg-primario-claro'}`}>
+                          {p}
+                        </button>
+                      ))}
+                    </div>
                   </td>
                   <td className="px-2 py-2 min-w-[170px]">
                     <SelectBuscable value={l.cargo_type} onChange={(e) => cambiarLinea(l._key, 'cargo_type', e.target.value)} className={inputClass}>
