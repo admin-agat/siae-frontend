@@ -8,7 +8,7 @@ import {
     ArrowLeftRight, ClipboardList, FileText, ShoppingCart,
     FileSignature, Tag, Ship, Container,
     CircleDollarSign, History, ClipboardCheck, HandCoins, Calculator,
-    MapPin, CheckCircle2, Truck, Anchor, ShoppingBasket, UserCog, Landmark, Receipt, ScrollText, ShieldCheck, PackageCheck, ListOrdered, Wallet, TrendingUp, Inbox,
+    MapPin, CheckCircle2, Truck, Anchor, ShoppingBasket, UserCog, Landmark, Receipt, ScrollText, ShieldCheck, PackageCheck, ListOrdered, Wallet, TrendingUp, Inbox, PieChart,
     FilePlus2, BadgeCheck, CreditCard, SlidersHorizontal
 } from "lucide-react";
 
@@ -95,6 +95,8 @@ export const menuItems = [
         // 02/11/2026: lo que cobra cada nave y los gastos de la exportación → ganancia por viaje
         items: [
             { label: "Gastos del viaje", ruta: "/finanzas/gastos-viaje", icono: Wallet, pantalla: "gastos_viaje" },
+            // 16/11/2026: tablero financiero arriba de la sección
+            { label: "Tablero financiero", ruta: "/finanzas/tablero", icono: PieChart, pantalla: "tablero_financiero" },
             { label: "Ganancia por viaje", ruta: "/finanzas/ganancia-viaje", icono: TrendingUp, pantalla: "ganancia_viaje" },
         ],
     },

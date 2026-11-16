@@ -35,6 +35,7 @@ const DestinationsPage = lazy(PAGINAS.DestinationsPage);
 const CustomerContractsPage = lazy(PAGINAS.CustomerContractsPage);
 const VoyageCostsPage = lazy(PAGINAS.VoyageCostsPage);
 const VoyageProfitPage = lazy(PAGINAS.VoyageProfitPage);
+const FinanceBoardPage = lazy(PAGINAS.FinanceBoardPage);
 // Pedido semanal de Rusia (listado + formulario de líneas)
 const CustomerOrdersPage = lazy(PAGINAS.CustomerOrdersPage);
 const CustomerOrderFormPage = lazy(PAGINAS.CustomerOrderFormPage);
@@ -178,6 +179,8 @@ export default function AppRouter() {
           {/* 02/11/2026: Finanzas — gastos de cada viaje y ganancia por viaje */}
           <Route path="/finanzas/gastos-viaje" element={P('gastos_viaje', <VoyageCostsPage />)} />
           <Route path="/finanzas/ganancia-viaje" element={P('ganancia_viaje', <VoyageProfitPage />)} />
+          {/* 16/11/2026: tablero financiero (suma de Ganancia por viaje) */}
+          <Route path="/finanzas/tablero" element={P('tablero_financiero', <FinanceBoardPage />)} />
           <Route path="/comercial/compras/:id" element={P('compra_fruta', <PurchaseAllocationPage />)} />
           <Route path="/comercial/precios-oficiales" element={P('precios_mag', <OfficialPricesPage />)} />
 

@@ -3,3 +3,6 @@ import axios from "./axios";
 
 // Tablero de operaciones (sin dinero): { year, week_from, week_to, customer_id, brand_id, negotiation_type }
 export const getOperationsBoard = (params) => axios.get("/boards/operations", { params });
+
+// 16/11/2026: Tablero financiero (con dinero; solo Finanzas, Gerencia y ADMIN): { year, week_from, week_to }
+export const getFinanceBoard = (params) => axios.get("/boards/finance", { params });

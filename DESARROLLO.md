@@ -273,6 +273,28 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 16/11/2026 — Tablero financiero (FINANZAS)
+- Pantalla nueva **FINANZAS → Tablero financiero** (`/finanzas/tablero`, clave `tablero_financiero`, roles FINANZAS y GERENCIA; ADMIN siempre).
+- Suma la **Ganancia por viaje** de todos los barcos de los pedidos del rango de semanas. Los números son los mismos de esa pantalla, agrupados en:
+  - indicadores: venta, costo, ganancia, margen y ganancia por caja;
+  - gráficos: venta y costo por semana, y ganancia por semana (en rojo las semanas con pérdida);
+  - en qué se va el dinero, por concepto;
+  - tablas: por cliente, y por barco con sus avisos.
+- **Cifras preliminares:** si un barco tiene datos incompletos (SPOT sin precio, tarifa de flete, gastos del viaje o precio real), se avisa arriba y en cada barco.
+  - Al 16/11, en producción ninguna semana está completa: no hay gastos de viaje, no hay cierres y faltan tarifas.
+  - Por eso hoy los márgenes salen más altos de lo real.
+- Backend:
+  - servicio nuevo `app/Services/Tableros/TableroFinanciero.php`;
+  - `BoardController::finance` y ruta `GET /boards/finance`;
+  - `VoyageCostController::gananciaDelViaje` pasa a ser pública.
+- Frontend: `src/pages/finanzas/FinanceBoardPage.jsx`, `src/api/boards.js`, ruta y menú.
+- Sin migraciones. A GERENCIA hay que marcarle la pantalla en **Perfiles**.
+
+### 16/11/2026 — Dividir compra: por defecto se va descontando
+- Si el vendedor es asociación o comercializadora y el cuadro no completa las cajas, la opción marcada al abrir es **DEJAR … POR DIVIDIR (VIENE OTRO CUADRO)**. Así la compra se va descontando cuadro por cuadro.
+- **BAJAR LA COMPRA** queda como elección explícita, para no perder cajas al guardar sin fijarse. Un productor directo sigue igual: solo puede bajar la compra.
+- Archivo: `src/components/DividirCompraModal.jsx`.
+
 ### 16/11/2026 — Rendimiento R2–R6 (informe `docs/revision-rendimiento-2026-11.md`)
 - **R2 Contador "Por despachar"** (`MaterialDispatchController::filasPorDespachar`): lo retirado y los retiros de todos los cupos en 2 consultas (antes 4 por cupo × marca × bodega). `Sidebar.jsx` ya no lo pide en cada cambio de pantalla: solo dentro de /despacho-materiales, cada 2 min y al volver a la pestaña (oculta no pide).
 - **R3 Guardar Compra de fruta**: tarjas y retiros de toda la semana en 2 consultas (`despachadas()`, reutilizado por `cargar()`), antes 2 por compra.

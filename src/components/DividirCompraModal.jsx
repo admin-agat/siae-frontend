@@ -33,7 +33,9 @@ export default function DividirCompraModal({
     boxes: compra.boxes,
   })]);
   const [pegado, setPegado] = useState('');
-  const [saldo, setSaldo] = useState('REDUCE');
+  // 16/11/2026: asociación/comercializadora arranca en "dejar por dividir" (se va descontando
+  // por cuadros); bajar la compra queda como elección explícita para no perder cajas sin querer
+  const [saldo, setSaldo] = useState(esComercializadora ? 'KEEP' : 'REDUCE');
   const [error, setError] = useState('');
   const [aviso, setAviso] = useState('');
   const [guardando, setGuardando] = useState(false);

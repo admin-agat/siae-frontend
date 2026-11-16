@@ -26,6 +26,8 @@ export const PAGINAS = {
   CustomerContractsPage: () => import("../pages/exportaciones/CustomerContractsPage"),
   VoyageCostsPage: () => import("../pages/finanzas/VoyageCostsPage"),
   VoyageProfitPage: () => import("../pages/finanzas/VoyageProfitPage"),
+  // 16/11/2026: tablero financiero
+  FinanceBoardPage: () => import("../pages/finanzas/FinanceBoardPage"),
   CustomerOrdersPage: () => import("../pages/exportaciones/CustomerOrdersPage"),
   CustomerOrderFormPage: () => import("../pages/exportaciones/CustomerOrderFormPage"),
   OrderDistributionsPage: () => import("../pages/exportaciones/OrderDistributionsPage"),
