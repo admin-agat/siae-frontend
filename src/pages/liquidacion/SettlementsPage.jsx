@@ -25,16 +25,19 @@ export default function SettlementsPage() {
   const [cupos, setCupos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [filtro, setFiltro] = useState('POR_LIQUIDAR');
+  // 16/11/2026 (rendimiento R6): por defecto las últimas 8 semanas + todo lo que falta liquidar; lo más viejo, a pedido
+  const [anteriores, setAnteriores] = useState(false);
 
   useEffect(() => {
-    getSettlementQuotas()
+    setCargando(true);
+    getSettlementQuotas(anteriores ? {} : { recientes: 1 })
       .then((res) => setCupos(Array.isArray(res.data) ? res.data : []))
       .catch((err) => {
         console.error('ERROR AL CARGAR CUPOS:', err);
         setCupos([]);
       })
       .finally(() => setCargando(false));
-  }, []);
+  }, [anteriores]);
 
   const estado = (c) => {
     if (c.settlement) return c.settlement.pagado
@@ -87,7 +90,7 @@ export default function SettlementsPage() {
         subtitulo="Pago al productor por semana: fruta de las tarjas − materiales − anticipos"
       />
 
-      <div className="flex gap-2 mb-3">
+      <div className="flex flex-wrap items-center gap-2 mb-3">
         {FILTROS.map((f) => (
           <button
             key={f.clave}
@@ -98,6 +101,11 @@ export default function SettlementsPage() {
             {f.etiqueta} ({cupos.filter(f.cumple).length})
           </button>
         ))}
+        <label className="ml-auto flex items-center gap-2 text-xs font-semibold text-gray-600 cursor-pointer"
+          title="Por defecto se ven las últimas 8 semanas y todo lo que falta liquidar">
+          <input type="checkbox" checked={anteriores} onChange={(e) => setAnteriores(e.target.checked)} className="accent-primario" />
+          VER SEMANAS ANTERIORES YA LIQUIDADAS
+        </label>
       </div>
 
       <TablaEstandar

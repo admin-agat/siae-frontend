@@ -93,13 +93,23 @@ export default function Sidebar() {
 
     const tieneBandeja = menuVisible.some((g) => g.items.some((i) => i.ruta === RUTA_POR_DESPACHAR));
     const [porDespachar, setPorDespachar] = useState(0);
+    // 16/11/2026 (rendimiento R2): ya no se pide en CADA cambio de pantalla, solo al entrar o salir de la
+    // bandeja o del despacho (ahí cambia al despachar), cada 2 minutos y al volver a la pestaña; con la pestaña oculta no se pide
+    const enBandeja = rutaActiva?.startsWith('/despacho-materiales') ? rutaActiva : '';
     useEffect(() => {
         if (!tieneBandeja) return undefined;
-        const pedir = () => getPorDespacharCuenta().then((d) => setPorDespachar(Number(d?.count) || 0)).catch(() => {});
+        const pedir = () => {
+            if (document.visibilityState !== 'visible') return;
+            getPorDespacharCuenta().then((d) => setPorDespachar(Number(d?.count) || 0)).catch(() => {});
+        };
         pedir();
         const t = setInterval(pedir, CADA_MS);
-        return () => clearInterval(t);
-    }, [tieneBandeja, location.pathname]);
+        document.addEventListener('visibilitychange', pedir);
+        return () => {
+            clearInterval(t);
+            document.removeEventListener('visibilitychange', pedir);
+        };
+    }, [tieneBandeja, enBandeja]);
     const contadorDe = (ruta) => (ruta === RUTA_POR_DESPACHAR ? porDespachar : 0);
 
     // Panel abierto encima del contenido: null, una sección o TODO

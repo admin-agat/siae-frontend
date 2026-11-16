@@ -273,6 +273,13 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 16/11/2026 — Rendimiento R2–R6 (informe `docs/revision-rendimiento-2026-11.md`)
+- **R2 Contador "Por despachar"** (`MaterialDispatchController::filasPorDespachar`): lo retirado y los retiros de todos los cupos en 2 consultas (antes 4 por cupo × marca × bodega). `Sidebar.jsx` ya no lo pide en cada cambio de pantalla: solo dentro de /despacho-materiales, cada 2 min y al volver a la pestaña (oculta no pide).
+- **R3 Guardar Compra de fruta**: tarjas y retiros de toda la semana en 2 consultas (`despachadas()`, reutilizado por `cargar()`), antes 2 por compra.
+- **R4**: tipo de puerto en una consulta (antes `Port::find` por bloque y compra) y cupos existentes leídos antes del bucle (antes `firstOrNew` por compra). Misma regla de semana de compra.
+- **R5 Última bodega**: `DISTINCT ON` en PostgreSQL (antes toda la historia en PHP).
+- **R6 Liquidación**: `GET /settlements/quotas?recientes=1` = últimas 8 semanas + todo lo que no tiene liquidación; casilla "VER SEMANAS ANTERIORES YA LIQUIDADAS" pide todo. Sin migraciones; ninguna regla de negocio cambia.
+
 ### 16/11/2026 — Puerto de salida con un clic (barra)
 - Nuevo `src/components/common/BarraPuertos.jsx`: los puertos de SALIDA como barra de botones (estilo CONTRATO | SPOT). Si algún día hay más de 4, vuelve a la lista desplegable.
 - Se usa en **Pedido semanal** (puerto de cada línea) y en **Distribución en barcos** (puerto de cada barco). En Compra de fruta el puerto del bloque sigue como lista (no entra en la fila de 7 campos y se llena solo con el barco), igual que "Entrega en". Solo pantalla, sin migraciones.
