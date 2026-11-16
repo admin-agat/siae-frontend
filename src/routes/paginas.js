@@ -50,6 +50,8 @@ export const PAGINAS = {
   SettlementHistoryPage: () => import("../pages/liquidacion/SettlementHistoryPage"),
   SettlementParametersPage: () => import("../pages/liquidacion/SettlementParametersPage"),
   ProducerContractsPage: () => import("../pages/liquidacion/ProducerContractsPage"),
+  // 16/11/2026: vacaciones fase 1 (LEGAL)
+  EmployeesPage: () => import("../pages/legal/EmployeesPage"),
   MaterialDispatchPage: () => import("../pages/inventario/MaterialDispatchPage"),
   MaterialDispatchHistoryPage: () => import("../pages/inventario/MaterialDispatchHistoryPage"),
   PurchaseOrdersPage: () => import("../pages/inventario/PurchaseOrdersPage"),

@@ -88,6 +88,8 @@ export const menuItems = [
         // 12/11/2026: Departamento LEGAL: contratos de productores (cupo, precio, fechas) y cajas registradas en el MAG
         items: [
             { label: "Contratos de productores", ruta: "/legal/contratos", icono: FileSignature, pantalla: "contratos_legal" },
+            // 16/11/2026: vacaciones fase 1
+            { label: "Empleados y vacaciones", ruta: "/legal/empleados", icono: Users, pantalla: "empleados_saldos" },
         ],
     },
     {

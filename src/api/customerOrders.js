@@ -56,3 +56,7 @@ export const getOrderClosing = (id) => axios.get(`/customer-orders/${id}/closing
 // Guarda los bookings de la semana: { version, shipments: [{ id, loading_from, loading_to,
 // departure_date, eta, bookings: [...] }] }. 409 si otro usuario guardó antes (version vieja).
 export const saveOrderClosing = (id, data) => axios.put(`/customer-orders/${id}/closing`, data);
+
+// 16/11/2026: materiales del pedido (preliminar) con las líneas en edición:
+// { customer_order_id?, lines: [{ brand_id, presentation, boxes }] } → necesario, stock, faltante (y costo si es Gerencia/Finanzas/ADMIN)
+export const getOrderMaterials = (data) => axios.post("/customer-orders/materials", data);

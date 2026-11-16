@@ -37,3 +37,6 @@ export const getPorDespachar = (params = {}) =>
 // 10/11/2026: cuántas compras enviadas por Comercial faltan por despachar (contador del menú): { count }
 export const getPorDespacharCuenta = () =>
   axios.get('/material-dispatch/pending/count').then((res) => res.data);
+// 16/11/2026: materiales que necesita el pedido de la semana contra el stock, sin dólares: { year, week }
+export const getMaterialesPedidoSemana = (params) =>
+  axios.get('/material-dispatch/order-materials', { params }).then((res) => res.data);

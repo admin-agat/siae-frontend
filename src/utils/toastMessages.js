@@ -28,6 +28,10 @@ const ENTIDADES = {
   usuario: { nombre: "Usuario", genero: "m" }, // CONFIGURACIÓN → Usuarios (29/10/2026)
   precioOficial: { nombre: "Precio oficial", genero: "m" }, // COMERCIAL → Precios oficiales MAG (30/10/2026)
   perfil: { nombre: "Perfil", genero: "m" }, // CONFIGURACIÓN → Perfiles y permisos (30/10/2026)
+  // 16/11/2026: vacaciones fase 1 (LEGAL → Empleados y saldos)
+  empleado: { nombre: "Empleado", genero: "m" },
+  departamento: { nombre: "Departamento", genero: "m" },
+  feriado: { nombre: "Feriado", genero: "m" },
 };
 
 // Participios base por acción, en masculino singular.

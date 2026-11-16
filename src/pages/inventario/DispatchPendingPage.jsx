@@ -11,7 +11,9 @@ import { useNavigate } from 'react-router-dom';
 import { Truck, RefreshCw } from 'lucide-react';
 import EncabezadoPagina from '../../components/common/EncabezadoPagina';
 import TablaEstandar from '../../components/common/TablaEstandar';
-import { getPorDespachar } from '../../api/materialDispatch';
+import { getPorDespachar, getMaterialesPedidoSemana } from '../../api/materialDispatch';
+import MaterialesPedidoPanel from '../../components/MaterialesPedidoPanel';
+import { semanaISO } from '../../utils/semana';
 
 const ESTADOS = {
     PENDIENTE: { texto: 'PENDIENTE', clase: 'bg-amber-100 text-amber-800' },
@@ -30,6 +32,8 @@ const FILTROS = [
 const fechaVer = (f) => (f ? String(f).slice(0, 10).split('-').reverse().join('/') : '—');
 const fechaHora = (iso) => (iso ? new Date(iso).toLocaleString('es-EC', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) : '—');
 const cajas = (n) => Number(n || 0).toLocaleString('es-EC');
+const { semana: SEMANA_HOY, anio: ANIO_HOY } = semanaISO();
+const SEMANAS = Array.from({ length: 53 }, (_, i) => i + 1);
 
 function Resumen({ titulo, valor, detalle, clase }) {
     return (
@@ -47,6 +51,21 @@ export default function DispatchPendingPage() {
     const [cargando, setCargando] = useState(true);
     const [error, setError] = useState('');
     const [filtro, setFiltro] = useState('POR_DESPACHAR');
+    // 16/11/2026: materiales del pedido de la semana contra el stock (sin dólares; el bodeguero ve su bodega)
+    const [semanaPedido, setSemanaPedido] = useState(SEMANA_HOY);
+    const [materiales, setMateriales] = useState(null);
+    const [cargandoMat, setCargandoMat] = useState(false);
+    const [errorMat, setErrorMat] = useState('');
+
+    useEffect(() => {
+        let vigente = true;
+        setCargandoMat(true);
+        getMaterialesPedidoSemana({ year: ANIO_HOY, week: semanaPedido })
+            .then((d) => { if (vigente) { setMateriales(d); setErrorMat(''); } })
+            .catch(() => vigente && setErrorMat('NO SE PUDIERON CALCULAR LOS MATERIALES DEL PEDIDO.'))
+            .finally(() => vigente && setCargandoMat(false));
+        return () => { vigente = false; };
+    }, [semanaPedido]);
 
     const pedir = () =>
         getPorDespachar()
@@ -100,6 +119,22 @@ export default function DispatchPendingPage() {
                 <Resumen titulo="SIN RETIRAR NADA" valor={pendientes.length} detalle="Pendientes" clase="text-amber-700" />
                 <Resumen titulo="RETIRO A MEDIAS" valor={parciales.length} detalle="Faltan materiales" clase="text-blue-700" />
                 <Resumen titulo="COMPLETOS" valor={completos.length} detalle="Sin liquidar todavía" clase="text-green-700" />
+            </div>
+
+            {/* 16/11/2026: materiales que necesita el pedido de la semana (preliminar) */}
+            <div>
+                <div className="flex items-center gap-2 mb-2 text-sm">
+                    <label htmlFor="semana-pedido" className="font-semibold text-gray-700">Pedido de la semana</label>
+                    <select id="semana-pedido" value={semanaPedido} onChange={(e) => setSemanaPedido(Number(e.target.value))}
+                        className="bg-gray-100 border border-gray-200 rounded-2xl px-3 py-1 text-sm">
+                        {SEMANAS.map((w) => <option key={w} value={w}>WK{w} {ANIO_HOY}</option>)}
+                    </select>
+                </div>
+                {materiales && materiales.pedido === null && !cargandoMat ? (
+                    <p className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-500">No hay pedido activo en la WK{semanaPedido}.</p>
+                ) : (
+                    <MaterialesPedidoPanel datos={materiales} cargando={cargandoMat} error={errorMat} titulo={`Materiales del pedido WK${semanaPedido}`} />
+                )}
             </div>
 
             {error && <p className="bg-red-50 text-red-700 text-sm rounded-lg px-4 py-3">{error}</p>}

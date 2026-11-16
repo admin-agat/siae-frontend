@@ -67,6 +67,7 @@ const SettlementHistoryPage = lazy(PAGINAS.SettlementHistoryPage);
 // 06/11/2026: parámetros de la semana + tabla de retención, contratos y retención de productores
 const SettlementParametersPage = lazy(PAGINAS.SettlementParametersPage);
 const ProducerContractsPage = lazy(PAGINAS.ProducerContractsPage);
+const EmployeesPage = lazy(PAGINAS.EmployeesPage);
 // Despacho de Materiales — cálculo de receta/BOM por cupo de productor + guardado del EGRESO
 const MaterialDispatchPage = lazy(PAGINAS.MaterialDispatchPage);
 // Historial de despachos (quién retiró, valor a descontar, reimprimir guía, anular)
@@ -190,6 +191,8 @@ export default function AppRouter() {
           {/* 12/11/2026: Liquidación edita la retención; los contratos los registra LEGAL (misma pantalla, otro modo) */}
           <Route path="/liquidacion/contratos" element={P('contratos_productores', <ProducerContractsPage key="retencion" modo="retencion" />)} />
           <Route path="/legal/contratos" element={P('contratos_legal', <ProducerContractsPage key="legal" modo="legal" />)} />
+          {/* 16/11/2026: vacaciones fase 1 — empleados, kárdex de días, departamentos y feriados */}
+          <Route path="/legal/empleados" element={P('empleados_saldos', <EmployeesPage />)} />
           <Route path="/liquidacion/tarjas" element={P('tarjas', <TalliesPage />)} />
           <Route path="/liquidacion/tarjas/:id" element={P('tarjas', <TallySheetPage />)} />
           <Route path="/liquidacion/anticipos" element={P('anticipos', <ProducerAdvancesPage />)} />

@@ -14,7 +14,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Plus, Trash2, ArrowLeft, Save, X } from 'lucide-react';
-import { getCustomerOrder, createCustomerOrder, updateCustomerOrder } from '../../api/customerOrders';
+import { getCustomerOrder, createCustomerOrder, updateCustomerOrder, getOrderMaterials } from '../../api/customerOrders';
+import MaterialesPedidoPanel from '../../components/MaterialesPedidoPanel';
 import { getCustomers } from '../../api/customers';
 import { getPorts } from '../../api/ports';
 import { getCustomerContracts } from '../../api/customerContracts';
@@ -246,6 +247,29 @@ export default function CustomerOrderFormPage() {
   const cuadrado = totalSemana > 0 && diferencia === 0;
   const avance = totalSemana > 0 ? Math.min(100, (totalLineas / totalSemana) * 100) : 0;
 
+  // 16/11/2026: materiales del pedido (preliminar). Se recalcula medio segundo después de cambiar
+  // marca, presentación o cajas de las líneas (aunque no estén guardadas). No bloquea el guardado.
+  const [materiales, setMateriales] = useState(null);
+  const [cargandoMateriales, setCargandoMateriales] = useState(false);
+  const [errorMateriales, setErrorMateriales] = useState('');
+  const claveMateriales = JSON.stringify(lineas.filter((l) => l.brand_id && Number(l.boxes) > 0)
+    .map((l) => [l.brand_id, l.presentation, Number(l.boxes)]));
+  useEffect(() => {
+    if (cargando) return undefined;
+    let vigente = true;
+    const t = setTimeout(() => {
+      setCargandoMateriales(true);
+      getOrderMaterials({
+        customer_order_id: esEdicion ? Number(id) : null,
+        lines: JSON.parse(claveMateriales).map(([brand_id, presentation, boxes]) => ({ brand_id: Number(brand_id), presentation, boxes })),
+      })
+        .then((r) => { if (vigente) { setMateriales(r.data); setErrorMateriales(''); } })
+        .catch((e) => vigente && setErrorMateriales(Object.values(e.response?.data?.errors || {})[0]?.[0] || 'NO SE PUDIERON CALCULAR LOS MATERIALES DEL PEDIDO.'))
+        .finally(() => vigente && setCargandoMateriales(false));
+    }, 500);
+    return () => { vigente = false; clearTimeout(t); };
+  }, [claveMateriales, cargando, esEdicion, id]);
+
   // ---------------- Cambios ----------------
 
   const cambiarCabecera = (e) => {
@@ -364,8 +388,11 @@ export default function CustomerOrderFormPage() {
       } else {
         await createCustomerOrder(data);
       }
-      setToast({ tipo: 'exito', mensaje: getMensajeExito('pedido', accion) });
-      setTimeout(() => navigate('/exportaciones/pedidos'), 1200);
+      // 16/11/2026: si faltan materiales en bodega se avisa al guardar (no lo impide)
+      const avisoMateriales = materiales?.con_faltante > 0
+        ? ` OJO: CON EL STOCK DE BODEGAS ALCANZA PARA ${formatoCajas(materiales.cajas_alcanzan)} DE ${formatoCajas(materiales.cajas)} CAJAS.` : '';
+      setToast({ tipo: 'exito', mensaje: getMensajeExito('pedido', accion) + avisoMateriales });
+      setTimeout(() => navigate('/exportaciones/pedidos'), avisoMateriales ? 3000 : 1200);
     } catch (err) {
       console.error('ERROR AL GUARDAR EL PEDIDO:', err);
       // 422 de Laravel: { errors: { campo: [mensaje] } } → lista de mensajes
@@ -661,6 +688,9 @@ export default function CustomerOrderFormPage() {
           </div>
         )}
       </div>
+
+      {/* 16/11/2026: materiales del pedido contra el stock de bodegas (preliminar) */}
+      <MaterialesPedidoPanel datos={materiales} cargando={cargandoMateriales} error={errorMateriales} />
 
       {/* Errores (frontend o 422 del backend, con número de línea) */}
       {errores.length > 0 && (

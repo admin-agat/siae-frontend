@@ -273,6 +273,41 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 16/11/2026 — Vacaciones y permisos, FASE 1: empleados, saldos, departamentos y feriados (LEGAL)
+- Diseño: `docs/modulos/vacaciones-permisos.md` (aprobado 16/11). Pantalla nueva **LEGAL → Empleados y vacaciones** (`/legal/empleados`, clave `empleados_saldos`, perfil LEGAL por migración).
+- **EMPLEADOS:**
+  - **Ficha:** apellidos y nombres; documento (barra CÉDULA | PASAPORTE; la cédula se valida con dígito verificador); departamento del catálogo; cargo; ingreso; jefe inmediato con búsqueda (sin ciclos); usuario del SIAE opcional (nunca DEPARTAMENTO ni ADMIN); días de trabajo (5 o 6); fecha de corte y saldo inicial.
+  - **Cédula:** en la lista sale enmascarada; en la bitácora también (`id_card` en `$auditarEnmascarar`).
+  - **Desactivar:** pide la fecha de salida y no deja si la persona es jefe de personal activo.
+- **Kárdex de días** (`employee_vacation_movements`, solo se agregan filas):
+  - **GANADO automático** por aniversario: 15 días por año, +1 desde el 5.º año, hasta 30 (P1). Lo acredita el comando diario `vacaciones:acreditar` (06:00) y también cada consulta.
+  - **A mano:** SALDO INICIAL (una vez, a una fecha de corte) y AJUSTE (suma o resta, con motivo).
+  - **Resumen:** saldo, años de servicio, próximo aniversario, proporcional en curso y **aviso de días ganados hace más de 3 años** (P8).
+- **DEPARTAMENTOS** (catálogo, P13) y **FERIADOS** por año (día ya trasladado, NACIONAL o LOCAL).
+- **Migración** `2026_11_16_000001_vacaciones_fase1`:
+  - crea `departments`, `employees`, `holidays` y `employee_vacation_movements`;
+  - el perfil LEGAL gana `empleados_saldos`.
+- **Archivos:**
+  - Backend: `config/vacaciones.php`, `App\Services\SaldoVacaciones`, `EmployeeController`, `DepartmentController`, `HolidayController` y los modelos `Employee`, `Department`, `Holiday` y `VacationMovement`.
+  - Frontend: `src/pages/legal/EmployeesPage.jsx`, `EmployeeModal.jsx`, `VacationLedgerModal.jsx` y `api/employees.js`.
+- **Queda para la fase 2:** solicitudes, aprobación del jefe y campanita. **Fase 3:** calendario.
+
+### 16/11/2026 — Materiales del pedido contra stock de bodegas (preliminar)
+- **Cálculo.** En el **Pedido semanal** se calcula, mientras se editan las líneas, cuánto material necesita el pedido:
+  - necesario = cajas × receta de su marca − lo ya retirado de bodega para ese pedido;
+  - se compara con el **stock sumado de todas las bodegas activas**.
+- **Alerta.** Si no alcanza, avisa "alcanza para X de N cajas", con los insumos que faltan y el detalle por bodega. Al guardar, el mensaje repite el aviso, pero **no impide guardar**.
+- **Costo.** El costo en $ (total y por caja, con el costo promedio de cada insumo) **solo lo ven GERENCIA, FINANZAS y ADMIN**. Si hay insumos con costo 0, se avisa que el total sale más bajo.
+- **PACKED.** Es presentación, no marca. Una línea PALMS_BANANA + PACKED usa la receta PALM_BANANAS_PACKED (`MaterialesPedido::RECETA_PACKED`).
+- **Bodega.** El mismo panel va en **Despacho de materiales → Por despachar**, con selector de semana y **sin dólares**. El bodeguero ve solo el stock de su bodega; el faltante se calcula con todas.
+- Backend:
+  - `app/Services/MaterialesPedido.php` y `app/Http/Controllers/Api/OrderMaterialsController.php`;
+  - rutas `POST /customer-orders/materials` (pedido_semanal) y `GET /material-dispatch/order-materials` (despacho).
+- Frontend:
+  - `src/components/MaterialesPedidoPanel.jsx`;
+  - `CustomerOrderFormPage.jsx`, `DispatchPendingPage.jsx`, `api/customerOrders.js` y `api/materialDispatch.js`.
+- Sin migraciones.
+
 ### 16/11/2026 — Tablero financiero (FINANZAS)
 - Pantalla nueva **FINANZAS → Tablero financiero** (`/finanzas/tablero`, clave `tablero_financiero`, roles FINANZAS y GERENCIA; ADMIN siempre).
 - Suma la **Ganancia por viaje** de todos los barcos de los pedidos del rango de semanas. Los números son los mismos de esa pantalla, agrupados en:
