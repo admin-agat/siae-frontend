@@ -273,6 +273,13 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 16/11/2026 — Puerto de salida con un clic (barra)
+- Nuevo `src/components/common/BarraPuertos.jsx`: los puertos de SALIDA como barra de botones (estilo CONTRATO | SPOT). Si algún día hay más de 4, vuelve a la lista desplegable.
+- Se usa en **Pedido semanal** (puerto de cada línea) y en **Distribución en barcos** (puerto de cada barco). En Compra de fruta el puerto del bloque sigue como lista (no entra en la fila de 7 campos y se llena solo con el barco), igual que "Entrega en". Solo pantalla, sin migraciones.
+
+### 16/11/2026 — Distribución en barcos: se ven 5 filas a la vez
+- Las tablas **Barcos de la semana** y **Reparto** (líneas × barcos) se desplazan por dentro mostrando ~5 filas, como las líneas del pedido semanal. El encabezado queda fijo arriba y, en el reparto, la fila **TOTAL** queda fija abajo. Solo pantalla, sin migraciones.
+
 ### 14/11/2026 — Pedido semanal: Presentación con un clic
 - En las líneas del pedido, **Presentación** pasa de lista desplegable a barra de dos botones **CONVENCIONAL | PACKED** (igual que CONTRATO | SPOT en Compra de fruta). Solo pantalla, sin migraciones.
 - PALLET SUR: se crea en Configuración → Puertos como tipo **SALIDA** (dato, no código); así aparece en Puerto del pedido y en "Entrega en" de Compra de fruta.

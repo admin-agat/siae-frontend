@@ -20,6 +20,7 @@ import ToastFlotante from '../../components/common/ToastFlotante';
 import DistributionPrint from '../../components/DistributionPrint';
 import { useAuth } from '../../context/AuthContext';
 import SelectBuscable from '../../components/common/SelectBuscable';
+import BarraPuertos from '../../components/common/BarraPuertos';
 import CampoNumero from '../../components/common/CampoNumero';
 import { ETIQUETA_MODALIDAD } from '../../utils/modalidades';
 
@@ -259,9 +260,11 @@ export default function OrderDistributionPage() {
       </div>
 
       {/* Barcos de la semana */}
-      <div className="bg-white rounded-xl shadow overflow-x-auto mb-4">
+      {/* 16/11/2026: se ven ~5 barcos y la tabla se desplaza por dentro (como las líneas del pedido semanal) */}
+      <div className="bg-white rounded-xl shadow overflow-hidden mb-4">
+       <div className="overflow-auto max-h-[21rem] scroll-ancho">
         <table className="w-full text-sm min-w-[1000px]">
-          <thead className="bg-primario text-white">
+          <thead className="bg-primario text-white sticky top-0 z-10">
             <tr>
               <th className="text-left px-3 py-3 uppercase w-24">Barco</th>
               <th className="text-left px-3 py-3 uppercase">Naviera</th>
@@ -300,10 +303,9 @@ export default function OrderDistributionPage() {
                   <input value={b.voyage} maxLength={20} placeholder="UNI1401" onChange={(e) => cambiarBarco(b._key, 'voyage', e.target.value.toUpperCase())} className={inputClass} />
                 </td>
                 <td className="px-3 py-2 min-w-[140px]">
-                  <SelectBuscable value={b.departure_port_id} onChange={(e) => cambiarBarco(b._key, 'departure_port_id', e.target.value)} className={inputClass}>
-                    <option value="">SELECCIONAR...</option>
-                    {puertosSalida.map((p) => <option key={p.id} value={String(p.id)}>{p.name}</option>)}
-                  </SelectBuscable>
+                  {/* 16/11/2026: puerto de salida con un clic (barra), como en el pedido semanal */}
+                  <BarraPuertos puertos={puertosSalida} value={b.departure_port_id} onChange={(v) => cambiarBarco(b._key, 'departure_port_id', v)}
+                    ariaLabel={`Barco ${i + 1}: puerto de salida`} className={inputClass} />
                 </td>
                 <td className="px-3 py-2 min-w-[140px]">
                   <SelectBuscable value={b.destination_port_id} onChange={(e) => cambiarBarco(b._key, 'destination_port_id', e.target.value)} className={inputClass}>
@@ -323,6 +325,7 @@ export default function OrderDistributionPage() {
             ))}
           </tbody>
         </table>
+       </div>
         <div className="px-4 py-3 border-t bg-gray-50">
           <button type="button" onClick={agregarBarco} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-primario text-white hover:bg-primario-hover transition">
             <Plus size={18} /> Agregar barco
@@ -332,9 +335,11 @@ export default function OrderDistributionPage() {
 
       {/* Hoja de reparto: líneas del pedido × barcos */}
       {barcos.length > 0 && (
-        <div className="bg-white rounded-xl shadow overflow-x-auto mb-4">
+        // 16/11/2026: se ven ~5 líneas; el encabezado y el TOTAL quedan fijos mientras se desplaza
+        <div className="bg-white rounded-xl shadow overflow-hidden mb-4">
+         <div className="overflow-auto max-h-[31rem] scroll-ancho">
           <table className="w-full text-sm">
-            <thead className="bg-primario text-white">
+            <thead className="bg-primario text-white sticky top-0 z-10">
               <tr>
                 <th className="text-left px-3 py-3 uppercase">#</th>
                 <th className="text-left px-3 py-3 uppercase">Cliente</th>
@@ -404,7 +409,7 @@ export default function OrderDistributionPage() {
                 );
               })}
             </tbody>
-            <tfoot className="bg-gray-50 border-t-2">
+            <tfoot className="bg-gray-50 border-t-2 sticky bottom-0 z-10">
               <tr>
                 <td colSpan={5} className="px-3 py-2 font-bold">TOTAL</td>
                 <td className="px-3 py-2 text-right font-bold">{formatoCajas(totalPedido)}</td>
@@ -414,6 +419,7 @@ export default function OrderDistributionPage() {
               </tr>
             </tfoot>
           </table>
+         </div>
           <p className="px-4 py-2 text-xs text-gray-500 flex items-center gap-1 border-t">
             <AlertTriangle size={14} className="text-amber-500" />
             Borde amarillo: la línea pide salir de otro puerto distinto al del barco (se permite, solo es un aviso).

@@ -23,6 +23,7 @@ import { useAvisoSalida } from '../../components/common/AvisoSalida';
 import ToastFlotante from '../../components/common/ToastFlotante';
 import { getMensajeExito, getMensajeError } from '../../utils/toastMessages';
 import SelectBuscable from '../../components/common/SelectBuscable';
+import BarraPuertos from '../../components/common/BarraPuertos';
 import { PRESENTACIONES } from '../../utils/presentaciones';
 import CampoNumero from '../../components/common/CampoNumero';
 import { hoyISO } from '../../utils/fecha';
@@ -533,10 +534,9 @@ export default function CustomerOrderFormPage() {
                     </SelectBuscable>
                   </td>
                   <td className="px-2 py-2 min-w-[140px]">
-                    <SelectBuscable value={l.departure_port_id} onChange={(e) => cambiarLinea(l._key, 'departure_port_id', e.target.value)} className={inputClass}>
-                      <option value="">SELECCIONAR...</option>
-                      {puertos.map((p) => <option key={p.id} value={String(p.id)}>{p.name}</option>)}
-                    </SelectBuscable>
+                    {/* 16/11/2026: puerto de salida con un clic (barra), como la presentación */}
+                    <BarraPuertos puertos={puertos} value={l.departure_port_id} onChange={(v) => cambiarLinea(l._key, 'departure_port_id', v)}
+                      ariaLabel={`Línea ${i + 1}: puerto de salida`} className={inputClass} />
                   </td>
                   <td className="px-2 py-2 min-w-[110px]">
                     <SelectBuscable value={l.negotiation_type} onChange={(e) => cambiarLinea(l._key, 'negotiation_type', e.target.value)} className={inputClass}>
