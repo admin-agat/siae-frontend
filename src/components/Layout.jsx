@@ -1,10 +1,11 @@
 import { Suspense, useCallback, useEffect, useState } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { KeyRound, LogOut, RefreshCw } from 'lucide-react';
 import Sidebar from "./Sidebar";
 import AvisoInactividad from './common/AvisoInactividad';
 import AvisoVersion from './common/AvisoVersion';
 import Campanita from './common/Campanita';
+import ErrorPantalla from './common/ErrorPantalla';
 import { ProveedorAvisoSalida, useIrA, useSoltarAviso } from './common/AvisoSalida';
 import { precargarPaginas } from '../routes/paginas';
 import { useAuth } from '../context/AuthContext';
@@ -51,16 +52,21 @@ export default function Layout() {
 function LayoutContenido() {
   const { user, logout, actualizarUsuario } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const irA = useIrA(); // 11/11/2026: pregunta antes de salir si la pantalla tiene cambios sin guardar
   const soltarAviso = useSoltarAviso();
-  const cerrarSesion = () => {
-    logout();
-    navigate('/login');
+  // 17/11/2026: recarga completa al volver al login (antes navigate): así la pestaña toma la última versión
+  // subida y al volver a entrar no pide pantallas viejas que ya no existen (la página quedaba en blanco)
+  // 17/11/2026: se espera el aviso al servidor (máx. 2 s) antes de recargar; si no, la recarga lo cortaba
+  const cerrarSesion = async () => {
+    soltarAviso();
+    await logout();
+    window.location.assign('/login');
   };
   // Recarga completa (no navigate): al borrar el token la ruta privada ya redirige a /login sin el aviso
-  const cerrarPorInactividad = useCallback(() => {
-    logout();
+  const cerrarPorInactividad = useCallback(async () => {
     soltarAviso(); // 11/11/2026: la sesión ya terminó: sin el aviso de "¿salir del sitio?" del navegador
+    await logout(); // 17/11/2026: que el servidor borre el token antes de recargar
     window.location.assign('/login?inactividad=1');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -148,9 +154,12 @@ function LayoutContenido() {
         {/* Página activa — Outlet renderiza la ruta hija */}
         <main className="flex-1 p-6">
           {/* Las páginas se cargan por partes (React.lazy en AppRouter): mientras llega una, se ve este aviso */}
-          <Suspense fallback={<div className="p-6 text-gray-400">Cargando...</div>}>
-            <Outlet />
-          </Suspense>
+          {/* 17/11/2026: si la pantalla falla al cargar o dibujarse, aviso (o recarga) en vez de página en blanco */}
+          <ErrorPantalla key={pathname}>
+            <Suspense fallback={<div className="p-6 text-gray-400">Cargando...</div>}>
+              <Outlet />
+            </Suspense>
+          </ErrorPantalla>
         </main>
 
       </div>

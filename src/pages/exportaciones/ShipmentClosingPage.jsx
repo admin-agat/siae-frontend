@@ -718,6 +718,9 @@ export default function ShipmentClosingPage() {
                   <th className="text-right py-1">Tarjas: embarcadas</th>
                   <th className="text-right py-1">Caídas</th>
                   <th className="text-right py-1">Rechazadas</th>
+                  {/* 17/11/2026: faltantes y recibidas (lo que se paga); el cruce sigue contra las embarcadas (total) */}
+                  <th className="text-right py-1">Faltantes</th>
+                  <th className="text-right py-1">Recibidas</th>
                   <th className="text-right py-1">Embarcado (bookings)</th>
                   <th className="text-right py-1">Diferencia</th>
                 </tr>
@@ -732,6 +735,8 @@ export default function ShipmentClosingPage() {
                       <td className="py-1.5 text-right">{formatoCajas(t.embarcadas)}</td>
                       <td className="py-1.5 text-right">{formatoCajas(t.caidas)}</td>
                       <td className="py-1.5 text-right">{formatoCajas(t.rechazadas)}</td>
+                      <td className="py-1.5 text-right">{formatoCajas(t.faltantes)}</td>
+                      <td className="py-1.5 text-right font-semibold">{formatoCajas(t.recibidas)}</td>
                       <td className="py-1.5 text-right">{formatoCajas(t.embarcado)}</td>
                       <td className={`py-1.5 text-right font-semibold ${dif === 0 ? 'text-green-700' : 'text-amber-700'}`}>{dif === 0 ? '✔' : `${dif > 0 ? '+' : ''}${formatoCajas(dif)}`}</td>
                     </tr>

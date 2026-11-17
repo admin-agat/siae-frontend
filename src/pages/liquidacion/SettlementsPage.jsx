@@ -4,6 +4,8 @@
 //
 // Cada fila es un cupo de Comercial (productor + semana) con lo que dicen sus tarjas.
 // "Liquidar" abre el cálculo (SettlementFormPage); "Ver" abre la liquidación con sus pagos.
+// 17/11/2026 (fase 0): un cupo puede tener varias LQ (una por contrato y una de SPOT): se ve un botón por LQ.
+// Lo que se paga son las RECIBIDAS (embarcadas − caídas − rechazadas − faltantes).
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calculator, Eye } from 'lucide-react';
@@ -15,8 +17,8 @@ const formatoCajas = (n) => Number(n || 0).toLocaleString('es-EC');
 const formatoDinero = (n) => Number(n || 0).toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const FILTROS = [
-  { clave: 'POR_LIQUIDAR', etiqueta: 'POR LIQUIDAR', cumple: (c) => !c.settlement },
-  { clave: 'LIQUIDADOS', etiqueta: 'LIQUIDADOS', cumple: (c) => Boolean(c.settlement) },
+  { clave: 'POR_LIQUIDAR', etiqueta: 'POR LIQUIDAR', cumple: (c) => !c.settlements?.length },
+  { clave: 'LIQUIDADOS', etiqueta: 'LIQUIDADOS', cumple: (c) => c.settlements?.length > 0 },
   { clave: 'TODOS', etiqueta: 'TODOS', cumple: () => true },
 ];
 
@@ -40,10 +42,10 @@ export default function SettlementsPage() {
   }, [anteriores]);
 
   const estado = (c) => {
-    if (c.settlement) return c.settlement.pagado
+    if (c.settlements?.length) return c.settlements.every((l) => l.pagado)
       ? <span className="text-green-700 font-semibold">PAGADO</span>
       : <span className="text-primario font-semibold">LIQUIDADO · PAGO PENDIENTE</span>;
-    if (c.a_pagar + c.rechazadas === 0) return <span className="text-gray-400 font-semibold">SIN TARJAS</span>;
+    if (c.embarcadas === 0) return <span className="text-gray-400 font-semibold">SIN TARJAS</span>;
     return <span className="text-amber-700 font-semibold">POR LIQUIDAR</span>;
   };
 
@@ -54,20 +56,26 @@ export default function SettlementsPage() {
     { titulo: 'Embarcadas', render: (c) => formatoCajas(c.embarcadas) },
     { titulo: 'Caídas', render: (c) => formatoCajas(c.caidas) },
     { titulo: 'Rechazadas', render: (c) => <span className="text-red-600">{formatoCajas(c.rechazadas)}</span> },
-    { titulo: 'A pagar', render: (c) => <strong className="text-green-700">{formatoCajas(c.a_pagar)}</strong> },
-    { titulo: 'Neto', render: (c) => (c.settlement ? `$ ${formatoDinero(c.settlement.net_amount)}` : '—') },
+    { titulo: 'Faltantes', render: (c) => formatoCajas(c.faltantes) },
+    { titulo: 'Recibidas', render: (c) => <strong className="text-green-700">{formatoCajas(c.recibidas)}</strong> },
+    { titulo: 'Neto', render: (c) => (c.settlements?.length ? `$ ${formatoDinero(c.settlements.reduce((s, l) => s + Number(l.net_amount), 0))}` : '—') },
     { titulo: 'Estado', render: estado },
     {
       titulo: 'Acciones',
-      render: (c) => (c.settlement ? (
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); navigate(`/liquidacion/${c.settlement.id}`); }}
-          title={`Ver ${c.settlement.code}`}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg shadow-sm bg-primario text-white hover:bg-primario-hover transition"
-        >
-          <Eye size={14} /> Ver
-        </button>
+      render: (c) => (c.settlements?.length ? (
+        <div className="flex flex-wrap gap-1.5">
+          {c.settlements.map((l) => (
+            <button
+              key={l.id}
+              type="button"
+              onClick={(e) => { e.stopPropagation(); navigate(`/liquidacion/${l.id}`); }}
+              title={`Ver ${l.code}`}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg shadow-sm bg-primario text-white hover:bg-primario-hover transition whitespace-nowrap"
+            >
+              <Eye size={14} /> {l.group_label || 'Ver'}
+            </button>
+          ))}
+        </div>
       ) : (
         <button
           type="button"
@@ -87,7 +95,7 @@ export default function SettlementsPage() {
     <div className="p-6">
       <EncabezadoPagina
         titulo="Liquidación"
-        subtitulo="Pago al productor por semana: fruta de las tarjas − materiales − anticipos"
+        subtitulo="Pago al productor por semana: fruta recibida (tarjas) − retención − materiales − anticipos. Una LQ por contrato y una de SPOT"
       />
 
       <div className="flex flex-wrap items-center gap-2 mb-3">
@@ -115,7 +123,7 @@ export default function SettlementsPage() {
         nombreRegistros="cupos"
         mostrarPestanas={false}
         placeholderBusqueda="Buscar por productor o semana..."
-        textosBusqueda={(c) => [c.third_party?.name, `${c.week}`, `${c.year}`, c.settlement?.code]}
+        textosBusqueda={(c) => [c.third_party?.name, `${c.week}`, `${c.year}`, ...(c.settlements || []).map((l) => l.code)]}
       />
     </div>
   );

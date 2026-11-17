@@ -3,9 +3,11 @@
 // Ruta: /liquidacion/tarjas/:id   (id = pedido semanal)
 //
 // Cada fila es un camión que llegó a puerto, de una compra (productor + cliente + marca):
-// EMBARCADAS + CAÍDAS + RECHAZADAS = RECIBIDAS. Se pagan embarcadas + caídas.
-// Ej.: 300 recibidas = 245 embarcadas + 5 caídas + 50 rechazadas → se pagan 250.
-// Arriba, el resumen por compra (comprado vs recibido vs a pagar).
+// 17/11/2026 (regla de Peter con el personal de tarjas): EMBARCADAS es el TOTAL del camión y
+// RECIBIDAS = EMBARCADAS − CAÍDAS − RECHAZADAS − FALTANTES, que es lo que se paga.
+// Ej.: 300 embarcadas − 5 caídas − 40 rechazadas − 5 faltantes → se pagan 250 recibidas.
+// (Antes "recibidas" era el total y se pagaban embarcadas + caídas.)
+// Arriba, el resumen por compra (comprado vs embarcado vs recibido).
 // Las tarjas de un productor ya liquidado quedan bloqueadas.
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -36,11 +38,13 @@ const tarjaDesdeBackend = (t) => ({
   boxes_shipped: String(t.boxes_shipped),
   boxes_fallen: String(t.boxes_fallen),
   boxes_rejected: String(t.boxes_rejected),
+  boxes_missing: String(t.boxes_missing ?? 0), // 17/11/2026: FALTANTES
 });
 
 const n = (v) => Number(v) || 0;
-const recibidas = (t) => n(t.boxes_shipped) + n(t.boxes_fallen) + n(t.boxes_rejected);
-const aPagar = (t) => n(t.boxes_shipped) + n(t.boxes_fallen);
+// 17/11/2026: lo que se descuenta del total y lo que se paga
+const descontadas = (t) => n(t.boxes_fallen) + n(t.boxes_rejected) + n(t.boxes_missing);
+const recibidas = (t) => n(t.boxes_shipped) - descontadas(t);
 
 export default function TallySheetPage() {
   const { id } = useParams();
@@ -88,6 +92,8 @@ export default function TallySheetPage() {
     embarcadas: suma(tarjas, (t) => n(t.boxes_shipped)),
     caidas: suma(tarjas, (t) => n(t.boxes_fallen)),
     rechazadas: suma(tarjas, (t) => n(t.boxes_rejected)),
+    faltantes: suma(tarjas, (t) => n(t.boxes_missing)),
+    recibidas: suma(tarjas, recibidas),
   };
 
   // ---------------- Cambios ----------------
@@ -112,7 +118,7 @@ export default function TallySheetPage() {
       _key: nuevaClave(), id: null,
       producer_quota_line_id: '', shipment_id: ultima?.shipment_id || '',
       date: ultima?.date || hoy(), number: '', truck_plate: '', container_number: '',
-      boxes_shipped: '', boxes_fallen: '0', boxes_rejected: '0',
+      boxes_shipped: '', boxes_fallen: '0', boxes_rejected: '0', boxes_missing: '0',
     }]);
   };
 
@@ -131,7 +137,8 @@ export default function TallySheetPage() {
     tarjas.forEach((t, i) => {
       if (!t.producer_quota_line_id) faltan.push(`TARJA ${i + 1}: ELIGE EL PRODUCTOR Y LA MARCA.`);
       if (!t.date) faltan.push(`TARJA ${i + 1}: FALTA LA FECHA.`);
-      if (recibidas(t) === 0) faltan.push(`TARJA ${i + 1}: NO TIENE CAJAS.`);
+      if (n(t.boxes_shipped) === 0) faltan.push(`TARJA ${i + 1}: ESCRIBE LAS CAJAS EMBARCADAS.`);
+      else if (descontadas(t) > n(t.boxes_shipped)) faltan.push(`TARJA ${i + 1}: LAS CAÍDAS, RECHAZADAS Y FALTANTES NO PUEDEN SUMAR MÁS QUE LAS EMBARCADAS.`);
     });
     if (faltan.length) {
       setErrores(faltan);
@@ -152,6 +159,7 @@ export default function TallySheetPage() {
           boxes_shipped: n(t.boxes_shipped),
           boxes_fallen: n(t.boxes_fallen),
           boxes_rejected: n(t.boxes_rejected),
+          boxes_missing: n(t.boxes_missing),
         })),
       });
       aplicarRespuesta(res.data);
@@ -185,7 +193,7 @@ export default function TallySheetPage() {
         </button>
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Tarjas — Semana {pedido.week} / {pedido.year}</h1>
-          <p className="text-sm text-gray-500">Registra lo que llegó a puerto por camión. Se pagan embarcadas + caídas; las rechazadas no.</p>
+          <p className="text-sm text-gray-500">Registra lo que llegó a puerto por camión. Embarcadas es el total; se pagan las recibidas (embarcadas − caídas − rechazadas − faltantes).</p>
         </div>
       </div>
 
@@ -196,11 +204,11 @@ export default function TallySheetPage() {
             <tr>
               <th className="text-left px-3 py-3 uppercase">Productor — Marca (Cliente)</th>
               <th className="text-right px-3 py-3 uppercase">Comprado</th>
-              <th className="text-right px-3 py-3 uppercase">Recibidas</th>
               <th className="text-right px-3 py-3 uppercase">Embarcadas</th>
               <th className="text-right px-3 py-3 uppercase">Caídas</th>
               <th className="text-right px-3 py-3 uppercase">Rechazadas</th>
-              <th className="text-right px-3 py-3 uppercase">A pagar</th>
+              <th className="text-right px-3 py-3 uppercase">Faltantes</th>
+              <th className="text-right px-3 py-3 uppercase">Recibidas (se pagan)</th>
             </tr>
           </thead>
           <tbody>
@@ -208,7 +216,7 @@ export default function TallySheetPage() {
               <tr><td colSpan={7} className="text-center py-6 text-gray-400">Comercial aún no compra fruta para esta semana</td></tr>
             ) : compras.map((c, i) => {
               const lista = tarjasDeCompra(c.id);
-              const rec = suma(lista, recibidas);
+              const emb = suma(lista, (t) => n(t.boxes_shipped));
               const rech = suma(lista, (t) => n(t.boxes_rejected));
               return (
                 <tr key={c.id} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
@@ -217,14 +225,14 @@ export default function TallySheetPage() {
                     {c.liquidada && <span className="ml-2 inline-flex items-center gap-1 text-[10px] text-gray-500"><Lock size={10} /> LIQUIDADO</span>}
                   </td>
                   <td className="px-3 py-2 text-right">{formatoCajas(c.boxes)}</td>
-                  <td className={`px-3 py-2 text-right ${rec > c.boxes ? 'text-amber-700 font-semibold' : ''}`} title={rec > c.boxes ? 'Llegó más de lo comprado' : ''}>{formatoCajas(rec)}</td>
-                  <td className="px-3 py-2 text-right">{formatoCajas(suma(lista, (t) => n(t.boxes_shipped)))}</td>
+                  <td className={`px-3 py-2 text-right ${emb > c.boxes ? 'text-amber-700 font-semibold' : ''}`} title={emb > c.boxes ? 'Llegó más de lo comprado' : ''}>{formatoCajas(emb)}</td>
                   <td className="px-3 py-2 text-right">{formatoCajas(suma(lista, (t) => n(t.boxes_fallen)))}</td>
                   <td className="px-3 py-2 text-right text-red-600">
                     {formatoCajas(rech)}
-                    {rec > 0 && <span className="block text-[10px] text-gray-500">{((rech / rec) * 100).toFixed(1)} %</span>}
+                    {emb > 0 && <span className="block text-[10px] text-gray-500">{((rech / emb) * 100).toFixed(1)} %</span>}
                   </td>
-                  <td className="px-3 py-2 text-right font-bold text-green-700">{formatoCajas(suma(lista, aPagar))}</td>
+                  <td className="px-3 py-2 text-right">{formatoCajas(suma(lista, (t) => n(t.boxes_missing)))}</td>
+                  <td className="px-3 py-2 text-right font-bold text-green-700">{formatoCajas(suma(lista, recibidas))}</td>
                 </tr>
               );
             })}
@@ -247,8 +255,8 @@ export default function TallySheetPage() {
               <th className="text-right px-3 py-3 uppercase">Embarcadas</th>
               <th className="text-right px-3 py-3 uppercase">Caídas</th>
               <th className="text-right px-3 py-3 uppercase">Rechazadas</th>
+              <th className="text-right px-3 py-3 uppercase">Faltantes</th>
               <th className="text-right px-3 py-3 uppercase">Recibidas</th>
-              <th className="text-right px-3 py-3 uppercase">A pagar</th>
               <th className="px-3 py-3 w-10"></th>
             </tr>
           </thead>
@@ -282,8 +290,8 @@ export default function TallySheetPage() {
                   <td className="px-3 py-2 min-w-[90px]"><CampoNumero decimales={0} value={t.boxes_shipped} onChange={(e) => cambiar(t._key, 'boxes_shipped', e.target.value)} disabled={bloqueada} className={`${inputClass} text-right`} /></td>
                   <td className="px-3 py-2 min-w-[80px]"><CampoNumero decimales={0} value={t.boxes_fallen} onChange={(e) => cambiar(t._key, 'boxes_fallen', e.target.value)} disabled={bloqueada} className={`${inputClass} text-right`} /></td>
                   <td className="px-3 py-2 min-w-[80px]"><CampoNumero decimales={0} value={t.boxes_rejected} onChange={(e) => cambiar(t._key, 'boxes_rejected', e.target.value)} disabled={bloqueada} className={`${inputClass} text-right text-red-600`} /></td>
-                  <td className="px-3 py-2 text-right">{formatoCajas(recibidas(t))}</td>
-                  <td className="px-3 py-2 text-right font-semibold text-green-700">{formatoCajas(aPagar(t))}</td>
+                  <td className="px-3 py-2 min-w-[80px]"><CampoNumero decimales={0} value={t.boxes_missing} onChange={(e) => cambiar(t._key, 'boxes_missing', e.target.value)} disabled={bloqueada} className={`${inputClass} text-right`} /></td>
+                  <td className={`px-3 py-2 text-right font-semibold ${recibidas(t) < 0 ? 'text-red-600' : 'text-green-700'}`}>{formatoCajas(recibidas(t))}</td>
                   <td className="px-3 py-2">
                     <button type="button" onClick={() => quitarTarja(t._key)} disabled={bloqueada} title={bloqueada ? 'Ya liquidado: no se puede quitar' : 'Quitar tarja'} className="text-white p-1.5 rounded-lg shadow-sm transition bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:hover:bg-red-600">
                       <Trash2 size={16} />
@@ -300,8 +308,8 @@ export default function TallySheetPage() {
                 <td className="px-3 py-2 text-right font-bold">{formatoCajas(totales.embarcadas)}</td>
                 <td className="px-3 py-2 text-right font-bold">{formatoCajas(totales.caidas)}</td>
                 <td className="px-3 py-2 text-right font-bold text-red-600">{formatoCajas(totales.rechazadas)}</td>
-                <td className="px-3 py-2 text-right font-bold">{formatoCajas(totales.embarcadas + totales.caidas + totales.rechazadas)}</td>
-                <td className="px-3 py-2 text-right font-bold text-green-700">{formatoCajas(totales.embarcadas + totales.caidas)}</td>
+                <td className="px-3 py-2 text-right font-bold">{formatoCajas(totales.faltantes)}</td>
+                <td className="px-3 py-2 text-right font-bold text-green-700">{formatoCajas(totales.recibidas)}</td>
                 <td></td>
               </tr>
             </tfoot>
@@ -311,7 +319,7 @@ export default function TallySheetPage() {
           <button type="button" onClick={agregarTarja} disabled={compras.length === 0} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-primario text-white hover:bg-primario-hover disabled:opacity-50 transition">
             <Plus size={18} /> Agregar tarja
           </button>
-          <p className="text-xs text-gray-500">Recibidas = embarcadas + caídas + rechazadas · A pagar = embarcadas + caídas</p>
+          <p className="text-xs text-gray-500">Recibidas (se pagan) = embarcadas − caídas − rechazadas − faltantes</p>
         </div>
       </div>
 

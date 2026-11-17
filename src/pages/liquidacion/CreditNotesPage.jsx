@@ -51,7 +51,7 @@ export default function CreditNotesPage() {
   }, {})).sort((a, b) => b.total - a.total);
 
   const columnas = [
-    { titulo: 'Liquidación', render: (l) => <span className="font-mono text-xs">{l.code}</span> },
+    { titulo: 'Liquidación', render: (l) => <span className="font-mono text-xs">{l.code}{l.group_label && <span className="block font-sans font-semibold text-primario">{l.group_label}</span>}</span> }, // 17/11/2026: contrato o SPOT
     { titulo: 'Fecha', render: (l) => formatoFecha(l.date) },
     { titulo: 'Vendedor', render: (l) => l.third_party?.name, className: 'font-medium' },
     { titulo: 'Semana', render: (l) => `${l.week} / ${l.year}` },

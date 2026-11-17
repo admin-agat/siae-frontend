@@ -24,7 +24,8 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     const status = error.response?.status;
-    const esLogin = error.config?.url?.includes("/login");
+    // 17/11/2026: también /logout (un token ya vencido al cerrar sesión no es "sesión expirada")
+    const esLogin = /\/log(in|out)/.test(error.config?.url || "");
 
     if (status === 401 && !esLogin) {
       localStorage.removeItem("token");

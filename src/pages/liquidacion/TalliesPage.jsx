@@ -51,7 +51,7 @@ export default function TalliesPage() {
     <div className="p-6">
       <EncabezadoPagina
         titulo="Tarjas"
-        subtitulo="Cajas recibidas en puerto por camión: embarcadas y caídas se pagan, rechazadas no"
+        subtitulo="Cajas que llegan a puerto por camión. Se pagan las recibidas: embarcadas − caídas − rechazadas − faltantes"
       />
 
       <TablaEstandar

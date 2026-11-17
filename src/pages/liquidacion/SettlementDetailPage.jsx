@@ -7,6 +7,8 @@
 // anticipos recuperan su saldo. Las clases print:* solo aplican al imprimir.
 // 30/10/2026: el vendedor factura al precio oficial MAG y entrega una NOTA DE CRÉDITO por la diferencia
 // con el real; aquí se registran el N° de factura y de NC cuando llegan (no bloquea los pagos).
+// 17/11/2026 (FASE 0): cada LQ es de un CONTRATO o de SPOT; las del mismo cupo se ven arriba ("hermanas") y se
+// anulan juntas. Se muestran las FALTANTES, las RECIBIDAS (lo que se paga) y la retención IR.
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Printer, Ban, CheckCircle, Undo2, Save } from 'lucide-react';
@@ -142,7 +144,7 @@ export default function SettlementDetailPage() {
       <div className="hidden print:flex justify-between items-start pb-1 mb-2 border-b-2 border-gray-800">
         <div>
           <p className="font-bold text-sm">AGAT-ECUAGREEN S.A.</p>
-          <p className="font-bold text-base">LIQUIDACIÓN {liq.code}</p>
+          <p className="font-bold text-base">LIQUIDACIÓN {liq.code}{liq.group_label ? ` · ${liq.group_label}` : ''}</p>
         </div>
         <div className="text-right text-[10px] text-gray-600 leading-tight">
           <p>Usuario: {user?.name || '—'}</p>
@@ -158,10 +160,22 @@ export default function SettlementDetailPage() {
         </button>
         <div className="flex-1">
           <h1 className="text-2xl font-bold text-gray-800">
-            Liquidación {liq.code}
+            Liquidación {liq.code}{liq.group_label && <span className="ml-2 text-primario">· {liq.group_label}</span>}
             {!liq.status && <span className="ml-3 text-sm align-middle px-2 py-0.5 rounded bg-red-100 text-red-700">ANULADA</span>}
           </h1>
           <p className="text-sm text-gray-500">{liq.third_party?.name} · Semana {liq.week} / {liq.year}</p>
+          {/* 17/11/2026: las otras LQ del mismo cupo (contratos y SPOT) */}
+          {liq.hermanas?.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 mt-1 text-xs">
+              <span className="text-gray-500">Misma semana:</span>
+              {liq.hermanas.map((h) => (
+                <button key={h.id} type="button" onClick={() => { setCargando(true); navigate(`/liquidacion/${h.id}`); }}
+                  className="px-2 py-0.5 rounded-md border border-primario/40 text-primario font-semibold hover:bg-primario-claro">
+                  {h.code} · {h.group_label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         <button type="button" onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-primario text-white hover:bg-primario-hover transition">
           <Printer size={18} /> Imprimir
@@ -205,7 +219,8 @@ export default function SettlementDetailPage() {
                 <th className={`${th} text-right`}>Embarcadas</th>
                 <th className={`${th} text-right`}>Caídas</th>
                 <th className={`${th} text-right`}>Rechazadas</th>
-                <th className={`${th} text-right`}>Pagadas</th>
+                <th className={`${th} text-right`}>Faltantes</th>
+                <th className={`${th} text-right`}>Recibidas</th>
                 <th className={`${th} text-right`}>P. oficial</th>
                 <th className={`${th} text-right`}>Precio real</th>
                 <th className={`${th} text-right`}>Valor</th>
@@ -221,6 +236,7 @@ export default function SettlementDetailPage() {
                   <td className={`${td} text-right`}>{formatoCajas(l.boxes_shipped)}</td>
                   <td className={`${td} text-right`}>{formatoCajas(l.boxes_fallen)}</td>
                   <td className={`${td} text-right`}>{formatoCajas(l.boxes_rejected)}</td>
+                  <td className={`${td} text-right`}>{formatoCajas(l.boxes_missing)}</td>
                   <td className={`${td} text-right font-semibold`}>{formatoCajas(l.boxes_paid)}</td>
                   <td className={`${td} text-right`}>{l.official_price === null ? '—' : `$ ${formatoDinero(l.official_price)}`}</td>
                   <td className={`${td} text-right`}>$ {formatoDinero(l.real_price)}</td>
@@ -235,6 +251,7 @@ export default function SettlementDetailPage() {
                 <td className={`${td} text-right`}>{formatoCajas(liq.boxes_shipped)}</td>
                 <td className={`${td} text-right`}>{formatoCajas(liq.boxes_fallen)}</td>
                 <td className={`${td} text-right`}>{formatoCajas(liq.boxes_rejected)}</td>
+                <td className={`${td} text-right`}>{formatoCajas(liq.boxes_missing)}</td>
                 <td className={`${td} text-right`}>{formatoCajas(liq.boxes_paid)}</td>
                 <td></td>
                 <td></td>
@@ -283,7 +300,14 @@ export default function SettlementDetailPage() {
         <div className={`${caja} p-4 print:p-2 text-sm print:text-[10px]`}>
           <h2 className="font-semibold text-gray-800 mb-2 print:text-xs">Resumen</h2>
           <div className="space-y-1">
-            <div className="flex justify-between"><span>Fruta ({formatoCajas(liq.boxes_paid)} cajas)</span><span className="font-semibold">$ {formatoDinero(liq.fruit_amount)}</span></div>
+            <div className="flex justify-between"><span>Fruta ({formatoCajas(liq.boxes_paid)} cajas recibidas)</span><span className="font-semibold">$ {formatoDinero(liq.fruit_amount)}</span></div>
+            {/* 17/11/2026: retención IR banano congelada al liquidar (las liquidaciones viejas no la tienen) */}
+            {liq.retention_regime && (
+              <div className="flex justify-between text-red-600 print:text-black">
+                <span title={`Base $ ${formatoDinero(liq.retention_base)}`}>(−) Retención IR {liq.retention_regime === 'NO_RETENER' ? '(NO RETENER)' : `${(Number(liq.retention_rate) * 100).toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %${liq.retention_regime === 'BPA' ? ' BPA' : ''}`}</span>
+                <span>$ {formatoDinero(liq.retention_amount)}</span>
+              </div>
+            )}
             <div className="flex justify-between text-red-600 print:text-black"><span>(−) Materiales</span><span>$ {formatoDinero(liq.materials_amount)}</span></div>
             {Number(liq.transport_amount) > 0 && <div className="flex justify-between text-red-600 print:text-black"><span>(−) Transporte de contenedor</span><span>$ {formatoDinero(liq.transport_amount)}</span></div>}
             {Number(liq.transport_recognized_amount) > 0 && <div className="flex justify-between text-green-700 print:text-black"><span>(+) Transporte reconocido</span><span>$ {formatoDinero(liq.transport_recognized_amount)}</span></div>}
@@ -427,6 +451,7 @@ export default function SettlementDetailPage() {
           onCancelar={() => setAnular(false)}
           onAceptar={anularLiquidacion}
         >
+          {liq.hermanas?.length > 0 && <>Se anulan juntas todas las liquidaciones de esta semana ({[liq.code, ...liq.hermanas.map((h) => h.code)].join(', ')}). </>}
           El cupo de la semana {liq.week} vuelve a quedar abierto y los anticipos recuperan su saldo.
           <input
             autoFocus value={motivo} maxLength={255} onChange={(e) => setMotivo(e.target.value.toUpperCase())}

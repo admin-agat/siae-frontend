@@ -55,9 +55,11 @@ export default function CambiarClavePage() {
         }
     };
 
-    const salir = () => {
-        logout();
-        navigate("/login", { replace: true });
+    // 17/11/2026: igual que "Cerrar sesión" del menú: espera que el servidor borre el token y recarga
+    // (la pestaña toma la última versión y el siguiente ingreso no pide pantallas viejas)
+    const salir = async () => {
+        await logout();
+        window.location.replace("/login");
     };
 
     return (

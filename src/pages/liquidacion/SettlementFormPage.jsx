@@ -8,6 +8,10 @@
 //   Anticipos  = se eligen aquí (todo o parte del saldo)
 // y los pagos: compras "100 %" completas en el 1er pago; "80/20" → 80 % en el 1er pago y
 // 20 % en el 2do. Los descuentos salen del 1er pago. El backend recalcula todo al guardar.
+// 17/11/2026 (FASE 0): el cupo se liquida en varias LQ, como el Excel: una por cada CONTRATO y una de SPOT.
+//   Se pagan las RECIBIDAS (embarcadas − caídas − rechazadas − faltantes). Cada LQ lleva su retención IR
+//   (tramo por sus recibidas; base = recibidas × el mayor entre el real y el oficial). Materiales y anticipos
+//   se descuentan en la LQ de mayor valor de fruta.
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Calculator, X, AlertTriangle } from 'lucide-react';
@@ -58,9 +62,9 @@ export default function SettlementFormPage() {
   useEffect(() => {
     getSettlementPreview(quotaId)
       .then((res) => {
-        // Si ya está liquidado, se va directo a la liquidación
-        if (res.data.settlement_id) {
-          navigate(`/liquidacion/${res.data.settlement_id}`, { replace: true });
+        // Si ya está liquidado, se va directo a la liquidación (17/11/2026: la primera de sus LQ)
+        if (res.data.settlements?.length) {
+          navigate(`/liquidacion/${res.data.settlements[0].id}`, { replace: true });
           return;
         }
         setDatos(res.data);
@@ -76,20 +80,27 @@ export default function SettlementFormPage() {
   if (!datos) return <div className="p-6 text-red-600 text-sm">{error}</div>;
 
   const totalAnticipos = r2(Object.values(aplicar).reduce((s, v) => s + (Number(v) || 0), 0));
-  // Descuentos fijos: materiales + transporte de contenedor negociado − transporte reconocido (11/11/2026)
-  // − bono / extra (13/11/2026: pago aparte, igual que el backend)
-  const fijos = r2(datos.materials_amount + Number(datos.transport_amount || 0) - Number(datos.transport_recognized_amount || 0) - Number(datos.bonus_amount || 0));
-  const neto = r2(datos.fruit_amount - fijos - totalAnticipos);
-  const pagos = calcularPagos(datos.lines, fijos, totalAnticipos);
+  // 17/11/2026: una LQ por grupo (igual que SettlementController::store). Descuentos fijos de cada LQ:
+  // materiales (solo la de mayor valor) + transporte negociado − transporte reconocido − bono + retención IR
+  const lqs = (datos.groups || []).map((g) => {
+    const materiales = g.lleva_descuentos ? Number(datos.materials_amount) : 0;
+    const anticipos = g.lleva_descuentos ? totalAnticipos : 0;
+    const fijos = r2(materiales + Number(g.transport_amount) - Number(g.transport_recognized_amount) - Number(g.bonus_amount) + Number(g.retention_amount));
+    const neto = r2(Number(g.fruit_amount) - fijos - anticipos);
+    return { ...g, materiales, anticipos, neto, pagos: calcularPagos(g.lines, fijos, anticipos) };
+  });
+  const principal = lqs.find((g) => g.lleva_descuentos);
+  const neto = r2(lqs.reduce((s, g) => s + g.neto, 0));
+  const grupoDe = Object.fromEntries(lqs.flatMap((g) => g.lines.map((l) => [l.producer_quota_line_id, g.group_label])));
   const anticipoExcedido = datos.advances.some((a) => Number(aplicar[a.id] || 0) > a.saldo);
-  const puedeLiquidar = datos.problemas.length === 0 && neto >= 0 && !anticipoExcedido && fecha;
+  const puedeLiquidar = datos.problemas.length === 0 && lqs.length > 0 && lqs.every((g) => g.neto >= 0) && !anticipoExcedido && fecha;
 
   const marcarAnticipo = (a, marcado) => {
     setAplicar((prev) => {
       const nuevo = { ...prev };
       if (marcado) {
-        // Propone descontar todo el saldo, sin pasar lo que queda después de materiales
-        const disponible = r2(datos.fruit_amount - fijos - totalAnticipos);
+        // Propone descontar todo el saldo, sin pasar lo que queda en la LQ que lleva los descuentos
+        const disponible = principal ? principal.neto : 0;
         nuevo[a.id] = String(Math.max(0, Math.min(a.saldo, disponible)));
       } else {
         delete nuevo[a.id];
@@ -158,32 +169,34 @@ export default function SettlementFormPage() {
 
       {/* 1. Fruta */}
       <div className="bg-white rounded-xl shadow overflow-x-auto mb-4">
-        <h2 className="px-4 py-3 font-semibold text-gray-800 border-b">1. Fruta (según tarjas)</h2>
+        <h2 className="px-4 py-3 font-semibold text-gray-800 border-b">1. Fruta (según tarjas: se pagan las recibidas)</h2>
         <table className="w-full text-sm min-w-[950px]">
           <thead className="bg-primario text-white">
             <tr>
               <th className={`${thClass} text-left`}>Marca (Cliente)</th>
-              <th className={`${thClass} text-left`}>Tipo · Pago</th>
+              <th className={`${thClass} text-left`}>LQ · Pago</th>
               <th className={`${thClass} text-right`}>Comprado</th>
               <th className={`${thClass} text-right`}>Embarcadas</th>
               <th className={`${thClass} text-right`}>Caídas</th>
               <th className={`${thClass} text-right`}>Rechazadas</th>
-              <th className={`${thClass} text-right`}>A pagar</th>
+              <th className={`${thClass} text-right`}>Faltantes</th>
+              <th className={`${thClass} text-right`}>Recibidas</th>
               <th className={`${thClass} text-right`}>P. oficial</th>
               <th className={`${thClass} text-right`}>Precio real</th>
               <th className={`${thClass} text-right`}>Valor</th>
-              <th className={`${thClass} text-right`} title="A pagar × (oficial − real)">Nota créd.</th>
+              <th className={`${thClass} text-right`} title="Recibidas × (oficial − real)">Nota créd.</th>
             </tr>
           </thead>
           <tbody>
             {datos.lines.map((l, i) => (
               <tr key={l.producer_quota_line_id} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
                 <td className="px-3 py-2 font-medium">{l.brand} <span className="text-gray-500 font-normal">({l.customer})</span>{(l.producer || l.farm_name) && <span className="block text-xs text-gray-500 font-normal">{[l.producer, l.farm_name].filter(Boolean).join(' · ')}</span>}{l.transport_deduction > 0 && <span className="block text-xs text-red-600 font-normal">Transporte − $ {formatoDinero(l.transport_deduction)}</span>}{l.transport_recognized > 0 && <span className="block text-xs text-green-700 font-normal">Transporte reconocido + $ {formatoDinero(l.transport_recognized)} ({formatoCajas(l.boxes_paid)} × $ {l.transport_recognized_rate})</span>}{l.bonus_amount > 0 && <span className="block text-xs text-green-700 font-normal">Bono {(l.bonus_reason || '').replace('_', ' ')}{l.bonus_detail ? ` (${l.bonus_detail})` : ''} + $ {formatoDinero(l.bonus_amount)} ({formatoCajas(l.boxes_paid)} × $ {l.bonus_rate})</span>}</td>
-                <td className="px-3 py-2 text-xs">{l.negotiation_type} · {ESQUEMA[l.payment_scheme]}</td>
+                <td className="px-3 py-2 text-xs"><span className="font-semibold">{grupoDe[l.producer_quota_line_id] || l.negotiation_type}</span> · {ESQUEMA[l.payment_scheme]}</td>
                 <td className="px-3 py-2 text-right">{formatoCajas(l.boxes_purchased)}</td>
                 <td className="px-3 py-2 text-right">{formatoCajas(l.boxes_shipped)}</td>
                 <td className="px-3 py-2 text-right">{formatoCajas(l.boxes_fallen)}</td>
                 <td className="px-3 py-2 text-right text-red-600">{formatoCajas(l.boxes_rejected)}</td>
+                <td className="px-3 py-2 text-right">{formatoCajas(l.boxes_missing)}</td>
                 <td className="px-3 py-2 text-right font-semibold">{formatoCajas(l.boxes_paid)}</td>
                 <td className="px-3 py-2 text-right">{l.official_price === null ? <span className="text-xs font-semibold text-red-600">FALTA</span> : `$ ${formatoDinero(l.official_price)}`}</td>
                 <td className="px-3 py-2 text-right">$ {formatoDinero(l.real_price)}</td>
@@ -198,6 +211,7 @@ export default function SettlementFormPage() {
               <td className="px-3 py-2 text-right">{formatoCajas(datos.boxes_shipped)}</td>
               <td className="px-3 py-2 text-right">{formatoCajas(datos.boxes_fallen)}</td>
               <td className="px-3 py-2 text-right text-red-600">{formatoCajas(datos.boxes_rejected)}</td>
+              <td className="px-3 py-2 text-right">{formatoCajas(datos.boxes_missing)}</td>
               <td className="px-3 py-2 text-right">{formatoCajas(datos.boxes_paid)}</td>
               <td></td>
               <td></td>
@@ -210,7 +224,7 @@ export default function SettlementFormPage() {
 
       {/* 2. Materiales */}
       <div className="bg-white rounded-xl shadow overflow-x-auto mb-4">
-        <h2 className="px-4 py-3 font-semibold text-gray-800 border-b">2. Materiales retirados (se descuentan)</h2>
+        <h2 className="px-4 py-3 font-semibold text-gray-800 border-b">2. Materiales retirados (se descuentan{principal && lqs.length > 1 ? ` en ${principal.group_label}` : ''})</h2>
         {datos.materials.length === 0 ? (
           <p className="px-4 py-4 text-sm text-gray-400">No retiró materiales que se cobren al productor.</p>
         ) : (
@@ -249,7 +263,7 @@ export default function SettlementFormPage() {
 
       {/* 3. Anticipos */}
       <div className="bg-white rounded-xl shadow overflow-x-auto mb-4">
-        <h2 className="px-4 py-3 font-semibold text-gray-800 border-b">3. Anticipos y préstamos con saldo</h2>
+        <h2 className="px-4 py-3 font-semibold text-gray-800 border-b">3. Anticipos y préstamos con saldo{principal && lqs.length > 1 ? ` (se descuentan en ${principal.group_label})` : ''}</h2>
         {datos.advances.length === 0 ? (
           <p className="px-4 py-4 text-sm text-gray-400">El productor no tiene anticipos ni préstamos pendientes.</p>
         ) : (
@@ -289,40 +303,50 @@ export default function SettlementFormPage() {
         )}
       </div>
 
-      {/* Resumen y pagos */}
+      {/* Resumen y pagos. 17/11/2026: una tarjeta por LQ (cada contrato y SPOT) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-        <div className="bg-white rounded-xl shadow p-4 text-sm">
-          <h2 className="font-semibold text-gray-800 mb-3">Resumen</h2>
-          <div className="space-y-1.5">
-            <div className="flex justify-between"><span>Fruta ({formatoCajas(datos.boxes_paid)} cajas)</span><span className="font-semibold">$ {formatoDinero(datos.fruit_amount)}</span></div>
-            <div className="flex justify-between text-red-600"><span>(−) Materiales</span><span>$ {formatoDinero(datos.materials_amount)}</span></div>
-            {Number(datos.transport_amount) > 0 && <div className="flex justify-between text-red-600"><span>(−) Transporte de contenedor</span><span>$ {formatoDinero(datos.transport_amount)}</span></div>}
-            {Number(datos.transport_recognized_amount) > 0 && <div className="flex justify-between text-green-700"><span>(+) Transporte reconocido</span><span>$ {formatoDinero(datos.transport_recognized_amount)}</span></div>}
-            {/* 13/11/2026: bono / extra (pago aparte, va en el 1er pago) */}
-            {Number(datos.bonus_amount) > 0 && <div className="flex justify-between text-green-700"><span>(+) Bono / extra</span><span>$ {formatoDinero(datos.bonus_amount)}</span></div>}
-            <div className="flex justify-between text-red-600"><span>(−) Anticipos / préstamos</span><span>$ {formatoDinero(totalAnticipos)}</span></div>
-            <div className={`flex justify-between border-t pt-2 text-base font-bold ${neto < 0 ? 'text-red-600' : 'text-green-700'}`}>
-              <span>NETO A PAGAR</span><span>$ {formatoDinero(neto)}</span>
-            </div>
-            {neto < 0 && <p className="text-xs text-red-600">Los descuentos superan el valor de la fruta: descuenta menos anticipo.</p>}
-            {/* 30/10/2026: el vendedor factura al precio oficial MAG y devuelve la diferencia con una nota de crédito */}
-            <div className="mt-3 rounded-lg bg-indigo-50 border border-indigo-100 px-3 py-2 space-y-1">
-              <div className="flex justify-between"><span>Factura del vendedor (precio oficial)</span><span className="font-semibold">$ {formatoDinero(datos.invoice_amount)}</span></div>
-              <div className="flex justify-between"><span>Nota de crédito que debe entregar</span><span className="font-semibold text-primario">$ {formatoDinero(datos.credit_note_amount)}</span></div>
-              <p className="text-xs text-gray-500">Factura − nota de crédito = valor de la fruta. Los números se registran en el detalle de la liquidación cuando lleguen.</p>
+        {lqs.map((g) => (
+          <div key={g.key} className="bg-white rounded-xl shadow p-4 text-sm">
+            <h2 className="font-semibold text-gray-800 mb-3">{g.group_label}{g.lleva_descuentos && lqs.length > 1 && <span className="ml-2 text-xs font-normal text-gray-500">(lleva materiales y anticipos)</span>}</h2>
+            <div className="space-y-1.5">
+              <div className="flex justify-between"><span>Fruta ({formatoCajas(g.boxes_paid)} cajas recibidas)</span><span className="font-semibold">$ {formatoDinero(g.fruit_amount)}</span></div>
+              <div className="flex justify-between text-red-600">
+                <span title={`Base $ ${formatoDinero(g.retention_base)} (recibidas × el mayor entre el precio real y el oficial)`}>(−) Retención IR {g.retention_regime === 'NO_RETENER' ? '(NO RETENER)' : `${(Number(g.retention_rate) * 100).toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %${g.retention_regime === 'BPA' ? ' BPA' : ''}`}</span>
+                <span>$ {formatoDinero(g.retention_amount)}</span>
+              </div>
+              {g.lleva_descuentos && <div className="flex justify-between text-red-600"><span>(−) Materiales</span><span>$ {formatoDinero(g.materiales)}</span></div>}
+              {Number(g.transport_amount) > 0 && <div className="flex justify-between text-red-600"><span>(−) Transporte de contenedor</span><span>$ {formatoDinero(g.transport_amount)}</span></div>}
+              {Number(g.transport_recognized_amount) > 0 && <div className="flex justify-between text-green-700"><span>(+) Transporte reconocido</span><span>$ {formatoDinero(g.transport_recognized_amount)}</span></div>}
+              {/* 13/11/2026: bono / extra (pago aparte, va en el 1er pago) */}
+              {Number(g.bonus_amount) > 0 && <div className="flex justify-between text-green-700"><span>(+) Bono / extra</span><span>$ {formatoDinero(g.bonus_amount)}</span></div>}
+              {g.lleva_descuentos && <div className="flex justify-between text-red-600"><span>(−) Anticipos / préstamos</span><span>$ {formatoDinero(g.anticipos)}</span></div>}
+              <div className={`flex justify-between border-t pt-2 text-base font-bold ${g.neto < 0 ? 'text-red-600' : 'text-green-700'}`}>
+                <span>NETO A PAGAR</span><span>$ {formatoDinero(g.neto)}</span>
+              </div>
+              {g.neto < 0 && <p className="text-xs text-red-600">Los descuentos superan el valor de la fruta: descuenta menos anticipo.</p>}
+              {/* 30/10/2026: el vendedor factura al precio oficial MAG y devuelve la diferencia con una nota de crédito */}
+              <div className="mt-3 rounded-lg bg-indigo-50 border border-indigo-100 px-3 py-2 space-y-1">
+                <div className="flex justify-between"><span>Factura del vendedor (precio oficial)</span><span className="font-semibold">$ {formatoDinero(g.invoice_amount)}</span></div>
+                <div className="flex justify-between"><span>Nota de crédito que debe entregar</span><span className="font-semibold text-primario">$ {formatoDinero(g.credit_note_amount)}</span></div>
+              </div>
+              <div className="mt-3">
+                <p className="text-xs font-semibold text-gray-600 uppercase mb-1">Pagos</p>
+                {g.pagos.length === 0 ? <p className="text-gray-400">No hay nada que pagar.</p> : g.pagos.map((p) => (
+                  <div key={p.installment} className="flex justify-between py-1 border-b last:border-0">
+                    <span>{p.description}</span><span className="font-semibold">$ {formatoDinero(p.amount)}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-        <div className="bg-white rounded-xl shadow p-4 text-sm">
-          <h2 className="font-semibold text-gray-800 mb-3">Pagos</h2>
-          {pagos.length === 0 ? <p className="text-gray-400">No hay nada que pagar.</p> : pagos.map((p) => (
-            <div key={p.installment} className="flex justify-between py-1.5 border-b last:border-0">
-              <span>{p.description}</span><span className="font-semibold">$ {formatoDinero(p.amount)}</span>
-            </div>
-          ))}
-          <p className="text-xs text-gray-500 mt-2">Los descuentos salen del primer pago. Cada pago se registra después con su fecha y comprobante.</p>
-        </div>
+        ))}
       </div>
+      {lqs.length > 1 && (
+        <div className="bg-white rounded-xl shadow px-4 py-3 mb-4 flex justify-between text-base font-bold text-green-700">
+          <span>NETO TOTAL ({lqs.length} liquidaciones)</span><span>$ {formatoDinero(neto)}</span>
+        </div>
+      )}
+      <p className="text-xs text-gray-500 mb-4">Factura − nota de crédito = valor de la fruta. Los descuentos salen del primer pago. Cada pago y los números de factura y NC se registran después en el detalle de cada liquidación.</p>
 
       {/* Datos de la liquidación */}
       <div className="bg-white rounded-xl shadow p-4 mb-4 grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
@@ -356,7 +380,7 @@ export default function SettlementFormPage() {
           onCancelar={() => setConfirmar(false)}
           onAceptar={handleLiquidar}
         >
-          {quota.third_party?.name}, semana {quota.week}: neto <strong>$ {formatoDinero(neto)}</strong>.
+          {quota.third_party?.name}, semana {quota.week}: {lqs.length > 1 ? `${lqs.length} liquidaciones (${lqs.map((g) => g.group_label).join(', ')}), ` : ''}neto <strong>$ {formatoDinero(neto)}</strong>.
           Después ya no se le podrá despachar ni devolver material de esta semana, ni cambiar sus tarjas.
         </DialogoConfirmacion>
       )}

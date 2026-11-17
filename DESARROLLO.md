@@ -273,6 +273,49 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 17/11/2026 — Liquidación FASE 0: faltantes, pago sobre recibidas, LQ por contrato y SPOT, retención IR
+- Es la fase 0 del diseño de pagos de liquidaciones (`docs/modulos/pagos-liquidaciones.md`), aprobado por Peter el 17/11.
+- **Migración** `2026_11_17_000001_liquidacion_fase0`:
+  - Agrega `boxes_missing` (FALTANTES) en `tally_sheets`, `settlement_lines` y `settlements`. Un CHECK exige que caídas + rechazadas + faltantes no pasen de las embarcadas.
+  - Agrega en `settlements`:
+    - `negotiation_type` (CONTRATO o SPOT), `contract_id` y `group_label`;
+    - la retención: `retention_regime`, `retention_base`, `retention_rate` y `retention_amount`.
+  - El índice único pasa de "una LQ activa por cupo" a "una por cupo y grupo".
+  - Se detiene si alguna tarja vieja no cumple la regla nueva.
+- **Tarjas (regla de Peter con el personal de tarjas):**
+  - **RECIBIDAS = EMBARCADAS − CAÍDAS − RECHAZADAS − FALTANTES.** EMBARCADAS es el total del camión.
+  - Antes, "recibidas" era el total y se pagaban embarcadas + caídas.
+  - La hoja de tarjas tiene la columna FALTANTES y muestra RECIBIDAS calculada. Exige embarcadas mayores que 0 y que las partes no pasen del total.
+- **Liquidación sobre recibidas:** la fruta, la factura al precio oficial, la nota de crédito, el transporte reconocido y el bono. El transporte descontado se cobra solo si hay recibidas. Las compras sin tarja no entran en la liquidación.
+- **LQ separadas, como el Excel:**
+  - Al liquidar un cupo se crean juntas una LQ por cada contrato ("CONTRATO n") y una de SPOT. También se anulan juntas.
+  - Materiales y anticipos se descuentan en la LQ de mayor valor de fruta.
+  - El detalle muestra las otras LQ de la misma semana. El listado muestra un botón por LQ.
+- **Retención IR banano por LQ** (servicio `RetencionBanano`):
+  - El tramo se calcula con las recibidas de esa LQ.
+  - Base = recibidas × el mayor entre el precio real y el oficial; sin oficial, se usa el mínimo de la semana.
+  - Régimen del vendedor: NORMAL por tramos, BPA con la tasa de los parámetros de la semana, NO_RETENER = 0.
+  - Se resta del neto, en el primer pago.
+- **No se liquida si:**
+  - una compra de CONTRATO no tiene contrato (R1);
+  - falta el precio real (R2, ya existía);
+  - la semana no tiene parámetros (R3).
+- **Ganancia por viaje, Tablero financiero y Cierre de embarque** usan las recibidas. El cierre muestra también faltantes y recibidas; su cruce con el INGRESO del puerto sigue contra las embarcadas.
+- **Pendiente para la fase 1:** el anticipo del 80 % antes de liquidar, el tablero de anticipos y pagos, y la bandeja de Contabilidad.
+
+### 17/11/2026 — Página en blanco al iniciar sesión
+- **Causa:** las pantallas se descargan por partes (React.lazy) y cada versión les cambia el nombre. Una pestaña abierta antes de una subida (o tras "Cerrar sesión", que no recargaba) pedía al entrar una parte que ya no existe; nginx responde con `index.html` y el `import()` falla. Sin un componente que atrape el error, React borraba toda la página. F5 lo arreglaba porque traía la versión nueva.
+- **Arreglo** (`src/components/common/ErrorPantalla.jsx`, nuevo):
+  - Si falla la descarga de una pantalla, el sistema **se recarga solo una vez**. Si vuelve a fallar en menos de 30 s, muestra un aviso con el botón "Actualizar"; nunca recarga en bucle.
+  - Cualquier otro error al dibujar una pantalla muestra un aviso con "Actualizar" en lugar de la página en blanco. El menú y la barra siguen visibles, y el aviso se limpia al cambiar de pantalla.
+  - Va en `Layout.jsx` alrededor de la pantalla activa y en `main.jsx` alrededor de todo el sistema.
+- **"Cerrar sesión"**, tanto en el menú como en "Cambia tu contraseña", ahora recarga la página al ir al login, para que la pestaña tome siempre la última versión.
+- **Cerrar sesión no borraba el token en el servidor** (lo encontró QA: 4 tokens vivos tras 4 ingresos y 1 salida).
+  - **Causa:** `logout()` borraba el token del navegador antes de que el interceptor de axios lo agregara, así que `/logout` salía sin token y respondía 401.
+  - **Arreglo:** ahora el token se manda explícito, con un tope de 2 s. "Cerrar sesión" y el cierre por inactividad esperan esa respuesta antes de recargar.
+  - Un 401 de `/logout` ya no se toma como "sesión expirada".
+- **Opcional, sin hacer:** que nginx responda 404 para un `/assets/*.js` que no existe, en lugar de `index.html`. Requiere sudo.
+
 ### 16/11/2026 — Vacaciones y permisos, FASE 1: empleados, saldos, departamentos y feriados (LEGAL)
 - Diseño: `docs/modulos/vacaciones-permisos.md` (aprobado 16/11). Pantalla nueva **LEGAL → Empleados y vacaciones** (`/legal/empleados`, clave `empleados_saldos`, perfil LEGAL por migración).
 - **EMPLEADOS:**

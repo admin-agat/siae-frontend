@@ -34,11 +34,18 @@ export function AuthProvider({ children }) {
     // 28/10/2026: se avisa al backend para que BORRE el token. Antes solo se borraba en el
     // navegador y el token seguía siendo válido en el servidor (había 21 tokens vivos).
     // No se espera la respuesta: si falla (sin red, ya vencido) igual se cierra la sesión local.
-    api.post("/logout").catch(() => {});
+    // 17/11/2026: el token se manda explícito. Antes la petición salía SIN token (el interceptor de axios lo
+    // lee después de que aquí ya se borró), el backend respondía 401 y el token seguía vivo en el servidor.
+    // Devuelve una promesa (máx. 2 s) para que quien recarga la página espere a que el aviso llegue.
+    const tokenActual = localStorage.getItem("token");
+    const aviso = tokenActual
+      ? api.post("/logout", null, { headers: { Authorization: `Bearer ${tokenActual}` }, timeout: 2000 }).catch(() => {})
+      : Promise.resolve();
     setUser(null);
     setToken(null);
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    return aviso;
   };
   return (
     <AuthContext.Provider value={{ user, token, login, logout, actualizarUsuario }}>
