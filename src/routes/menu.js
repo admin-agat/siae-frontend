@@ -170,4 +170,7 @@ export const inicioDe = (user) => {
 };
 
 // 02/11/2026: pantallas que un tipo base puede tener (las 'solo' de otros tipos no se ofrecen; ej. Dashboard = GERENCIA)
-export const pantallasDelTipo = (catalogo, tipo) => (tipo === 'ADMIN' ? catalogo : catalogo.filter((p) => !p.solo || p.solo.includes(tipo)));
+// 17/11/2026: el TARJADOR (puerto) solo puede tener Tarjas (igual que Profile::pantallasVedadas)
+export const pantallasDelTipo = (catalogo, tipo) => (tipo === 'ADMIN' ? catalogo
+    : tipo === 'TARJADOR' ? catalogo.filter((p) => p.key === 'tarjas')
+    : catalogo.filter((p) => !p.solo || p.solo.includes(tipo)));

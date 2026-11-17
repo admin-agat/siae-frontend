@@ -34,6 +34,8 @@ const TIPOS_BASE = {
   // 06/11/2026
   // 12/11/2026: los contratos de productores pasaron a LEGAL; Liquidaciones los ve
   LIQUIDACIONES: 'Departamento de Liquidaciones: retención de productores (ve los contratos), parámetros de la semana, tarjas, liquidaciones y pagos.',
+  // 17/11/2026
+  TARJADOR: 'Personal de tarjas en el puerto (celular o laptop): solo la pantalla Tarjas. Ve la orden de corte y llena las tarjas; no ve precios ni montos.',
   LEGAL: 'Departamento Legal: contratos de productores (cupo, precio, fechas, código bananero, finca, N° MAGAP) y cajas registradas en el MAG.',
 };
 

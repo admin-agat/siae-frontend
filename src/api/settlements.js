@@ -4,6 +4,8 @@
 import axios from "./axios";
 
 // ---- Tarjas de una semana (pedido) ----
+// 17/11/2026: semanas para Tarjas sin precios (la usa el TARJADOR del puerto)
+export const getTallyWeeks = () => axios.get("/tallies/weeks");
 export const getOrderTallies = (orderId) => axios.get(`/customer-orders/${orderId}/tallies`);
 export const saveOrderTallies = (orderId, data) => axios.put(`/customer-orders/${orderId}/tallies`, data);
 

@@ -6,7 +6,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ClipboardCheck } from 'lucide-react';
-import { getCustomerOrders } from '../../api/customerOrders';
+import { getTallyWeeks } from '../../api/settlements';
 import EncabezadoPagina from '../../components/common/EncabezadoPagina';
 import TablaEstandar from '../../components/common/TablaEstandar';
 
@@ -18,7 +18,8 @@ export default function TalliesPage() {
   const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
-    getCustomerOrders({ status: true })
+    // 17/11/2026: endpoint propio de Tarjas (sin precios); el TARJADOR no lee los pedidos
+    getTallyWeeks()
       .then((res) => setPedidos(Array.isArray(res.data) ? res.data : []))
       .catch((err) => {
         console.error('ERROR AL CARGAR PEDIDOS:', err);

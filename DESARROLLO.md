@@ -273,6 +273,20 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 17/11/2026 — Tipo base TARJADOR: la persona del puerto ve solo Tarjas y ningún precio
+- Peter: las tarjas las llena una persona en el puerto (celular o laptop). Solo ve la orden de corte y los campos que llena, sin precios ni montos.
+- **Migración `2026_11_17_000002_tipo_tarjador`**: agrega TARJADOR a los CHECK de `users.role` y `profiles.base_role`, y crea el perfil TARJADOR con la pantalla `tarjas`. Tiene `down()`.
+- `Profile::pantallasVedadas`: el TARJADOR solo puede tener `tarjas`, ni por perfil ni por excepción. En el frontend, `pantallasDelTipo` (`src/routes/menu.js`) ofrece solo Tarjas en Perfiles y Usuarios.
+- `config/pantallas.php`: `tarjas` por defecto para LIQUIDACIONES y TARJADOR.
+- `routes/api.php`: `tarjas` sale del grupo de LECTURA general. Antes, quien tenía Tarjas podía leer tarifas de puerto, contratos de clientes y pedidos.
+- Nuevo `GET /tallies/weeks` (`TallySheetController::weeks`): semanas con cajas pedidas y compradas, sin precios. `TalliesPage` lo usa en vez de `GET /customer-orders`.
+- `GET /customer-orders/{id}/tallies` ya no devuelve `real_price` (la hoja no lo usaba).
+- Middleware nuevo `solo_tarjas` (`app/Http/Middleware/SoloTarjas.php`) en todo el grupo autenticado. Es una lista blanca: el TARJADOR solo usa `/me`, `/me/password`, `/logout`, `tallies/weeks` y `customer-orders/*/tallies`; todo lo demás le da 403.
+  - QA encontró 17 rutas de lectura abierta a cualquier usuario: precios MAG, terceros, marcas, insumos, bodegas, etc.
+  - Para los demás perfiles esas rutas no cambian.
+- Pruebas: `tests/Feature/TarjadorTest.php` (13). Suite 161/161.
+- Pendiente (fases siguientes del diseño): historial visible de cada tarja, "Guardar camión" y vista de celular.
+
 ### 17/11/2026 — Tarjas pasa al menú de EXPORTACIONES
 - A pedido de Peter, "Tarjas" sale de LIQUIDACIÓN y queda en EXPORTACIONES, entre "Distribución en barcos" y "Cierre de embarque" (`src/routes/menu.js`).
 - En Perfiles y permisos también aparece bajo EXPORTACIONES (`config/pantallas.php`, campo `seccion`).

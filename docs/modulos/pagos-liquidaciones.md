@@ -1,20 +1,21 @@
-# Pagos de liquidaciones → Contabilidad (diseño para aprobar)
+# Pagos de liquidaciones → Contabilidad (diseño)
 
-Fecha: 17/11/2026 · Autor: arquitecto (siae-architect) · Estado: **BORRADOR, ESPERA EL OK DE PETER** · Actualizado el 17/11 con las respuestas de Peter (P1 y P5), el **Tablero de anticipos y pagos** y la tabla de cuentas contables para completar.
-Pedido de Peter (17/11/2026): que el sistema calcule las cuotas a pagar de cada liquidación (CONTRATO 100 %, SPOT 80/20), que Liquidaciones las acepte con un check en un listado, que lo aceptado le llegue a Contabilidad para pagar por el banco, y saber cómo se manejan las **cuentas contables**.
+Fecha: 17/11/2026 · Autor: arquitecto (siae-architect)
+**Estado:**
+- **FASE 0: EN PRODUCCIÓN** (17/11, migración `2026_11_17_000001_liquidacion_fase0`).
+- **FASE 1a (tarjas en el puerto) y FASE 1b (anticipos, aprobación y pagos al banco): LISTAS PARA PROGRAMAR.** Peter aprobó las recomendaciones el 17/11 (sección 11). Lo nuevo de tarjas (3.5) espera su OK final en los puntos de la sección 12.
+
+Pedido de Peter (17/11/2026): que el sistema calcule las cuotas a pagar de cada liquidación (CONTRATO 100 %, SPOT 80/20), que Liquidaciones las acepte con un check en un listado, que lo aceptado le llegue a Contabilidad para pagar por el banco, y saber cómo se manejan las **cuentas contables**. Ese mismo día agregó dos temas de tarjas: el **historial de cada tarja** y que las llene **una persona en el puerto desde el celular**.
 
 > **En un minuto**
-> - **Nada de pantallas paralelas.** Se reutilizan los pagos que ya tiene cada liquidación, la bandeja de Contabilidad de las OC, los lotes al banco y el TXT del Pichincha. Las cuentas bancarias siguen cifradas y en su misma tabla.
-> - **Tres momentos, una sola cola.** El sistema calcula la cuota. Liquidaciones la **acepta** con un check, o la **devuelve** con un motivo. Contabilidad la **paga** en un lote al banco, o a mano con su comprobante.
-> - **SPOT:** el 80 % se paga en la semana de la compra como un **anticipo automático** sobre las cajas embarcadas, y la liquidación de la semana siguiente lo descuenta y paga el 20 % restante.
->   - Eso es lo que decía el Excel del 06/11. Hoy el sistema paga el 80 % recién **después** de liquidar, así que esto **cambia una regla que ya está programada**.
-> - **CONTRATO:** un solo pago del 100 % al liquidar. Se programa para la semana en curso o para la siguiente, según el contrato, y Liquidaciones lo puede cambiar al aprobar.
-> - **Cuentas contables:** **ahora no** se lleva contabilidad dentro del SIAE.
->   - Se exporta un archivo con el "asiento sugerido" para el sistema contable (Contífico u otro).
->   - El plan de cuentas lo da Andrea o el contador.
->   - El plan de cuentas dentro del SIAE queda para una fase posterior, si se decide.
-> - **Antes de usarlo** hay que cerrar los bloqueos de la sección 8.1: compras CONTRATO sin contrato, compras sin precio real, parámetros de la semana, cuentas bancarias, TXT real y la fase 0 (retención, solo embarcadas y LQ separadas por contrato y SPOT).
-> - **Producción no tiene liquidaciones ni pagos todavía**, así que no hay que migrar pagos.
+> - **Nada de pantallas paralelas.** Se reutilizan los pagos que ya tiene cada liquidación, los anticipos, los lotes al banco y el TXT del Pichincha. Las cuentas bancarias siguen cifradas y en su misma tabla.
+> - **Tres momentos, una sola cola.** El sistema calcula la cuota. El jefe de Liquidaciones la **acepta** con un check, o la **devuelve** con un motivo. Contabilidad la **paga** en un lote al banco, o a mano con su comprobante.
+> - **SPOT:** el 80 % se paga en la semana de la compra como un **anticipo automático por negociación**, sobre las cajas EMBARCADAS. La LQ SPOT lo descuenta y paga el saldo (20 %).
+> - **CONTRATO:** un solo pago del 100 % al liquidar, en la semana siguiente a la de compra o una más, según el contrato.
+> - **Anticipos y préstamos manuales** también pasan por aprobación y por el TXT (P14).
+> - **Tarjas (fase 1a, va primero):** tipo base nuevo **TARJADOR** que solo ve Tarjas y no ve precios; pantalla para celular con **"Guardar camión"**; **historial de cada tarja** de punta a punta; las tarjas ya no se borran (baja lógica con motivo).
+> - **Contabilidad:** dos permisos por persona: **preparar** el lote y el TXT, y **confirmar** lo que pagó el banco. Las OC siguen con su único aprobador.
+> - **Cuentas contables:** **ahora no** se lleva contabilidad en el SIAE; se exporta (fase 2) y el plan de cuentas queda para la fase 3.
 > - **Segregación de funciones:** quien liquida no aprueba su propia liquidación, y quien aprueba no paga. El banco nunca recibe un pago sin aprobación ni el mismo pago dos veces.
 
 ---
@@ -23,370 +24,288 @@ Pedido de Peter (17/11/2026): que el sistema calcule las cuotas a pagar de cada 
 
 | # | Cuándo | Quién | Qué pasa |
 |---|---|---|---|
-| 1 | Semana de compra **N** | Comercial / Logística | Se compra la fruta y llega al puerto. Las **tarjas** dicen cuántas cajas se embarcaron. |
-| 2 | Semana N, al cerrar las tarjas | **Sistema** | Para cada compra **SPOT** calcula el **anticipo del 80 %**: cajas embarcadas × precio real × 80 %. Lo deja en **POR APROBAR**. |
-| 3 | Semana N | Jefe de Liquidaciones | En **LIQUIDACIÓN → Pagos por aprobar** marca con un check los anticipos correctos y pulsa **Aprobar**, o devuelve uno con su motivo. |
-| 4 | Semana **N+1** | Liquidaciones | **Liquida** el cupo como hoy (fruta, materiales, transporte, retención, nota de crédito). El sistema descuenta el 80 % ya pagado y calcula la cuota final: el **20 %** de SPOT o el **100 %** de CONTRATO. |
-| 5 | Semana N+1 | Jefe de Liquidaciones | Aprueba con un check las cuotas de la liquidación, eligiendo para CONTRATO si se pagan **esta semana o la próxima**. |
-| 6 | Cuando toca | Contabilidad (Andrea) | En **CONTABILIDAD → Pagos al banco** ve juntas las OC aprobadas y las cuotas de liquidación aprobadas. Marca las que va a pagar, **genera el TXT del Pichincha** y lo sube al banco. |
-| 7 | Al confirmar el banco | Contabilidad | Marca el lote como **PAGADO**. Si el banco rechazó alguna línea, la marca **FALLIDA** con el motivo, y esa cuota vuelve a "por pagar" (por ejemplo, porque la cuenta estaba mal). |
-| 8 | Fin de semana o de mes | Contabilidad | Descarga el **archivo de asientos sugeridos** (liquidaciones, retenciones y pagos) para registrarlos en el sistema contable. |
+| 1 | Semana de compra **N** | Comercial / Logística | Se compra la fruta y llega al puerto. |
+| 2 | Semana N, en el puerto | **Tarjador** (celular) | Registra cada **camión**: embarcadas, caídas, rechazadas y faltantes. Cada cambio queda en el historial de la tarja. |
+| 3 | Semana N, al guardar cada camión | **Sistema** | Para cada compra **SPOT** calcula o ajusta el **anticipo del 80 %**: cajas embarcadas × precio pactado × 80 %. Lo deja **POR APROBAR**. |
+| 4 | Semana N | Jefe de Liquidaciones | En **Tablero de anticipos y pagos** marca con un check los anticipos correctos (y los anticipos o préstamos manuales) y pulsa **Aprobar**, o devuelve uno con su motivo. |
+| 5 | Cuando toca | Contabilidad (quien **prepara**) | En **CONTABILIDAD → Pagos al banco** ve juntas las OC aprobadas y las órdenes de Liquidaciones aprobadas. Marca las que va a pagar y **genera el TXT del Pichincha**. |
+| 6 | Al confirmar el banco | Contabilidad (quien **confirma**) | Marca el lote como **PAGADO**. Si el banco rechazó alguna línea, la marca **FALLIDA** con el motivo, y esa orden vuelve a "por pagar". |
+| 7 | Semana **N+1** | Liquidaciones | **Liquida** el cupo: una LQ por contrato y una SPOT (fase 0). La LQ SPOT descuenta el 80 % ya pagado y deja la cuota del **saldo**; la LQ CONTRATO deja la cuota del **100 %**. Las tarjas de ese cupo quedan **bloqueadas**. |
+| 8 | Semana N+1 (o N+2) | Jefe de Liquidaciones → Contabilidad | Se aprueban las cuotas con el mismo check y se pagan como en los pasos 5 y 6. |
 
 ---
 
-## 2. Reglas: lo que se dijo, lo que hay en el código y lo que propongo
+## 2. Reglas: lo que se dijo, lo que hay en el código y lo que queda
 
-| Tema | 29/10 | 06/11 (Excel) | 17/11 (Peter) | **Código hoy** | **Propuesta** |
-|---|---|---|---|---|---|
-| CONTRATO | 100 % | — | 100 %, en la semana que transcurre o en la próxima | Cuota 1 = 100 % **al liquidar** | 100 % al liquidar, con **semana programada** = la de liquidación + 0 o + 1 |
-| SPOT | 80 % al embarcar y 20 % después | "Anticipo 80 % se paga **ANTES** de liquidar; la liquidación lo descuenta" | 80 % en la semana actual y 20 % en la próxima | Cuotas 1 (80 %) y 2 (20 %) se crean **las dos al liquidar** | 80 % en la semana **N**, como anticipo automático; 20 % en **N+1**, como saldo de la liquidación |
-| De qué cuota salen los descuentos | Del 1er pago; si no alcanza, del 2do | Todos en la LQ (retención, materiales, anticipo 80 % pagado) | — | Del 1er pago | **Todos de la cuota de la liquidación.** El anticipo del 80 % sale **bruto**, sin descuentos. |
-| Quién registra el pago | ADMIN | — | Contabilidad, por bancos | Pantalla `pagos` (Liquidaciones) | **Contabilidad.** Liquidaciones solo aprueba. |
-| Retención IR | No | Sí, por tramos | — | **No se calcula todavía** (parte 3 pendiente; la tabla de tramos y el servicio `RetencionBanano` ya existen) | Se descuenta en la cuota de la liquidación. Es **prerrequisito** de este módulo (ver la fase 0). |
+| Tema | Excel 06/11 y Peter 17/11 | **Código hoy (con la fase 0)** | **Fase 1** |
+|---|---|---|---|
+| CONTRATO | 100 % en la semana que transcurre o en la próxima | Cuota 1 = 100 % **al liquidar**, sin semana programada | 100 % al liquidar, **semana programada** = N+1 + `payment_week_offset` del contrato (0 o 1). El aprobador lo puede cambiar (P2). El esquema 80/20 no aplica a CONTRATO (P17). |
+| SPOT | 80 % **antes** de liquidar, sobre embarcadas; la LQ lo descuenta | Cuotas 80 % y 20 % se crean **las dos al liquidar** | 80 % en **N** como anticipo automático por negociación; saldo en **N+1** como cuota de la LQ SPOT |
+| Descuentos | Todos en la LQ | Materiales y anticipos en la LQ de **mayor valor de fruta**; retención en cada LQ, en el primer pago | Igual. El 80 % se descuenta **solo en la LQ SPOT** (es de sus compras). El 80 % sale **bruto**. |
+| Cajas | RECIBIDAS = EMBARCADAS − CAÍDAS − RECHAZADAS − FALTANTES | **Ya implementado** (fase 0) | El 80 % usa EMBARCADAS; la LQ, RECIBIDAS |
+| Retención IR | Por tramos | **Ya implementado** (fase 0): por LQ, base = recibidas × el mayor entre real y oficial (sin oficial, el mínimo de la semana) | Sin cambio |
+| Quién registra el pago | Contabilidad, por bancos | Pantalla `pagos` (Liquidaciones) | **Contabilidad.** Liquidaciones solo aprueba (P12). |
+| Anticipos manuales | — | Se entregan por fuera y se descuentan | Pasan por aprobación y TXT (P14) |
 
-⚠️ **Regla de negocio que cambia (señalado como pide `CLAUDE.md`):**
-- La regla que está **programada** dice que el 80 % SPOT se paga después de liquidar.
-- La regla del **Excel (06/11)** y la de **Peter (17/11)** dicen que se paga **antes**.
-- Tomo la del Excel porque cuadra con la frase de Peter: el 80 % "en la semana actual" (la de compra) y el 20 % "en la próxima" (la de liquidación).
-- **Lo confirma el Excel real WK41** (revisado por `siae-datos` el 17/11, solo lectura). Sus hojas DOCUMENTOS y ACUMULADO traen las columnas "ANTICIPO 80%", "ID ORDEN ANTICIPO 80%", "REF. ANTICIPO", "CONFIRMACION DE PAGO DEL ANTICIPO 80%", "20% SALDO FRUTA", "ID ORDEN SALDO 20%" y "SALDO SPOT".
-  - Es decir: el 80 % SPOT es una **orden de pago propia, con su número**, que se paga **antes** de la LQ.
-  - La LQ SPOT descuenta ese 80 % y paga el 20 % con **otra orden**.
-  - CONTRATO = una LQ al 100 %.
-- La **pregunta 1** queda solo como confirmación.
+⚠️ **Reglas de negocio que cambian (señalado como pide `CLAUDE.md`):**
+1. **Liquidación — anticipo del 80 %:** hoy el 80 % SPOT se paga **después** de liquidar; pasa a pagarse **antes**, como orden propia por negociación. Confirmado con el Excel real WK41 y el "REPORTE DE ANTICIPOS WK 40" (P1, P5).
+2. **Liquidación — CONTRATO con 80/20:** hoy una compra CONTRATO marcada 80_20 se paga 80/20. Desde la fase 1, toda LQ CONTRATO paga 100 % en una cuota (P17: "el anticipo 80 % es solo SPOT"). Ver 3.1.
+3. **Liquidación — saldo negativo:** hoy, si los descuentos superan la fruta, la LQ no se graba. Desde la fase 1, si el exceso viene del 80 % ya pagado, se graba y el exceso queda como **SALDO A FAVOR DE AGAT** (P4). Si viene de anticipos manuales elegidos de más, sigue el error de hoy.
+4. **Órdenes de compra:** el **único aprobador** de OC no cambia (`aprobar_oc`). Lo que cambia es dónde se arman los lotes al banco: pasan de "Aprobación y pago de OC" a **"Pagos al banco"**, con permisos propios (5.5). Andrea no pierde nada: la migración le da las pantallas nuevas a su perfil.
+5. **Anticipos manuales:** dejan de entregarse por fuera; pasan por aprobación y TXT (P14). Solo se descuentan en una LQ si ya salieron al banco o se pagaron (3.4).
 
 **Cómo lo lleva hoy el Excel** (hoja PAGOS): una fila por LQ, con referencia y fecha de pago.
-- Estados: **PENDIENTE / PAGADO / PARCIAL / PAGADO DE MES**. "PARCIAL" y "PAGADO DE MES" se aclaran en las preguntas 7 y 15.
-- La hoja PENDIENTES POR PAGAR muestra banco, tipo, número y titular por RUC, con el indicador **OK / FALTA CUENTA**: el diseño lo reproduce como el aviso "SIN CUENTA BANCARIA".
-
-⚠️ **Otras dos diferencias que cambian lo que se paga** (las dos quedan en la **fase 0**):
-- **Cajas que se pagan (regla nueva, 17/11; reemplaza la del 06/11, que decía "solo embarcadas"):**
-  - Peter la definió con el personal de tarjas: **RECIBIDAS = EMBARCADAS − CAÍDAS − RECHAZADAS − FALTANTES**.
-  - "Embarcadas" de la tarja es el **total** (bruto). La liquidación paga sobre las **recibidas**. El 80 % SPOT sigue sobre las **embarcadas**.
-  - El código de hoy sigue la regla del 29/10: paga **embarcadas + caídas**, como si fueran categorías separadas. Ver 3.3.
-- El código no calcula la **retención**.
+- Estados **PENDIENTE / PAGADO / PARCIAL / PAGADO DE MES**. "PARCIAL" se cubre con el lote PAGADO_PARCIAL (P7). "PAGADO DE MES" = pago manual con forma **CRUCE** (P15).
+- La hoja PENDIENTES POR PAGAR muestra el indicador **OK / FALTA CUENTA**: el diseño lo reproduce como el aviso "SIN CUENTA BANCARIA".
 
 ---
 
 ## 3. Cálculo automático de las cuotas
 
-### 3.1 Qué cuotas se generan
+### 3.1 Qué órdenes de pago se generan
 
-| Negociación de la compra | Cuota | Cuándo se crea | Monto | Semana programada |
+| Origen | Orden | Cuándo se crea | Monto | Semana programada |
 |---|---|---|---|---|
-| **SPOT** (`payment_scheme = 80_20`) | **ANTICIPO 80 %**: una orden **por negociación**, es decir, por cada compra | Al grabar las tarjas de la semana N | **cajas EMBARCADAS × PRECIO PACTADO × 0,80** (sin descuentos) | N |
-| SPOT | **SALDO 20 %** (cuota de la liquidación) | Al liquidar, en N+1 | neto de la liquidación − anticipo 80 % ya pagado | N+1 |
-| **CONTRATO** (`payment_scheme = 100`) | **PAGO ÚNICO 100 %** | Al liquidar, en N+1 | neto de la liquidación | N+1 + `payment_week_offset` del contrato (0 o 1) |
-| SPOT pagado al 100 % (hoy existe) | PAGO ÚNICO 100 % | Al liquidar | neto | N+1 |
+| Compra **SPOT** con `payment_scheme = 80_20` | **ANTICIPO 80 %**, una por negociación (compra) | Al guardar un camión de esa compra (servicio `Anticipo80`) | **Σ EMBARCADAS de sus tarjas activas × PRECIO PACTADO × 0,80**, sin descuentos | N (semana del cupo) |
+| LQ **SPOT** | **SALDO SPOT** (cuota única de la LQ) | Al liquidar | neto de la LQ − anticipos 80 % descontados | N+1 |
+| LQ **CONTRATO n** | **PAGO ÚNICO 100 %** | Al liquidar | neto de la LQ | N+1 + `payment_week_offset` (0 o 1) |
+| Liquidaciones (pantalla `anticipos`) | **ANTICIPO / PRÉSTAMO MANUAL** (P14) | Al registrarlo | el monto escrito | La semana en curso, editable antes de aprobar |
 
-- **Fórmula del 80 %: CONFIRMADA por Peter el 17/11** (preguntas 1 y 5) con su Excel "REPORTE DE ANTICIPOS WK 40".
-  - Se calcula sobre las **cajas embarcadas** de la tarja y al **precio pactado**, que en el SIAE es el `real_price` de la compra. **No** se usa el precio oficial.
-  - Ejemplo inventado: 1.000 cajas × $7,00 × 0,80 = **$5.600,00**.
-  - Es **una orden por negociación** (una compra = un vendedor, una marca y un precio), como las filas del reporte de Peter. Si un vendedor tiene dos compras SPOT a precios distintos, tiene dos órdenes.
-- **De dónde salen las CAJAS EMBARCADAS** (fuente única): `tally_sheets.boxes_shipped`, que cuelga de la compra (`producer_quota_line_id`). Al liquidar se copian a `settlement_lines.boxes_shipped`.
-  - **No** se usa `shipment_bookings.shipped_boxes` del cierre de embarque, porque es por cliente y booking, no por vendedor.
-  - **No** se usan las cajas compradas.
-- ⚠️ **Sin tarja no hay 80 %.** Si la compra SPOT no tiene tarja, el tablero muestra la fila con estado **SIN TARJA**, cajas 0 y monto 0, y **no se puede aprobar** (casilla desactivada).
-  - El backend lo rechaza con "LA COMPRA DE <VENDEDOR> NO TIENE TARJA: NO SE PUEDE CALCULAR EL 80 %".
-  - La orden se crea sola cuando Liquidaciones graba la tarja.
-  - Hoy en producción hay **1 sola tarja** (WK45) y la WK40 no tiene tarjas: ver el requisito **R8**.
-- **Neto de la liquidación** = fruta (**RECIBIDAS** × precio real) + transporte reconocido + bono − materiales − transporte descontado − **retención IR** − anticipos o préstamos elegidos. Las cajas, en 3.3.
-- Ya va descontada la nota de crédito, porque se paga al precio real.
-- Es lo mismo que el "A pagar = saldo − nota de crédito" del Excel, que calcula el saldo al precio oficial.
-
-**Liquidaciones separadas por CONTRATO y por SPOT (como el Excel).**
-- Hoy una liquidación es **por cupo** (vendedor + semana) y puede **mezclar** compras al 100 % y al 80/20.
-- El Excel separa un documento LQ por cada contrato (1, 1.1, 1.2, 2…) y otro por SPOT.
-- **Propuesta:** se adopta la separación del Excel **antes** de este módulo, en la fase 0 (la "parte 3" del plan del 06/11). Cada liquidación queda de **un solo tipo**:
-  - **LQ CONTRATO n** → una sola cuota del 100 %.
-  - **LQ SPOT** → descuenta su orden de anticipo 80 % y genera una cuota de SALDO 20 %.
-- Así cada orden de pago apunta a **un** documento, igual que las columnas "ID ORDEN" del Excel.
-- **Descuentos del vendedor en la semana** (materiales, anticipos manuales): ¿en qué LQ se descuentan si tiene varias? Ver la **pregunta 16**. Recomiendo descontarlos en la LQ de mayor valor de esa semana, como hace hoy el Excel; hay que confirmarlo con Liquidaciones.
-- La retención se calcula **por liquidación**, como ya está acordado.
-
-**Número de orden de pago:**
-- Cada anticipo 80 % y cada cuota llevan un código visible, `ORD-AAAA-NNNNN`, que equivale a "ID ORDEN ANTICIPO 80%" e "ID ORDEN SALDO 20%".
-- Es el que Contabilidad ve en el lote y el que va en la referencia del TXT.
+- **Fórmula del 80 %: CONFIRMADA** (P1 y P5): cajas EMBARCADAS de la tarja × precio pactado (`real_price` de la compra) × 0,80. Ejemplo inventado: 1.000 × $7,00 × 0,80 = **$5.600,00**.
+- **Una orden por negociación** (una compra = un vendedor, una marca y un precio). Si una compra embarca en varios días, la **misma** orden se recalcula mientras esté POR APROBAR (supuesto de P22, ver 11).
+- **Solo SPOT** (P17): si una compra CONTRATO quedó marcada 80_20, no genera 80 %; en su LQ se paga al 100 %. Para evitar la confusión, `PurchaseAllocationController` guarda `payment_scheme = '100'` en toda compra CONTRATO nueva o editada (validación en el backend; no se migran datos).
+- **SPOT al 100 %** (`payment_scheme = 100`): no genera 80 %; su fruta va completa en la cuota SALDO SPOT.
+- **Cajas EMBARCADAS** (fuente única): `tally_sheets.boxes_shipped` de las tarjas **activas** (`status = true`, fase 1a). No se usan `shipment_bookings.shipped_boxes` ni las cajas compradas.
+- ⚠️ **Sin tarja no hay 80 %.** El tablero muestra la compra como **SIN TARJA** (cajas 0, monto 0, casilla desactivada).
+- **Sin precio real (R2) no hay 80 %.** La fila sale **SIN PRECIO**, no aprobable, con aviso para Comercial.
+- **Neto de la LQ** = fruta (RECIBIDAS × precio pactado) + transporte reconocido + bono − materiales − transporte descontado − retención IR − anticipos manuales elegidos − **anticipos 80 % descontados** (solo LQ SPOT).
+- **Número de orden:** cada anticipo y cada cuota llevan `ORD-AAAA-NNNNN` ("ID ORDEN ANTICIPO 80%" / "ID ORDEN SALDO 20%" del Excel), de una **secuencia de PostgreSQL** compartida (`payment_order_seq`), segura con dos personas a la vez.
 
 ### 3.2 Ejemplo con números inventados (SPOT)
 
-1.000 cajas embarcadas; oficial $7,50; real $7,00; materiales $400; retención 1 %.
+La tarja trae 1.000 embarcadas, de las que 20 son caídas, 10 rechazadas y 10 faltantes: **960 recibidas**. Precio pactado $7,00, oficial $7,50, materiales $400, retención 1 %.
 
 | Concepto | Valor |
 |---|---|
 | **Semana N: ANTICIPO 80 %** = 1.000 × 7,00 × 0,80 | **5.600,00** |
-| Fruta al precio real (1.000 × 7,00) | 7.000,00 |
-| − Materiales | −400,00 |
-| − Retención IR (1 % de la factura de 7.500, al precio oficial) | −75,00 |
-| = Neto de la liquidación | 6.525,00 |
-| − Anticipo 80 % ya pagado | −5.600,00 |
-| **Semana N+1: SALDO 20 %** | **925,00** |
-
-Si el productor no hubiera llegado a cobrar el 80 %, la cuota de N+1 sería de 6.525,00.
-
-### 3.3 Cajas: EMBARCADAS y RECIBIDAS (regla de Peter, 17/11; fase 0)
-
-**Regla:** RECIBIDAS = EMBARCADAS − CAÍDAS − RECHAZADAS − FALTANTES.
-- **EMBARCADAS** es el total que trae la tarja (bruto).
-- CAÍDAS, RECHAZADAS y FALTANTES son **partes** de ese total.
-- **FALTANTES** no existe hoy: hay que agregarlo.
-
-**Qué se calcula con cada número:**
-
-| Cálculo | Cajas | Cambio frente al código de hoy |
-|---|---|---|
-| **Anticipo 80 % SPOT** | **EMBARCADAS** × precio pactado × 0,80 | Nuevo |
-| **Fruta de la liquidación** (20 % SPOT) | **RECIBIDAS** × precio pactado | Hoy: embarcadas + caídas |
-| Fruta de la liquidación (100 % CONTRATO) | **RECIBIDAS**, por coherencia (**pregunta 32**) | Hoy: embarcadas + caídas |
-| Factura al oficial y **nota de crédito** | **RECIBIDAS** × oficial; NC = máx(0, factura − fruta) | Hoy: embarcadas + caídas |
-| **Retención IR**: tasa por tramos y base | Tramo según las cajas **RECIBIDAS** de la LQ; base = factura sobre recibidas (**pregunta 33**) | No existe hoy |
-| **Transporte reconocido** y **bono / extra** ("solo por las cajas que llegaron") | **RECIBIDAS** × $/caja (**pregunta 33**) | Hoy: embarcadas + caídas |
-| Transporte descontado (monto por compra) | Se descuenta si **RECIBIDAS > 0** | Hoy: si embarcadas + caídas > 0 |
-| **Ganancia por viaje** y **Tablero financiero** (costo de la fruta) | **RECIBIDAS** × precio | Hoy: embarcadas + caídas |
-
-**Ejemplo inventado:**
-- La tarja trae 1.000 embarcadas, de las que 20 son caídas, 10 rechazadas y 10 faltantes: quedan **960 recibidas**.
-- Precio pactado $7,00, oficial $7,50, materiales $400, retención 1 %.
-
-| Concepto | Valor |
-|---|---|
-| Anticipo 80 % (semana N) = 1.000 × 7,00 × 0,80 | 5.600,00 |
 | Fruta en la LQ = 960 × 7,00 | 6.720,00 |
 | − Materiales | −400,00 |
-| − Retención (1 % de 960 × 7,50 = 7.200) | −72,00 |
-| = Neto | 6.248,00 |
-| − Anticipo 80 % pagado | −5.600,00 |
-| **Cuota 20 % (semana N+1)** | **648,00** |
+| − Retención (1 % de 960 × máx(7,00; 7,50) = 7.200) | −72,00 |
+| = Neto antes del 80 % | 6.248,00 |
+| − Anticipo 80 % ya pagado | −5.600,00 |
+| **Semana N+1: SALDO SPOT** | **648,00** |
 
-**El 80 % se calcula sobre embarcadas y la LQ sobre recibidas,** así que con muchas caídas, rechazadas o faltantes el 80 % puede quedar **por encima** del neto. Eso es **SALDO A FAVOR DE AGAT**: no se paga cuota y la diferencia se descuenta en la siguiente liquidación del vendedor (pregunta 4). Ver también 3.4.
+Si el 80 % no llegó a salir al banco, la LQ lo anula y la cuota es de 6.248,00 (3.4).
 
-**Código que hay que cambiar en la fase 0** (lo programa la sesión principal):
+### 3.3 FASE 0 — EN PRODUCCIÓN (17/11/2026)
 
-| Archivo | Hoy | Cambio |
+Lo que quedó programado (`DESARROLLO.md`, entrada del 17/11):
+
+| Tema | Implementado | Diferencia con el borrador anterior |
 |---|---|---|
-| `SettlementController::calcular()` (líneas ~363-421) y `quotas()` (~líneas 56-86) | `pagadas = embarcadas + caídas` | `recibidas = embarcadas − caídas − rechazadas − faltantes`. Se suma `t_faltantes`; `boxes_paid` pasa a guardar las **recibidas**. |
-| `SettlementController::store()` y `pagos()` | Copian `boxes_fallen` y `boxes_rejected` | Copiar también `boxes_missing`. La retención se calcula sobre las recibidas. |
-| `TallySheetController` (línea 73 y validación de las líneas 48-49) | Rechaza solo si embarcadas + caídas + rechazadas = 0 | Exigir **embarcadas > 0** y caídas + rechazadas + faltantes ≤ embarcadas. Mensaje: "LAS CAÍDAS, RECHAZADAS Y FALTANTES NO PUEDEN SUMAR MÁS QUE LAS EMBARCADAS". Agregar `boxes_missing` a la lista de campos (línea 28) y a la comparación de cambios (línea 129). |
-| `VoyageCostController::comprasDelViaje()` (línea ~364) | `SUM(boxes_shipped + boxes_fallen)` | `SUM(boxes_shipped − boxes_fallen − boxes_rejected − boxes_missing)`. La **Ganancia por viaje** y el **Tablero financiero** (`TableroFinanciero` usa `gananciaDelViaje`) se corrigen solos. |
-| `ShipmentClosingController` (línea ~258) | Suma embarcadas, caídas y rechazadas por barco, cliente y marca | Agregar **faltantes** y **recibidas**. El cruce con el INGRESO del puerto sigue contra **EMBARCADAS** (bruto). |
-| Frontend: `TallySheetPage.jsx`, `TalliesPage.jsx`, `SettlementFormPage.jsx`, `SettlementDetailPage.jsx`, `SettlementsPage.jsx`, `ShipmentClosingPage.jsx` | Columnas embarcadas / caídas / rechazadas | Columna **FALTANTES** y columna calculada **RECIBIDAS**, que no se escribe (**pregunta 34**). El rótulo "a pagar" pasa a "RECIBIDAS". |
+| Migración | **`2026_11_17_000001_liquidacion_fase0`** | El borrador decía `2026_11_18_000000_tarjas_faltantes_recibidas`: **ese nombre ya no aplica**. |
+| FALTANTES | `boxes_missing` en `tally_sheets`, `settlement_lines` y `settlements`; CHECK caídas + rechazadas + faltantes ≤ embarcadas; la migración se detiene si una tarja vieja no cumple | — |
+| RECIBIDAS | Accesor `TallySheet::boxes_received`; en la LQ, `boxes_paid` = recibidas | — |
+| Pago sobre recibidas | Fruta, factura al oficial, NC, transporte reconocido y bono. Transporte descontado solo si hay recibidas. Ganancia por viaje, Tablero financiero y Cierre de embarque usan recibidas (el cruce con el INGRESO del puerto sigue con embarcadas). | Las compras **sin tarja no entran** en la LQ. |
+| LQ por contrato y SPOT | `settlements.negotiation_type`, `contract_id`, `group_label` ("CONTRATO n", "SPOT"); índice único por cupo y grupo; se crean y se anulan juntas | — |
+| Descuentos | Materiales y anticipos en la LQ de **mayor valor de fruta** | Resuelve la P16 |
+| Retención | `retention_regime`, `retention_base`, `retention_rate` (7,4), `retention_amount` en `settlements`; por LQ; tramo por recibidas | **Base = recibidas × el mayor entre real y oficial** (sin oficial, el mínimo de la semana). Se resta en el primer pago. |
+| Bloqueos | No se liquida sin contrato en compra CONTRATO (R1), sin precio real (R2) ni sin parámetros de la semana (R3) | — |
 
-**Migración de la fase 0** (aparte de la de 7.2 y antes que ella): `2026_11_18_000000_tarjas_faltantes_recibidas.php`
+**Tarja WK45 del 05/11 (id 1):** 500 embarcadas, 10 caídas, 20 rechazadas. **Es correcta** (Peter, 17/11): 500 son las del camión y se pagan **470 recibidas**. **No se corrige**; el script de corrección que se había previsto **se descarta**.
 
-```php
-<?php
-
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
-
-// 18/11/2026: regla de Peter (17/11, con el personal de tarjas):
-//   RECIBIDAS = EMBARCADAS − CAÍDAS − RECHAZADAS − FALTANTES. EMBARCADAS es el total (bruto).
-//   La liquidación paga RECIBIDAS; el anticipo 80 % SPOT se calcula sobre EMBARCADAS.
-//   RECIBIDAS no se guarda en la tarja (se calcula); en la liquidación queda congelada en boxes_paid.
-return new class extends Migration
-{
-    public function up(): void
-    {
-        // Antes de poner el CHECK: si alguna tarja vieja quedó con caídas + rechazadas > embarcadas
-        // (regla del 29/10: eran categorías separadas), se detiene para revisarla a mano con siae-datos.
-        $malas = DB::table('tally_sheets')->whereRaw('boxes_fallen + boxes_rejected > boxes_shipped')->count();
-        if ($malas > 0) {
-            throw new RuntimeException("HAY {$malas} TARJAS CON CAÍDAS + RECHAZADAS MAYORES QUE LAS EMBARCADAS: REVÍSALAS ANTES DE MIGRAR.");
-        }
-
-        Schema::table('tally_sheets', function (Blueprint $table) {
-            $table->unsignedInteger('boxes_missing')->default(0)->after('boxes_rejected'); // FALTANTES
-        });
-        DB::statement('ALTER TABLE tally_sheets ADD CONSTRAINT tally_sheets_boxes_nonneg_check CHECK (boxes_shipped >= 0 AND boxes_fallen >= 0 AND boxes_rejected >= 0 AND boxes_missing >= 0)');
-        DB::statement('ALTER TABLE tally_sheets ADD CONSTRAINT tally_sheets_boxes_parts_check CHECK (boxes_fallen + boxes_rejected + boxes_missing <= boxes_shipped)');
-
-        Schema::table('settlement_lines', function (Blueprint $table) {
-            $table->unsignedInteger('boxes_missing')->default(0)->after('boxes_rejected');
-        });
-        Schema::table('settlements', function (Blueprint $table) {
-            $table->unsignedInteger('boxes_missing')->default(0)->after('boxes_rejected');
-        });
-        // boxes_paid = RECIBIDAS (lo que se paga), congelado al liquidar
-        foreach (['settlement_lines', 'settlements'] as $t) {
-            DB::statement("ALTER TABLE {$t} ADD CONSTRAINT {$t}_boxes_missing_check CHECK (boxes_missing >= 0)");
-            DB::statement("ALTER TABLE {$t} ADD CONSTRAINT {$t}_boxes_parts_check CHECK (boxes_fallen + boxes_rejected + boxes_missing <= boxes_shipped)");
-        }
-    }
-
-    public function down(): void
-    {
-        foreach (['settlement_lines', 'settlements'] as $t) {
-            DB::statement("ALTER TABLE {$t} DROP CONSTRAINT IF EXISTS {$t}_boxes_parts_check");
-            DB::statement("ALTER TABLE {$t} DROP CONSTRAINT IF EXISTS {$t}_boxes_missing_check");
-            Schema::table($t, fn (Blueprint $table) => $table->dropColumn('boxes_missing'));
-        }
-        DB::statement('ALTER TABLE tally_sheets DROP CONSTRAINT IF EXISTS tally_sheets_boxes_parts_check');
-        DB::statement('ALTER TABLE tally_sheets DROP CONSTRAINT IF EXISTS tally_sheets_boxes_nonneg_check');
-        Schema::table('tally_sheets', fn (Blueprint $table) => $table->dropColumn('boxes_missing'));
-    }
-};
-```
-
-**`$fillable` y `$casts`:**
-- `TallySheet`, `SettlementLine` y `Settlement` agregan `boxes_missing` (`'integer'`).
-- `TallySheet` tiene un accesor `getBoxesReceivedAttribute()` para la columna RECIBIDAS de la pantalla.
-
-**Datos existentes:**
-- Producción tiene **0 liquidaciones** y **1 sola tarja** (WK45).
-- Antes de subir, `siae-datos` revisa con Liquidaciones si esa tarja se llenó con la regla vieja ("embarcadas" netas, con caídas y rechazadas aparte) o con la nueva (bruto).
-  - Si es la vieja, se corrige con un script `CARGA_BD` y simulación, usando el mismo endpoint de tarjas: embarcadas = embarcadas + caídas + rechazadas.
-  - La migración se detiene sola si encuentra una tarja que no cumple la regla.
+**Por eso la migración de la fase 1 (7.3) ya no crea las columnas de retención.**
 
 ### 3.4 Casos borde
 
 | Caso | Qué hace el sistema |
 |---|---|
-| El 80 % (sobre **embarcadas**) supera el neto de la LQ (sobre **recibidas**), por caídas, rechazadas o faltantes | Igual que la fila de abajo: **SALDO A FAVOR DE AGAT** (pregunta 4). El tablero lo marca en rojo antes de aprobar el 20 %. |
-| Los descuentos son mayores que el 20 % (saldo negativo) | **No se liquida en negativo.** El sistema propone dejar la diferencia como **SALDO A FAVOR DE AGAT**: un préstamo automático en Anticipos y préstamos que se descuenta la semana siguiente (pregunta 4). |
-| El 80 % todavía **POR APROBAR** o **RECHAZADO** al liquidar | La liquidación **anula** ese anticipo y paga todo en su cuota: no se descuenta lo que nunca se pagó. |
-| El 80 % está **en el banco** (lote generado, sin confirmar) al liquidar | Se descuenta igual, porque ya salió hacia el banco. Si después el banco lo rechaza, Contabilidad lo marca FALLIDO y vuelve a "por pagar" (no se anula). |
-| Cambian las tarjas después de aprobar el 80 % | Si la cuota no está en el banco, el sistema la **recalcula y la vuelve a POR APROBAR**. Si ya está en el banco, avisa y la diferencia se arregla en la liquidación. |
-| Se anula la liquidación | Hoy solo se permite sin pagos registrados. Ahora además pide que **ninguna cuota esté aprobada ni en el banco**: primero se rechaza la cuota y, si está en un lote, se anula el lote. |
-| Pago a otra persona (con carta) | La cuota lleva un **beneficiario** (por defecto, el vendedor). Ver 4.4. |
+| El 80 % (sobre embarcadas) supera el neto de la LQ SPOT (sobre recibidas) | La LQ se graba con cuota 0 y el exceso queda como **SALDO A FAVOR DE AGAT**: un anticipo `origin = SALDO` ligado a la LQ (`source_settlement_id`), que sale preseleccionado en la siguiente LQ del vendedor (P4). El tablero lo marca en rojo. |
+| Los anticipos **manuales** elegidos superan el neto | Error como hoy: "DESCUENTA MENOS ANTICIPO". |
+| Al liquidar, el 80 % está **POR APROBAR, APROBADO sin lote o RECHAZADO** | La LQ lo **ANULA** (`approval_status = ANULADA`, `status = false`) y paga todo en su cuota. Se bloquea con `lockForUpdate` para que Contabilidad no lo meta en un lote en ese mismo instante. |
+| Al liquidar, el 80 % está **EN BANCO o PAGADO** | Se descuenta completo. Si después el banco lo rechaza, Contabilidad lo marca FALLIDO y vuelve a "por pagar" (no se anula: ya está descontado). |
+| Anticipo **manual** sin salir al banco | **No se ofrece** para descontar: solo cuentan los ANTERIOR, EN BANCO o PAGADOS (`ProducerAdvance::saldo()`). |
+| Cambian las **EMBARCADAS** con el 80 % POR APROBAR | Se recalcula solo. |
+| Cambian las **EMBARCADAS** con el 80 % **APROBADO** (sin lote) | Solo lo puede hacer quien tiene la pantalla `liquidar` (el tarjador recibe "LA COMPRA YA TIENE ANTICIPO APROBADO: PIDE A LIQUIDACIONES QUE CORRIJA LA TARJA"). Al guardar, el 80 % se recalcula, vuelve a **POR APROBAR** y se avisa al aprobador en la campanita. |
+| Cambian las **EMBARCADAS** con el 80 % **EN BANCO o PAGADO** | Solo `liquidar`. El 80 % no cambia; el tablero avisa "TARJA CAMBIADA DESPUÉS DE PAGAR EL 80 %" y la diferencia se arregla sola en la LQ. |
+| Caídas, rechazadas o faltantes | No mueven el 80 %: el tarjador las corrige hasta que se liquide el cupo. |
+| La compra ya tuvo una LQ (aunque esté anulada) | No se crea un 80 % nuevo: todo se paga en la LQ. |
+| Se anula la liquidación | Exige que **ninguna cuota** esté APROBADA, EN BANCO o PAGADA (primero se rechaza la cuota o se anula el lote). Sus cuotas pasan a ANULADA, su SALDO a favor se desactiva y los 80 % descontados recuperan su saldo. Las tarjas del cupo se desbloquean (y queda en su historial). |
+| Pago a otra persona (con carta) | La cuota lleva `payee_third_party_id` (por defecto el vendedor). Diseño aparte (fase 2b). |
+
+### 3.5 FASE 1a — Tarjas en el puerto (pedido de Peter, 17/11)
+
+**Por qué va antes que los pagos:** el 80 % nace de la tarja. Si la tarja se llena en el puerto y con historial, el 80 % sale bien desde el primer día. Además, hoy hay un **riesgo real**: el guardado reemplaza toda la semana (`PUT /customer-orders/{id}/tallies` borra las tarjas que no vienen en la lista). Si el tarjador agrega un camión desde el celular mientras Liquidaciones tiene la semana abierta en la laptop, al guardar la laptop **se borra el camión del celular**.
+
+#### A) Historial de cada tarja
+
+**Qué hay hoy:** `TallySheet` usa `Auditable`, así que `audit_logs` ya guarda CREAR, EDITAR (campo por campo, antes → después) y BORRAR, con usuario y fecha. Solo lo ve el ADMIN en Bitácora. La tarja id 1 tiene su historial desde el 05/11 (el trait existe desde el 30/10).
+
+**Propuesta:**
+1. **Las tarjas ya no se borran** (regla 5 de `CLAUDE.md`): baja lógica con `status` y `deactivation_reason` obligatorio. "Quitar" pasa a ser **"Quitar tarja"** con icono `Ban` y motivo; en un formulario sin guardar sigue `Trash2`. Así el id de la tarja nunca desaparece y el historial por compra es una consulta simple.
+2. **Endpoint de historial acotado** (no se abre la Bitácora):
+   - `GET /tallies/{id}/history` (una tarja) y `GET /tallies/history?producer_quota_line_id=` (todas las de una compra, incluidas las quitadas).
+   - Middleware `pantalla:tarjas,liquidar`.
+   - El backend lee **solo** `audit_logs` con `table_name = 'tally_sheets'` y `record_id` de tarjas de esa compra. **Nunca** acepta `table_name` del usuario.
+   - Devuelve **solo** campos de una lista blanca: fecha, N° tarja, placa, contenedor, barco, compra, embarcadas, caídas, rechazadas, faltantes, notas, estado y motivo. **No** devuelve IP, ruta ni otros campos.
+   - Traduce: `shipment_id` → nombre del barco; `producer_quota_line_id` → "VENDEDOR — MARCA (CLIENTE)"; `status false` → "QUITADA".
+   - Agrega los eventos de la liquidación, **sin montos**: "LIQUIDADA EN LQ-#### (SPOT) EL dd/mm POR <usuario>" y "LQ ANULADA EL dd/mm POR <usuario>: <motivo>" (de `settlements` y de su bitácora).
+   - Para las tarjas borradas antes de la fase 1a (solo existen en la bitácora como BORRAR), se buscan por `changes->>'producer_quota_line_id'`.
+3. **Cómo se ve:**
+   - En la hoja de tarjas: icono **Historial** (`History`) en cada camión y en cada compra del resumen. Abre un `ModalShell` con una línea de tiempo: **CREADA** por X el 05/11 10:32 (500 / 10 / 20 / 0) → **EDITADA**: RECHAZADAS 15 → 20 → **QUITADA**: motivo → **LIQUIDADA** en LQ-####.
+   - En el detalle de la liquidación (`SettlementDetailPage`): enlace "Historial de tarjas" por compra.
+   - Botón "Ver quitadas" en la hoja de tarjas para mostrarlas en gris.
+4. **Bloqueo:** **sí**, la tarja queda bloqueada al liquidar el cupo (ya existe: "YA FUE LIQUIDADO"; se extiende a quitar y reactivar). La única forma de cambiarla es **anular la LQ** (Liquidaciones), y eso queda en el historial. Además, desde la fase 1b, las EMBARCADAS se bloquean para el tarjador cuando el 80 % ya está aprobado (3.4).
+
+#### B) Quién llena las tarjas: tipo base **TARJADOR** (recomendado)
+
+| | **TARJADOR (tipo base nuevo)** ✅ | Perfil LIQUIDACIONES restringido |
+|---|---|---|
+| Qué puede recibir | **Solo `tarjas`**, por una lista blanca en `Profile::PANTALLAS_PERMITIDAS`. Ni el ADMIN puede darle por error `liquidar` o `pagos`: el backend lo rechaza al guardar el perfil, la excepción y en `User::pantallas()`. | Cualquier pantalla de LIQUIDACIÓN, con dinero; depende de que nadie se equivoque al armar el perfil. |
+| Inicio | Automático: `inicioDe()` lleva a la primera pantalla del menú, que es Tarjas. No hace falta código. | Igual |
+| Campanita, avisos de rol | Ninguno | Los de Liquidaciones |
+| Costo | Una migración como la de LEGAL (CHECK de `users.role` y `profiles.base_role`) + el perfil | Ninguno |
+
+**Recomiendo TARJADOR:** separa a la persona del puerto de todo el dinero por sistema, no por cuidado. `tarjas` sigue con rol por defecto LIQUIDACIONES (Liquidaciones la sigue usando) y se agrega al perfil TARJADOR.
+
+**Lo que hoy expone la pantalla `tarjas` y hay que cerrar (lo ve cualquiera con esa pantalla):**
+| Fuga | Arreglo |
+|---|---|
+| `GET /customer-orders/{id}/tallies` devuelve `real_price` y `payment_scheme` de cada compra (la pantalla no los usa) | Se quitan de la respuesta. |
+| `tarjas` está en el grupo `$lectura` de `routes/api.php`: con solo esa pantalla se leen **tarifas portuarias con precios** (`port-tariff-items`, `price-history`), clientes, embarques y líneas de embarque | Se **saca `tarjas` de `$lectura`** y del middleware de `GET /customer-orders`. Liquidaciones no pierde nada: tiene otras pantallas del grupo. |
+| El listado de semanas (`TalliesPage`) usa `GET /customer-orders` | Endpoint propio `GET /tallies/weeks` (`pantalla:tarjas`): semana, año, cajas compradas, cajas con tarja y camiones; sin dinero. |
+
+El tarjador **no ve** precios, montos, anticipos ni el estado de pago. Solo ve "LIQUIDADO" (candado) y, en la fase 1b, el mensaje del 3.4 si quiere cambiar embarcadas con el 80 % aprobado.
+
+#### C) Hoja de tarjas para celular (`src/pages/liquidacion/TallySheetPage.jsx`)
+
+**Escritorio (≥ 768 px): la tabla de hoy no cambia**, salvo: icono Historial, "Quitar tarja" con motivo para las ya guardadas y el guardado nuevo (abajo).
+
+**Celular (< 768 px), con `window.matchMedia('(min-width: 768px)')` dentro de la página** (se dibuja una sola vista, sin duplicar campos):
+1. **Encabezado compacto:** "WK45 · 2026", buscador por vendedor, marca o placa, y filtro "Solo hoy".
+2. **Resumen por compra en tarjetas plegables:** vendedor — marca (cliente), COMPRADO / EMBARCADAS / RECIBIDAS, candado si está liquidado.
+3. **Lista de camiones en tarjetas:** placa, N° tarja, hora, compra, y las cuatro cifras + **RECIBIDAS** en grande. Al tocar, se edita.
+4. **Botón verde fijo abajo "+ Nuevo camión"** (copia fecha y barco del último, como hoy).
+5. **Formulario de un camión** a pantalla completa (`ModalShell`): compra (`SelectBuscable`), barco, fecha, N° tarja, placa, contenedor; **EMBARCADAS, CAÍDAS, RECHAZADAS y FALTANTES** con `CampoNumero decimales={0}` grandes (`text-2xl py-3`, teclado numérico: ya trae `inputMode="numeric"`), RECIBIDAS calculada en vivo. Botones de ancho completo: **"Guardar camión"** (verde) y "Cancelar" (rojo, texto blanco).
+6. **Guardar por camión:** cada camión se guarda solo (`POST /tallies` o `PUT /tallies/{id}`). No se reenvía la semana.
+7. **Sin señal:** si falla la red, el formulario **no se cierra ni se pierde** y dice "SIN CONEXIÓN: TUS DATOS SIGUEN AQUÍ. VUELVE A GUARDAR". El celular manda un `client_key` (UUID) por camión nuevo: si el primer envío sí llegó, el reenvío **no duplica** el camión.
+8. Opcional, global: `Layout.jsx` usa `p-6` en `<main>`; en celular conviene `p-3 md:p-6` (en escritorio no cambia nada). Se pregunta (sección 12).
+
+**Guardado seguro (celular y escritorio):**
+- Cada tarja viaja con su `updated_at`. Si otra persona la cambió antes, el backend responde **409**: "LA TARJA <N°> LA CAMBIÓ <USUARIO> A LAS hh:mm. RECARGA PARA VER LO ÚLTIMO".
+- El `PUT` de la semana (escritorio) **ya no borra** lo que no viene: manda solo las filas nuevas o cambiadas y una lista explícita `removed: [{id, reason}]`.
 
 ---
 
-## 4. Liquidaciones: "Tablero de anticipos y pagos" (la vista de "Pagos por aprobar")
+## 4. Liquidaciones: "Tablero de anticipos y pagos"
 
-### 4.0 Tablero de anticipos y pagos (pedido de Peter el 17/11; fase 1)
-Copia en el sistema el Excel "REPORTE DE ANTICIPOS WK 40" de Peter: una tabla dinámica filtrada por NEGOCIACIÓN = SPOT, con los indicadores CAJAS / ANTICIPO 80% / NEGOCIACIONES y filas agrupadas por DÍA PROCESO → COMERCIALIZA. En el SIAE, el **DÍA PROCESO es el DÍA DE CORTE** de la compra (respuesta de Peter, P18). **Es la pantalla donde se aprueba**: reemplaza la pestaña "POR APROBAR" de 4.1.
+### 4.0 Tablero (fase 1b)
+Copia en el sistema el Excel "REPORTE DE ANTICIPOS WK 40" de Peter: filtrado por NEGOCIACIÓN, con los indicadores CAJAS / ANTICIPO 80% / NEGOCIACIONES y filas agrupadas por DÍA DE CORTE → COMERCIALIZA. **Es la pantalla donde se aprueba.**
 
-**Ruta:** LIQUIDACIÓN → **Tablero de anticipos y pagos** (`/liquidacion/tablero-pagos`), con una página nueva `SettlementPaymentsBoardPage.jsx`. "Pagos e historial" queda para el historial.
+**Ruta:** LIQUIDACIÓN → **Tablero de anticipos y pagos** (`/liquidacion/tablero-pagos`), página nueva `SettlementPaymentsBoardPage.jsx`. "Pagos e historial" queda para el seguimiento.
 
-**Filtros** (arriba, en una barra):
+**Filtros:**
 
 | Filtro | Valores | Por defecto |
 |---|---|---|
-| AÑO / SEMANA | Semana ISO de compra | La semana anterior a la actual (la que se paga) |
-| NEGOCIACIÓN | SPOT / CONTRATO / TODAS | SPOT, como el Excel |
+| AÑO / SEMANA | Semana ISO de compra | La semana actual |
+| NEGOCIACIÓN | SPOT / CONTRATO / MANUAL / TODAS | SPOT, como el Excel |
 | DÍA DE CORTE | Una fecha o todas (`producer_quota_lines.cut_date`) | Todas |
-| ESTADO | SIN TARJA / POR APROBAR / APROBADO / EN LOTE / PAGADO / RECHAZADO | POR APROBAR |
-| CUOTA | 80 % / 20 % / 100 % | Todas |
-| Vendedor | Búsqueda (`SelectBuscable`) | Todos |
+| ESTADO | SIN TARJA / SIN PRECIO / POR APROBAR / APROBADO / EN LOTE / PAGADO / RECHAZADO / FALLIDO | POR APROBAR |
+| ORDEN | ANTICIPO 80 % / SALDO SPOT / 100 % CONTRATO / ANTICIPO O PRÉSTAMO MANUAL | Todas |
+| Vendedor | `SelectBuscable` | Todos |
 
-**Indicadores** (tres tarjetas arriba, como los botones del Excel):
-- **CAJAS EMBARCADAS** (suma), **TOTAL A PAGAR** (suma, en $) y **N° DE NEGOCIACIONES** (cantidad de órdenes).
-- ⚠️ **Regla: los indicadores y el total general se calculan SIEMPRE sobre las filas que se ven** con los filtros puestos.
-  - En el Excel de Peter había **3 filas ocultas que sí sumaban al total general**. El total que se veía no cuadraba con las filas visibles.
-  - En el SIAE no existen las "filas ocultas": lo que no se ve está filtrado y no suma.
-  - El backend devuelve los totales ya calculados con los mismos filtros, y la pantalla los compara con la suma de lo que muestra. Si no coinciden, sale un aviso rojo.
+**Indicadores:** CAJAS EMBARCADAS, TOTAL A PAGAR y N° DE ÓRDENES.
+- ⚠️ **Se calculan SIEMPRE sobre las filas que se ven** con los filtros puestos. En el Excel de Peter había 3 filas ocultas que sumaban al total; en el SIAE lo que no se ve está filtrado y no suma. El backend devuelve los totales con los mismos filtros y la pantalla los compara con su suma: si no coinciden, aviso rojo.
 
-**Tabla agrupada** (`TablaEstandar` con grupos, MAYÚSCULAS):
+**Tabla agrupada** (`TablaEstandar`, MAYÚSCULAS):
 
 | Columna | Qué muestra |
 |---|---|
-| ☐ | Casilla por fila. Solo se activa si la fila está POR APROBAR y el usuario puede aprobar. La casilla del encabezado del grupo marca todo el día. |
-| DÍA DE CORTE | Encabezado del grupo (`cut_date` de la compra) |
-| COMERCIALIZA | Vendedor (comercializadora o productor) |
+| ☐ | Casilla por fila, activa solo si está POR APROBAR y el usuario tiene `aprobar_pagos_liquidacion`. La del encabezado marca todo el día. |
+| DÍA DE CORTE | Encabezado del grupo (`cut_date`). Cuota de LQ: el último `cut_date` de sus compras. Sin fecha: grupo "SIN FECHA DE CORTE" al final, aprobable con aviso ámbar. |
+| COMERCIALIZA | Vendedor |
 | N° ORDEN | `ORD-AAAA-NNNNN` |
-| CUOTA | 80 % / 20 % / 100 % |
-| CAJAS EMB. | Cajas embarcadas de la tarja |
-| PRECIO PACT. | Precio pactado de la compra (`real_price`) |
-| A PAGAR | 80 % ANTICIPO, o la cuota de la liquidación |
-| CUENTA | OK / FALTA CUENTA (sin número, como la hoja PENDIENTES POR PAGAR) |
-| ESTADO | `EstadoBadge`, más el motivo si fue rechazado |
+| ORDEN | 80 % / SALDO SPOT / 100 % / MANUAL |
+| CAJAS EMB. | Embarcadas de las tarjas activas |
+| PRECIO PACT. | `real_price` |
+| A PAGAR | Monto de la orden |
+| SEMANA PAGO | Programada; editable solo en CONTRATO (+0/+1) y MANUAL, antes de aprobar |
+| CUENTA | OK / FALTA CUENTA (sin número). **No sale** en la vista de solo lectura. |
+| ESTADO | `EstadoBadge` y motivo si fue rechazado o fallido |
 
-- **Subtotal por día:** cajas, a pagar y N° de negociaciones.
-- **Total general:** lo mismo para todas las filas visibles.
-- **Precio en los subtotales y en el total = promedio ponderado por cajas** (Σ cajas × precio ÷ Σ cajas, a 4 decimales). El Excel de Peter mostraba el **MÁXIMO** en esa celda (por ejemplo $9,30 cuando el ponderado era de unos $8,69), y eso confunde.
+- **Subtotal por día** y **total general:** cajas, a pagar, N° de órdenes. **Precio = promedio ponderado por cajas** (no el máximo, como hacía el Excel).
 
 **Acciones:**
 
 | Botón | Quién | Qué hace |
 |---|---|---|
-| **Aprobar seleccionados** (verde) | `aprobar_pagos_liquidacion` | Muestra un `DialogoConfirmacion` con "VAS A APROBAR N ÓRDENES POR $X" y aprueba en lote. Si alguna ya cambió de estado, el backend la rechaza y dice cuál. |
+| **Aprobar seleccionados** (verde) | `aprobar_pagos_liquidacion` | `DialogoConfirmacion` "VAS A APROBAR N ÓRDENES POR $X" y aprueba en lote. Si alguna cambió de estado, el backend la rechaza y dice cuál. |
 | **Rechazar** (por fila, rojo) | `aprobar_pagos_liquidacion` | Motivo obligatorio |
-| **Semana de pago** (solo CONTRATO) | `aprobar_pagos_liquidacion` | Esta semana o la próxima, antes de aprobar |
-| **Exportar Excel** | Quien ve la pantalla | Exactamente las filas filtradas, con subtotales y total (el mismo cálculo) |
-| **Imprimir** | Quien ve la pantalla | Hoja A4 horizontal con los filtros puestos en el encabezado |
+| **Semana de pago** | `aprobar_pagos_liquidacion` | CONTRATO: +0/+1 sobre N+1; MANUAL: cualquier semana desde la actual |
+| **Exportar Excel** / **Imprimir** | Quien ve la pantalla | Las filas filtradas con subtotales y total; A4 horizontal con los filtros en el encabezado |
 
-**"DÍA PROCESO" = DÍA DE CORTE (RESPONDIDA por Peter, P18, 17/11):**
-- Se usa la columna que **ya existe**, `producer_quota_lines.cut_date` (la fecha de corte que Comercial pone en la compra). **No hace falta una columna nueva**: se descarta el `process_date` que se había propuesto.
-- **Anticipo 80 %:** su día es el `cut_date` de la compra (una orden = una compra).
-- **Cuota de liquidación (20 % o 100 %):** su día es el **último** `cut_date` de las compras de esa LQ. Se calcula al consultar; no se guarda.
-- **Compra sin fecha de corte:** va en un grupo **"SIN FECHA DE CORTE"** al final del tablero. Se puede aprobar, pero sale un aviso ámbar para que Comercial complete la fecha.
-- **Candado:** una vez **aprobado** el 80 %, Comercial ya no puede cambiar el `cut_date` de esa compra. Así el tablero ya aprobado no se reacomoda. Lo valida `PurchaseAllocationController` con el mensaje "LA COMPRA YA TIENE ANTICIPO APROBADO: NO SE PUEDE CAMBIAR LA FECHA DE CORTE".
-- Para filtrar y agrupar rápido se agrega un índice en `producer_quota_lines.cut_date`.
-- ⚠️ **Por verificar (pregunta 23):** en la WK40, los `cut_date` del SIAE van del **25/09 al 03/10**, pero el Excel de Peter agrupa la WK40 en **06/11/2026**. Si "DÍA PROCESO" es el día de corte, el 06/11 no cuadra. Puede ser que en el Excel esa columna tenga la fecha en que se hizo el reporte.
+**DÍA DE CORTE (P18):**
+- Se usa `producer_quota_lines.cut_date`, que ya existe; se le agrega un índice.
+- **Candado:** con el 80 % aprobado, Comercial ya no puede cambiar el `cut_date` de esa compra: "LA COMPRA YA TIENE ANTICIPO APROBADO: NO SE PUEDE CAMBIAR LA FECHA DE CORTE" (`PurchaseAllocationController`). Lo mismo para el `real_price` y el `payment_scheme`.
+- **Supuesto (P23 sin respuesta):** se agrupa por la fecha de corte real de cada compra; el 06/11 del Excel se toma como la fecha en que se hizo el reporte.
+
 ### 4.1 Pestañas de seguimiento
-En la pantalla que ya existe, **LIQUIDACIÓN → Pagos e historial** (`/liquidacion/pagos`, `SettlementHistoryPage.jsx`), se agregan pestañas. La aprobación se hace en el **Tablero** (4.0):
+En **LIQUIDACIÓN → Pagos e historial** (`SettlementHistoryPage.jsx`): **APROBADAS / EN BANCO / PAGADAS** (solo lectura), **DEVUELTAS** (rechazadas por el jefe o devueltas por Contabilidad, con motivo) e **HISTORIAL** (lo de hoy). Ya no se registran pagos aquí (P12).
 
-| Pestaña | Contenido |
+### 4.2 Reglas que valida el backend al aprobar
+
+| Acción | Regla |
 |---|---|
-| ~~POR APROBAR~~ | Pasa al **Tablero de anticipos y pagos** (4.0). |
-| **APROBADAS / EN BANCO / PAGADAS** | Seguimiento: solo se leen. |
-| **DEVUELTAS** | Las que Contabilidad devolvió o el jefe rechazó, con su motivo. |
-| HISTORIAL | Lo que la pantalla muestra hoy. |
+| Aprobar | Solo POR APROBAR. **No aprueba quien creó la liquidación o el anticipo manual** (P3); el ADMIN queda fuera de la regla. No se aprueba SIN TARJA ni SIN PRECIO. Guarda quién y cuándo. |
+| Semana programada | CONTRATO: N+1 o N+2. MANUAL: semana actual o posterior. 80 % y SALDO SPOT: fija. |
+| Rechazar | Motivo obligatorio: "ESCRIBE EL MOTIVO DEL RECHAZO." |
+| Corregir el monto | **Nadie.** Se corrige el origen (tarja, compra, anticipo manual) y se recalcula, o se anula y rehace la LQ. |
 
-Columnas de POR APROBAR: semana · vendedor · beneficiario · tipo (ANTICIPO 80 % / SALDO 20 % / 100 %) · LIQ · cajas · monto · semana programada · **cuenta (SÍ/NO, sin número)** · avisos.
-
-### 4.2 Qué se puede hacer
-
-| Acción | Quién | Reglas que valida el backend |
-|---|---|---|
-| **Aprobar en lote** (check + botón verde) | Pantalla `aprobar_pagos_liquidacion` | Solo si está POR APROBAR. **No puede aprobar quien creó la liquidación** (pregunta 3). Guarda quién aprobó y cuándo. |
-| Cambiar la **semana programada** (solo CONTRATO: esta semana o la próxima) | El mismo aprobador, antes de aprobar | Solo `+0` o `+1` respecto de la semana de liquidación. |
-| **Rechazar** con motivo | El mismo aprobador | Motivo obligatorio: "ESCRIBE EL MOTIVO DEL RECHAZO." |
-| Corregir el **monto** | **Nadie.** | El monto sale del cálculo. Para corregirlo se arregla el origen (tarjas, compra) y se **anula y rehace la liquidación**. Así nadie "ajusta" a mano un pago. |
-
-Un aviso sin bloqueo sale en ámbar:
-- "SIN CUENTA BANCARIA: CONTABILIDAD NO PODRÁ PAGAR POR EL BANCO".
-- "NC POR RECIBIR".
-
-Lo que sí bloquea es **"CUENTA CAMBIADA HACE MENOS DE X DÍAS"**: hay que confirmarlo (ver los riesgos).
+Avisos ámbar sin bloqueo: "SIN CUENTA BANCARIA: CONTABILIDAD NO PODRÁ PAGAR POR EL BANCO", "NC POR RECIBIR". El bloqueo por **cuenta cambiada** (3 días o después de aprobar, P11) es de la fase 2.
 
 ### 4.3 Quién la ve
-- El perfil **LIQUIDACIONES** ve la pestaña.
-- El **jefe** (o quien Peter diga) tiene además la pantalla `aprobar_pagos_liquidacion`.
-- Contabilidad no aprueba liquidaciones: las **paga**, y puede **devolverlas** con motivo si encuentra un problema.
+- `aprobar_pagos_liquidacion`: **solo el jefe de Liquidaciones**, dada por **excepción por persona** (P3). La migración **no** la pone en el perfil LIQUIDACIONES. Si no hay jefe, aprueba el ADMIN.
+- `pagos` (perfil LIQUIDACIONES): ve el tablero sin casillas.
+- `tablero_pagos_lectura` (nueva, perfiles GERENCIA y FINANZAS, P19): ve el tablero **sin cuentas y sin botones** (solo exportar e imprimir).
+- El TARJADOR no lo ve (lista blanca).
 
-### 4.4 Pago a otra persona (gancho, no diseño completo)
-- La cuota guarda `payee_third_party_id`: a quién se le paga. Por defecto es el vendedor.
-- El diseño de "factura y pago a otra persona con carta" (pendiente desde el 11/11) llenará ese campo **por compra**, con la carta adjunta. Solo Contabilidad o el ADMIN lo confirman.
-- Si en una misma liquidación hay compras con beneficiarios distintos, la cuota se **parte por beneficiario**: se pagan dos líneas en el TXT (pregunta 8).
+### 4.4 Pago a otra persona (gancho)
+La cuota guarda `payee_third_party_id`. El diseño "pago a otra persona con carta" (fase 2b) lo llenará por compra; si una LQ tiene dos beneficiarios, la cuota se parte y los descuentos se prorratean (P8).
 
 ---
 
 ## 5. Contabilidad: "Pagos al banco"
 
-### 5.1 Una sola bandeja, junto con las OC (recomendado)
-La pantalla que ya existe, **CONTABILIDAD → Aprobación y pago de OC** (`AccountingOrdersPage.jsx`), pasa a llamarse **"Aprobación y pago (OC y liquidaciones)"**:
+### 5.1 Una sola bandeja y un solo TXT (P6)
+Pantalla nueva **CONTABILIDAD → Pagos al banco** (`/contabilidad/pagos-banco`, `src/pages/contabilidad/BankPaymentsPage.jsx`). Los lotes salen de "Aprobación y pago de OC", que queda como **"Aprobación de OC"** (POR APROBAR y TODAS; la clave `aprobar_oc` no cambia).
 
-| Pestaña | Hoy | Con este diseño |
-|---|---|---|
-| POR APROBAR | OC | OC (sin cambios; las liquidaciones **no** pasan por aquí, las aprueba Liquidaciones) |
-| **POR PAGAR** | OC aprobadas | OC aprobadas **+ cuotas de liquidación aprobadas**. Filtro **ORIGEN** (OC / LIQUIDACIÓN / ANTICIPO 80 %) y **semana programada**. |
-| LOTES AL BANCO | Lotes de OC | Lotes mixtos, con el detalle **por línea** y su estado |
-| TODAS | OC | Todo, con filtros |
-
-¿Por qué juntas? Andrea sube **un solo TXT** al Pichincha por corrida, y así ve en un lugar todo lo que sale del banco esa semana. Si prefieres pantallas separadas, es la **pregunta 6**.
+| Pestaña | Contenido |
+|---|---|
+| **POR PAGAR** | OC aprobadas + órdenes de Liquidaciones aprobadas (80 %, saldo SPOT, 100 %, manuales) + FALLIDAS. Filtros **ORIGEN** (OC / LIQUIDACIÓN / ANTICIPO) y **semana programada**. |
+| **LOTES AL BANCO** | Lotes mixtos con el detalle por línea y su estado |
+| **PAGADAS** | Historial con forma de pago, referencia y comprobante |
 
 ### 5.2 Lote de pago y TXT
 - Se marcan líneas → **Revisar** (como el `preview` de hoy: dice cuáles no se pueden pagar y por qué) → **Generar archivo Pichincha**.
-- Al generar, por cada línea se **congela una copia** del beneficiario y de su cuenta en la línea del lote: banco, tipo, número **cifrado**, titular e identificación.
-  - Así, si alguien cambia la cuenta después, el lote no cambia.
-  - Volver a bajar el TXT da exactamente el mismo archivo.
-- La referencia de pago de una liquidación es la del Excel, cortada a 40 caracteres: `NOMBRE CORTO LIQ <cajas> <marca> WKxx`. Si no cabe, se prioriza el **N° de orden** (`ORD-…`), para cruzar el pago con el banco.
-- `PichinchaPagos` se cambia para leer **líneas de lote**, y ya no OC directamente. El formato sigue **PROVISIONAL** hasta tener un TXT real.
+- **Una línea del TXT por cada orden** (P20), para cruzar cada pago 1 a 1 con su `ORD-…`.
+- Al generar, cada línea **congela una copia** del beneficiario y su cuenta (banco, tipo, número **cifrado**, titular, identificación **cifrada**). Volver a bajar el TXT da el mismo archivo.
+- Referencia (40 caracteres): `NOMBRE CORTO LIQ <cajas> <marca> WKxx`; si no cabe, manda el `ORD-…`.
+- `PichinchaPagos` lee **líneas de lote**. El formato sigue **PROVISIONAL** hasta tener un TXT real (R6).
 
 ### 5.3 Registro del pago, pago fallido y reverso
 
 | Situación | Qué hace Contabilidad | Efecto |
 |---|---|---|
-| El banco pagó todo | Lote → **PAGADO** (fecha de pago, referencia del banco y comprobante PDF o foto opcional) | Todas las líneas → PAGADO; cuotas y OC → PAGADA |
-| El banco rechazó algunas líneas | Marca cada línea **FALLIDO** con el motivo y el resto PAGADO | Lote → **PAGADO_PARCIAL**. La cuota fallida vuelve a **POR PAGAR** y puede ir en otro lote, una vez corregida la cuenta. |
-| El banco rechazó todo o se generó por error | Lote → **ANULADO** con motivo (como hoy) | Todo vuelve a POR PAGAR |
-| Se pagó **fuera** del TXT (cheque, transferencia manual) | **Registrar pago manual**: forma de pago, fecha, referencia, comprobante | Cuota → PAGADA, sin lote. Es lo que hoy hace "registrar pago" en Liquidaciones, que pasa a Contabilidad. |
-| Se registró por error | **Reversar pago** con motivo obligatorio (solo `pagar_liquidaciones` o ADMIN) | Cuota → POR PAGAR. Queda en la bitácora. **No** se reversa una línea de un lote PAGADO sin antes marcarla FALLIDA. |
-| **Pago parcial** de una cuota (pagar $500 de $925) | **No se permite** (pregunta 7) | Una cuota se paga entera. Para pagar en partes, Liquidaciones tendría que partirla. |
+| El banco pagó todo | Lote → **PAGADO** (fecha, referencia del banco) | Líneas → PAGADO; órdenes y OC → PAGADA |
+| El banco rechazó algunas líneas | Marca cada una **FALLIDA** con motivo | Lote → **PAGADO_PARCIAL**; la orden fallida vuelve a POR PAGAR (estado FALLIDA) |
+| Se generó por error o el banco rechazó todo | Lote → **ANULADO** con motivo | Todo vuelve a POR PAGAR |
+| Pagó fuera del TXT | **Pago manual**: forma (TRANSFERENCIA, CHEQUE o **CRUCE**, P15), fecha, referencia, comprobante | Orden → PAGADA, sin lote |
+| Registró por error | **Reversar** con motivo | Orden → POR PAGAR. No se reversa una línea de un lote PAGADO sin marcarla antes FALLIDA. |
+| Encontró un problema (cuenta, monto) | **Devolver a Liquidaciones** con motivo | Orden → RECHAZADA (pestaña DEVUELTAS) |
+| Pago parcial de una orden | **No se permite** (P7) | — |
 
-### 5.4 Estados de punta a punta
+### 5.4 Estados
 
 ```
                 ┌────────── RECHAZADA (motivo) ◄───┐
@@ -395,25 +314,28 @@ CALCULADA ──► POR_APROBAR ──(check)──► APROBADA ──(lote TXT)
    (sistema)       │                    ▲   │                        │
                    │                    │   └─(pago manual)──────────┼──► PAGADA
                    │                    └──────── FALLIDA ◄──────────┘ (banco rechazó la línea)
-                   └──► ANULADA  (se anuló la liquidación o el 80 % quedó sin pagar al liquidar)
+                   └──► ANULADA  (se anuló la LQ, o el 80 % no salió al banco antes de liquidar)
 ```
 
-Se guardan dos columnas, como en las OC: **`approval_status`** (POR_APROBAR, APROBADA, RECHAZADA, ANULADA, ANTERIOR) y **`payment_status`** (vacío, EN_BANCO, PAGADA, FALLIDA).
+Dos columnas, como en las OC: **`approval_status`** (POR_APROBAR, APROBADA, RECHAZADA, ANULADA, ANTERIOR) y **`payment_status`** (vacío, EN_BANCO, PAGADA, FALLIDA).
 
-### 5.5 Quién ve qué
+### 5.5 Quién hace qué en Contabilidad (P21: pantallas por persona, no nombres fijos)
 
-| Pantalla (clave) | Tipo base inicial | Ve | Hace |
+En Contabilidad hay varias personas (Andrea, una contadora y otras). Se separan **tres permisos**; Peter decide en **Perfiles y permisos** quién tiene cuál (perfil + excepciones por persona).
+
+| Pantalla (clave) | `solo` | Quién (sugerido) | Qué puede hacer |
 |---|---|---|---|
-| `pagos` *(existe)* | LIQUIDACIONES | Cuotas y su estado; la cuenta solo como SÍ/NO | Nada nuevo: ya **no** registra pagos (ese permiso pasa a Contabilidad) |
-| `aprobar_pagos_liquidacion` *(nueva, `solo: LIQUIDACIONES`)* | LIQUIDACIONES (dárselo solo al jefe) | POR APROBAR | Aprobar, rechazar, semana programada |
-| `aprobar_oc` *(existe)* | CONTABILIDAD | OC | Como hoy |
-| `pagar_liquidaciones` *(nueva, `solo: CONTABILIDAD`)* | CONTABILIDAD | Cuotas aprobadas, con la cuenta enmascarada `****1234` | Lote, TXT, pagado, fallido, pago manual, reverso, devolver |
-| `cuentas_bancarias` *(existe)* | CONTABILIDAD | Cuentas completas | Como hoy |
-| `asientos_contables` *(nueva, fase 3)* | CONTABILIDAD | Asientos sugeridos | Exportar |
+| `aprobar_oc` *(existe)* | — | La aprobadora única de OC (como hoy) | Aprobar o rechazar OC. **Ya no** arma lotes. |
+| `pagos_banco` *(nueva)* | CONTABILIDAD | Quien **prepara** (contadora y la jefa) | Ver POR PAGAR, **Revisar**, **generar el lote y el TXT**, bajarlo de nuevo, **anular un lote GENERADO**, **devolver** una orden a Liquidaciones. Ve la cuenta enmascarada `****1234`. |
+| `confirmar_pagos` *(nueva, permiso dentro de Pagos al banco)* | CONTABILIDAD | Quien **sube al banco y confirma** (la jefa) | Marcar lote **PAGADO / PAGADO_PARCIAL** con fallidas, **pago manual**, **reverso**. Necesita también `pagos_banco` para ver la pantalla. |
+| `cuentas_bancarias` *(existe)* | — | Quien Peter diga | Cuentas completas (hoy incluye PROVEEDOR; se agregan PRODUCTOR y COMERCIALIZADORA) |
+| `asientos_contables` *(fase 3)* | CONTABILIDAD | — | Exportar asientos |
 
-- **El ADMIN** puede todo, como siempre.
-- **Por qué `solo`:** con `solo` ningún perfil de Liquidaciones puede recibir la pantalla de pagar, y ningún perfil de Contabilidad la de aprobar liquidaciones. Así la segregación la garantiza el sistema y no depende de que alguien arme bien un perfil.
-- **BODEGUERO** no aplica.
+- **Perfil por defecto CONTABILIDAD:** la migración le agrega `pagos_banco` y `confirmar_pagos`, así **nadie pierde lo que hace hoy** con los lotes de OC.
+- **Para separar funciones:** Peter crea en Perfiles un perfil **"CONTABILIDAD ASISTENTE"** (tipo base CONTABILIDAD) con `pagos_banco` y, si aplica, `cuentas_bancarias`; o le quita `confirmar_pagos` a la persona con una excepción.
+- **No se bloquea** que la misma persona genere y confirme: el portal del Pichincha ya pide la aprobación con el token de quien sube. Si Peter quiere bloquearlo en el SIAE, es una línea en `batchPaid` (sección 12).
+- **Por qué `solo`:** ningún perfil de Liquidaciones puede recibir pantallas de pagar, ni Contabilidad la de aprobar liquidaciones. La segregación la garantiza el sistema.
+- **El ADMIN** puede todo. **BODEGUERO** y **TARJADOR** no aplican.
 
 ---
 
@@ -518,64 +440,54 @@ Fuente: plan de cuentas de AGAT exportado de Contífico (617 cuentas; columnas C
 - `accounting_account_mappings`: concepto C1–C15 → cuenta; para C7, una por categoría de insumo; para C13, una por cuenta bancaria de AGAT.
 - Ambas tablas con modelo `Auditable` y pantalla `asientos_contables` (solo CONTABILIDAD). La migración se diseña cuando Contabilidad confirme el mapeo.
 - **Hasta entonces (fase 2),** el exportable "PAGOS Y RETENCIONES" ya sale con estos códigos propuestos en una columna "CUENTA SUGERIDA".
+
 ---
 
-## 7. Base de datos: cambios sobre lo que ya existe
+## 7. Base de datos y código: cambios sobre lo que ya existe
 
-**Qué se reutiliza tal cual:**
-- `settlements`, `settlement_lines`, `settlement_advances`.
-- `banks`, `third_party_bank_accounts` (cifrada).
-- `bank_payment_batches`, `RetencionBanano`, `retention_brackets`, `settlement_week_parameters`.
-- Perfiles y `config/pantallas.php`.
+**Se reutiliza tal cual:** `settlements` (con lo de la fase 0), `settlement_lines`, `settlement_advances` (también para el 80 % descontado), `banks`, `third_party_bank_accounts` (cifrada), `bank_payment_batches`, `RetencionBanano`, `retention_brackets`, `settlement_week_parameters`, `audit_logs`, `notifications` (campanita), perfiles y `config/pantallas.php`.
 
-**No se crea** una tabla paralela de "pagos": se **extienden** `settlement_payments` (cuotas de liquidación) y `producer_advances` (el 80 % es un anticipo). Solo es nueva la **línea del lote** (`bank_payment_batch_items`), que hoy no existe porque el lote apunta a la OC directamente.
+**No se crea** una tabla paralela de "pagos": se **extienden** `settlement_payments` (cuotas) y `producer_advances` (80 %, manuales y saldo a favor). Solo es nueva la **línea del lote** (`bank_payment_batch_items`).
 
 ### 7.1 Tablas y columnas
 
+**Fase 1a (tarjas):**
+
 | Tabla | Cambio | Tipo / regla | Para qué |
 |---|---|---|---|
-| `contracts` | + `payment_week_offset` | smallint, default 0, CHECK IN (0,1) | CONTRATO: pagar en la semana de liquidación (0) o en la siguiente (1) |
-| `settlements` | + `retention_regime` | varchar(12), null | Régimen congelado al liquidar (NORMAL, BPA, NO_RETENER) |
-| | + `retention_rate` | decimal(5,2), default 0 | Tasa efectiva congelada |
-| | + `retention_amount` | decimal(12,2), default 0 | Retención IR (se resta del neto) |
-| `producer_advances` | + `producer_quota_id` | FK → producer_quotas, null, índice | Cupo del anticipo 80 % automático |
-| | + `payment_order_code` | varchar(20), único, null | N° de orden `ORD-AAAA-NNNNN` |
-| | + `origin` | varchar(10), default 'MANUAL', CHECK IN ('MANUAL','SPOT_80','SALDO') | Manual (hoy), 80 % SPOT, saldo a favor de AGAT |
-| | + `boxes` | integer, null | Cajas embarcadas con que se calculó el 80 % |
+| `users`, `profiles` | CHECK de `role` / `base_role` | + 'TARJADOR' | Tipo base de la persona del puerto |
+| `profiles` | fila nueva | TARJADOR, `screens = ['tarjas']` | Perfil inicial |
+| `tally_sheets` | + `status` | boolean, default true | Baja lógica: ya no se borran |
+| | + `deactivation_reason` | varchar(255), null; CHECK `status OR deactivation_reason IS NOT NULL` | Motivo al quitar |
+| | + `client_key` | uuid, null, **único** | El celular no duplica un camión al reenviar |
+| | índice parcial | `(producer_quota_line_id) WHERE status` | Sumas de tarjas activas |
+
+**Fase 1b (pagos):**
+
+| Tabla | Cambio | Tipo / regla | Para qué |
+|---|---|---|---|
+| `contracts` | + `payment_week_offset` | smallint, default 0, CHECK IN (0,1) | CONTRATO: pagar en N+1 (0) o N+2 (1); lo pone LEGAL (P2) |
+| `settlements` | + `advance_80_amount` | decimal(12,2), default 0, CHECK ≥ 0 | 80 % descontado en la LQ SPOT (columna "ANTICIPO 80%" del Excel) |
+| `producer_advances` | + `producer_quota_id`, `producer_quota_line_id` | FK null | Cupo y **negociación** del 80 % |
+| | + `source_settlement_id` | FK → settlements, null | LQ que generó un SALDO A FAVOR |
+| | + `payment_order_code` | varchar(20), único, null | `ORD-AAAA-NNNNN` |
+| | + `origin` | varchar(10), default 'MANUAL', CHECK IN ('MANUAL','SPOT_80','SALDO') | |
+| | + `boxes` | integer, null | Embarcadas con que se calculó el 80 % |
 | | + `scheduled_week`, `scheduled_year` | smallint, null | Semana ISO programada |
-| | + estados y aprobación (como `settlement_payments`) | ver abajo | |
-| | + `producer_quota_line_id` | FK → producer_quota_lines, null, índice | **Negociación** (compra) del 80 % |
-| `producer_quota_lines` | + índice en `cut_date` (la columna ya existe) | index | DÍA DE CORTE del tablero (P18) |
-| | índice único parcial | `(producer_quota_line_id) WHERE origin='SPOT_80' AND status` | Un solo 80 % activo **por negociación** |
-| `settlement_payments` | + `payment_order_code` | varchar(20), único, null | N° de orden (mismo correlativo) |
-| | + `approval_status` | varchar(15), default 'POR_APROBAR', CHECK IN ('POR_APROBAR','APROBADA','RECHAZADA','ANULADA','ANTERIOR') | |
-| | + `approved_by` (FK users), `approved_at` (timestamp), `rejection_reason` (text) | null | |
-| | + `scheduled_week`, `scheduled_year` | smallint, null | Semana programada |
-| | + `payee_third_party_id` | FK → third_parties, null (null = el vendedor) | Pago a otra persona |
-| | + `payment_status` | varchar(10), null, CHECK IN ('EN_BANCO','PAGADA','FALLIDA') | |
-| | + `payment_method` | varchar(15), null, CHECK IN ('LOTE_BANCO','TRANSFERENCIA','CHEQUE','CRUCE') | |
-| | + `voucher_path` | varchar(255), null | Comprobante (PDF o foto) en `storage/app/private` |
-| | índice | `(approval_status, payment_status)` | Bandejas |
-| | *(existentes)* `paid_at`, `reference`, `paid_by` | sin cambio | Fecha, referencia del banco y quién registró |
-| **`bank_payment_batch_items`** *(nueva)* | `bank_payment_batch_id` | FK, índice | Línea del TXT |
-| | `source_type` | varchar(12), CHECK IN ('OC','LIQUIDACION','ANTICIPO') | |
-| | `purchase_order_id` / `settlement_payment_id` / `producer_advance_id` | FK null; CHECK: **exactamente uno**, acorde a `source_type` | |
-| | `payee_third_party_id` | FK → third_parties | |
-| | `amount` | decimal(12,2), CHECK > 0 | |
-| | `bank_id`, `account_type`, `account_number` (**text cifrado**), `holder_id_type`, `holder_id`, `holder_name` | Copia congelada de la cuenta | Que un cambio de cuenta no altere el lote |
-| | `reference` | varchar(40) | Lo que va al banco |
-| | `status` | varchar(10), default 'EN_BANCO', CHECK IN ('EN_BANCO','PAGADO','FALLIDO','ANULADO') | Estado de la línea (mismo patrón que `bank_payment_batches.status`) |
-| | `failure_reason` (text), `paid_at` (date), `bank_reference` (varchar 60) | null | |
-| | **índices únicos parciales** | `(settlement_payment_id)`, `(producer_advance_id)` y `(purchase_order_id)` `WHERE status IN ('EN_BANCO','PAGADO')` | **Lo mismo no puede estar en dos lotes vivos: evita pagar dos veces a nivel de base** |
+| | + `approval_status`, `approved_by`, `approved_at`, `rejection_reason` | como las OC | Aprobación |
+| | + `payment_status`, `payment_method`, `paid_at`, `payment_reference`, `paid_by`, `voucher_path` | como las OC | Pago |
+| | índice único parcial | `(producer_quota_line_id) WHERE origin='SPOT_80' AND status` | Un solo 80 % activo por negociación |
+| `producer_quota_lines` | índice en `cut_date` | index | DÍA DE CORTE del tablero |
+| `settlement_payments` | + `payment_order_code`, `approval_status`, `approved_by`, `approved_at`, `rejection_reason`, `scheduled_week`, `scheduled_year`, `payee_third_party_id`, `payment_status`, `payment_method`, `voucher_path` | como arriba | |
+| **`bank_payment_batch_items`** *(nueva)* | lote, `source_type` (OC / LIQUIDACION / ANTICIPO), una FK por origen (CHECK: exactamente una), beneficiario, `amount` (> 0), copia de la cuenta (`account_number` y `holder_id` **cifrados**), `reference` (40), `status` (EN_BANCO / PAGADO / FALLIDO / ANULADO), `failure_reason`, `paid_at`, `bank_reference` | | Línea del TXT |
+| | índices únicos parciales por origen `WHERE status IN ('EN_BANCO','PAGADO')` | | **Nada en dos lotes vivos: candado contra el doble pago** |
 | `bank_payment_batches` | CHECK de `status` | + 'PAGADO_PARCIAL' | |
-| | + `company_bank_account_id` | FK null (fase 2) | De qué cuenta de AGAT sale |
-| **`company_bank_accounts`** *(nueva, fase 2)* | `bank_id`, `account_type`, `account_number` (cifrado), `alias`, `status` (bool) | | Cuentas de AGAT (origen) |
+| secuencia `payment_order_seq` | nueva | | Correlativo de `ORD-…` compartido |
+| `company_bank_accounts` | *(fase 2, otra migración)* | | Cuentas de AGAT de origen (P9) |
 
-**`purchase_orders.bank_payment_batch_id`** se mantiene y se sigue llenando, para no romper lo que ya está en producción. El detalle del lote se lee de `bank_payment_batch_items`.
+### 7.2 Migración FASE 1a
 
-### 7.2 Migración propuesta (fase 1)
-
-`database/migrations/2026_11_18_000001_pagos_liquidaciones.php`
+`database/migrations/2026_11_18_000001_tarjas_puerto_historial.php` (la fecha final es la del día en que se programe; debe ir **antes** que la de 1b).
 
 ```php
 <?php
@@ -585,37 +497,127 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
-// 18/11/2026: PAGOS DE LIQUIDACIONES → CONTABILIDAD (diseño docs/modulos/pagos-liquidaciones.md).
-//   - Cuotas de liquidación (settlement_payments) y anticipos (producer_advances) con aprobación
-//     (Liquidaciones) y estado de pago (Contabilidad), igual que las OC.
-//   - SPOT: el 80 % es un anticipo automático (origin SPOT_80) por cupo; la liquidación lo descuenta.
-//   - CONTRATO: semana de pago = liquidación + payment_week_offset (0/1).
-//   - Lotes al banco con líneas (bank_payment_batch_items) y copia congelada de la cuenta (cifrada).
-//   - Retención IR congelada en la liquidación (si la parte 3 ya la creó, no se repite).
+// 18/11/2026: TARJAS EN EL PUERTO (fase 1a de docs/modulos/pagos-liquidaciones.md, sección 3.5).
+//   1. Tipo base TARJADOR: la persona del puerto solo puede tener la pantalla 'tarjas'
+//      (lista blanca en Profile::PANTALLAS_PERMITIDAS). Nunca ve precios ni montos.
+//   2. Las tarjas ya no se borran: baja lógica con status y motivo, para que el historial
+//      (audit_logs) quede completo desde que se crean hasta que se liquidan.
+//   3. client_key: el celular manda una clave por camión nuevo; si la señal falla y reenvía, no se duplica.
+return new class extends Migration
+{
+    private const ROLES_ANTES = "'ADMIN','JEFE_BODEGA','COORDINADOR_INVENTARIO','BODEGUERO','EXPORTACIONES','COMERCIAL','GERENCIA','FINANZAS','CONTABILIDAD','DEPARTAMENTO','LIQUIDACIONES','LEGAL'";
+
+    public function up(): void
+    {
+        // 1) Tipo base TARJADOR (la base valida los tipos, como en 2026_11_12_000002_departamento_legal)
+        DB::statement('ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check');
+        DB::statement('ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN (' . self::ROLES_ANTES . ",'TARJADOR'))");
+        DB::statement('ALTER TABLE profiles DROP CONSTRAINT IF EXISTS profiles_base_role_check');
+        DB::statement('ALTER TABLE profiles ADD CONSTRAINT profiles_base_role_check CHECK (base_role IN (' . self::ROLES_ANTES . ",'TARJADOR'))");
+        if (!DB::table('profiles')->where('name', 'TARJADOR')->exists()) {
+            DB::table('profiles')->insert([
+                'name' => 'TARJADOR', 'base_role' => 'TARJADOR',
+                'description' => 'Personal de tarjas en el puerto: registra los camiones (embarcadas, caídas, rechazadas y faltantes) desde el celular. No ve precios ni montos.',
+                'screens' => json_encode(['tarjas']),
+                'status' => true, 'created_at' => now(), 'updated_at' => now(),
+            ]);
+        }
+
+        // 2) y 3) Tarjas con baja lógica y clave del celular
+        Schema::table('tally_sheets', function (Blueprint $table) {
+            $table->boolean('status')->default(true);
+            $table->string('deactivation_reason', 255)->nullable(); // motivo al quitar la tarja
+            $table->uuid('client_key')->nullable()->unique();       // reenvío desde el celular sin duplicar
+        });
+        DB::statement('ALTER TABLE tally_sheets ADD CONSTRAINT tally_sheets_motivo_check CHECK (status OR deactivation_reason IS NOT NULL)');
+        DB::statement('CREATE INDEX tally_sheets_compra_activa_idx ON tally_sheets (producer_quota_line_id) WHERE status');
+    }
+
+    public function down(): void
+    {
+        // Sin la columna status, las tarjas quitadas volverían a contar como activas: se detiene.
+        if (DB::table('tally_sheets')->where('status', false)->exists()) {
+            throw new RuntimeException('HAY TARJAS QUITADAS: NO SE PUEDE REVERTIR SIN QUE VUELVAN A SUMAR. REVÍSALAS ANTES.');
+        }
+        DB::statement('DROP INDEX IF EXISTS tally_sheets_compra_activa_idx');
+        DB::statement('ALTER TABLE tally_sheets DROP CONSTRAINT IF EXISTS tally_sheets_motivo_check');
+        Schema::table('tally_sheets', function (Blueprint $table) {
+            $table->dropUnique(['client_key']);
+            $table->dropColumn(['status', 'deactivation_reason', 'client_key']);
+        });
+
+        DB::table('profiles')->where('base_role', 'TARJADOR')->whereNotExists(
+            fn ($q) => $q->select(DB::raw(1))->from('users')->whereColumn('users.profile_id', 'profiles.id')
+        )->delete();
+        if (!DB::table('users')->where('role', 'TARJADOR')->exists()) {
+            DB::statement('ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check');
+            DB::statement('ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN (' . self::ROLES_ANTES . '))');
+        }
+        if (!DB::table('profiles')->where('base_role', 'TARJADOR')->exists()) {
+            DB::statement('ALTER TABLE profiles DROP CONSTRAINT IF EXISTS profiles_base_role_check');
+            DB::statement('ALTER TABLE profiles ADD CONSTRAINT profiles_base_role_check CHECK (base_role IN (' . self::ROLES_ANTES . '))');
+        }
+    }
+};
+```
+
+**Código de la fase 1a (lo programa la sesión principal):**
+
+| Archivo | Cambio |
+|---|---|
+| `app/Models/Profile.php` | `TIPOS_BASE` + 'TARJADOR'. Constante `PANTALLAS_PERMITIDAS = ['TARJADOR' => ['tarjas']]`. `pantallasVedadas()`: si el tipo tiene lista blanca, veda todo lo que no esté en ella. Eso ya cubre perfil, excepciones y `User::pantallas()`. |
+| `ProfileController::screens` + `src/routes/menu.js` (`pantallasDelTipo`) | Devolver y respetar la lista blanca, para que el selector de pantallas no ofrezca nada más al TARJADOR. Si la lista de tipos base está fija en el frontend (Usuarios, Perfiles), agregar TARJADOR. ⚠️ `menu.js` tiene cambios de espacios de Peter: no van en el commit. |
+| `app/Models/TallySheet.php` | `$fillable` + `status`, `deactivation_reason`, `client_key`; `$casts` + `'status' => 'boolean'`. |
+| `ProducerQuotaLine::tallies()` | `->where('status', true)`. Con eso se corrigen `SettlementController` (`withSum`/`withCount`) y `PurchaseAllocationController` línea ~597. |
+| Consultas directas a `tally_sheets` | Agregar `where status`: `PurchaseAllocationController` (~283 y ~906), `ShipmentClosingController` (~254), `VoyageCostController` (~363-364). |
+| `TallySheetController` | `cargar()`: solo activas (con `?quitadas=1`, también las quitadas) y **sin** `real_price` ni `payment_scheme`. `update()` (escritorio): sin borrado implícito; filas con `updated_at` (409 si cambió); `removed: [{id, reason}]` desactiva uno por uno. Métodos nuevos: `weeks`, `storeOne`, `updateOne`, `deactivate`, `reactivate`, `history`. Mismas validaciones de hoy (embarcadas > 0, partes ≤ embarcadas, cupo LIQUIDADO bloquea agregar, cambiar, quitar y reactivar). |
+| `routes/api.php` | Sacar `tarjas` de `$lectura` y del middleware de `GET /customer-orders`. Rutas nuevas de 7.5. |
+| Frontend | `TalliesPage.jsx` usa `GET /tallies/weeks`. `TallySheetPage.jsx`: vista celular (3.5 C), "Quitar tarja" con motivo, Historial, guardado nuevo. Modal de historial nuevo **solo si no cabe en la página** (por ejemplo `src/components/HistorialTarjaModal.jsx`, reutilizado por `SettlementDetailPage`). `src/api/settlements.js`: funciones nuevas. |
+
+### 7.3 Migración FASE 1b
+
+`database/migrations/2026_11_18_000002_pagos_liquidaciones.php` (revisada: ya **no** crea la retención, que vino en la fase 0).
+
+```php
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+
+// 18/11/2026: PAGOS DE LIQUIDACIONES → CONTABILIDAD (fase 1b de docs/modulos/pagos-liquidaciones.md).
+//   - SPOT: el 80 % es un anticipo automático (origin SPOT_80) por negociación, sobre las EMBARCADAS;
+//     la LQ SPOT lo descuenta (settlements.advance_80_amount). Si sobra, SALDO A FAVOR DE AGAT (origin SALDO).
+//   - CONTRATO: una cuota del 100 %; semana de pago = N+1 + payment_week_offset (0/1).
+//   - Anticipos y préstamos manuales también pasan por aprobación y TXT (P14).
+//   - Aprobación (jefe de Liquidaciones) y pago (Contabilidad) como las OC; lotes con líneas y cuenta congelada.
+//   - La retención IR ya está en settlements desde 2026_11_17_000001_liquidacion_fase0.
 return new class extends Migration
 {
     public function up(): void
     {
-        // 1) Contrato: pagar la semana de la liquidación (0) o la siguiente (1)
+        // 1) Contrato: pagar en la semana siguiente a la compra (0) o una más (1). Lo pone LEGAL.
         Schema::table('contracts', function (Blueprint $table) {
             $table->smallInteger('payment_week_offset')->default(0);
         });
         DB::statement('ALTER TABLE contracts ADD CONSTRAINT contracts_payment_week_offset_check CHECK (payment_week_offset IN (0,1))');
 
-        // 2) Retención congelada en la liquidación
-        Schema::table('settlements', function (Blueprint $table) {
-            if (!Schema::hasColumn('settlements', 'retention_amount')) {
-                $table->string('retention_regime', 12)->nullable();
-                $table->decimal('retention_rate', 5, 2)->default(0);
-                $table->decimal('retention_amount', 12, 2)->default(0);
-            }
-        });
+        // 2) Correlativo de órdenes de pago ORD-AAAA-NNNNN (compartido por anticipos y cuotas; seguro con concurrencia)
+        DB::statement('CREATE SEQUENCE IF NOT EXISTS payment_order_seq');
 
-        // 3) Anticipos: el 80 % SPOT automático + aprobación y pago
+        // 3) LQ SPOT: 80 % descontado, a la vista como en el Excel
+        Schema::table('settlements', function (Blueprint $table) {
+            $table->decimal('advance_80_amount', 12, 2)->default(0)->after('advances_amount');
+        });
+        DB::statement('ALTER TABLE settlements ADD CONSTRAINT settlements_advance_80_check CHECK (advance_80_amount >= 0)');
+
+        // 4) Anticipos: 80 % automático, saldo a favor y manuales, con aprobación y pago
         Schema::table('producer_advances', function (Blueprint $table) {
             $table->foreignId('producer_quota_id')->nullable()->constrained('producer_quotas');
             $table->foreignId('producer_quota_line_id')->nullable()->constrained('producer_quota_lines'); // negociación del 80 %
-            $table->string('payment_order_code', 20)->nullable()->unique(); // ORD-AAAA-NNNNN ("ID ORDEN ANTICIPO 80%")
+            $table->foreignId('source_settlement_id')->nullable()->constrained('settlements');           // LQ que dejó el SALDO
+            $table->string('payment_order_code', 20)->nullable()->unique();
             $table->string('origin', 10)->default('MANUAL');      // MANUAL | SPOT_80 | SALDO
             $table->integer('boxes')->nullable();                 // embarcadas con que se calculó el 80 %
             $table->smallInteger('scheduled_week')->nullable();
@@ -625,28 +627,28 @@ return new class extends Migration
             $table->timestamp('approved_at')->nullable();
             $table->text('rejection_reason')->nullable();
             $table->string('payment_status', 10)->nullable();     // null | EN_BANCO | PAGADA | FALLIDA
-            $table->string('payment_method', 15)->nullable();
+            $table->string('payment_method', 15)->nullable();     // LOTE_BANCO | TRANSFERENCIA | CHEQUE | CRUCE
             $table->date('paid_at')->nullable();
             $table->string('payment_reference', 60)->nullable();
             $table->foreignId('paid_by')->nullable()->constrained('users');
             $table->string('voucher_path', 255)->nullable();
             $table->index(['approval_status', 'payment_status']);
         });
-        // Los anticipos que ya existían se entregaron por fuera: quedan ANTERIOR + PAGADA (no entran a bandejas)
+        // Los anticipos que ya existían se entregaron por fuera: ANTERIOR + PAGADA (no entran a bandejas y se siguen descontando)
         DB::table('producer_advances')->update(['approval_status' => 'ANTERIOR', 'payment_status' => 'PAGADA']);
         DB::statement("ALTER TABLE producer_advances ADD CONSTRAINT pa_origin_check CHECK (origin IN ('MANUAL','SPOT_80','SALDO'))");
         DB::statement("ALTER TABLE producer_advances ADD CONSTRAINT pa_approval_status_check CHECK (approval_status IN ('POR_APROBAR','APROBADA','RECHAZADA','ANULADA','ANTERIOR'))");
         DB::statement("ALTER TABLE producer_advances ADD CONSTRAINT pa_payment_status_check CHECK (payment_status IS NULL OR payment_status IN ('EN_BANCO','PAGADA','FALLIDA'))");
         DB::statement("ALTER TABLE producer_advances ADD CONSTRAINT pa_payment_method_check CHECK (payment_method IS NULL OR payment_method IN ('LOTE_BANCO','TRANSFERENCIA','CHEQUE','CRUCE'))");
-        DB::statement("ALTER TABLE producer_advances ADD CONSTRAINT pa_spot80_quota_check CHECK (origin <> 'SPOT_80' OR (producer_quota_id IS NOT NULL AND producer_quota_line_id IS NOT NULL))");
-        // 17/11/2026: el 80 % es por NEGOCIACIÓN (compra), como el REPORTE DE ANTICIPOS de Peter
+        DB::statement("ALTER TABLE producer_advances ADD CONSTRAINT pa_spot80_check CHECK (origin <> 'SPOT_80' OR (producer_quota_id IS NOT NULL AND producer_quota_line_id IS NOT NULL))");
+        DB::statement("ALTER TABLE producer_advances ADD CONSTRAINT pa_saldo_check CHECK (origin <> 'SALDO' OR source_settlement_id IS NOT NULL)");
+        DB::statement("ALTER TABLE producer_advances ADD CONSTRAINT pa_pago_aprobado_check CHECK (payment_status IS NULL OR approval_status IN ('APROBADA','ANTERIOR'))");
         DB::statement("CREATE UNIQUE INDEX producer_advances_spot80_activo_unique ON producer_advances (producer_quota_line_id) WHERE origin = 'SPOT_80' AND status");
-        // 17/11/2026: el tablero agrupa por DÍA DE CORTE (respuesta de Peter): índice en la columna que ya existe
         Schema::table('producer_quota_lines', fn (Blueprint $table) => $table->index('cut_date'));
 
-        // 4) Cuotas de liquidación: aprobación, semana programada, beneficiario y pago
+        // 5) Cuotas de liquidación: aprobación, semana programada, beneficiario y pago
         Schema::table('settlement_payments', function (Blueprint $table) {
-            $table->string('payment_order_code', 20)->nullable()->unique(); // ORD-AAAA-NNNNN ("ID ORDEN SALDO 20%"); mismo correlativo que los anticipos
+            $table->string('payment_order_code', 20)->nullable()->unique();
             $table->string('approval_status', 15)->default('POR_APROBAR');
             $table->foreignId('approved_by')->nullable()->constrained('users');
             $table->timestamp('approved_at')->nullable();
@@ -659,17 +661,14 @@ return new class extends Migration
             $table->string('voucher_path', 255)->nullable();
             $table->index(['approval_status', 'payment_status']);
         });
-        // Las ya pagadas quedan ANTERIOR + PAGADA; las pendientes entran a POR APROBAR
         DB::table('settlement_payments')->whereNotNull('paid_at')
             ->update(['approval_status' => 'ANTERIOR', 'payment_status' => 'PAGADA', 'payment_method' => 'TRANSFERENCIA']);
         DB::statement("ALTER TABLE settlement_payments ADD CONSTRAINT sp_approval_status_check CHECK (approval_status IN ('POR_APROBAR','APROBADA','RECHAZADA','ANULADA','ANTERIOR'))");
         DB::statement("ALTER TABLE settlement_payments ADD CONSTRAINT sp_payment_status_check CHECK (payment_status IS NULL OR payment_status IN ('EN_BANCO','PAGADA','FALLIDA'))");
         DB::statement("ALTER TABLE settlement_payments ADD CONSTRAINT sp_payment_method_check CHECK (payment_method IS NULL OR payment_method IN ('LOTE_BANCO','TRANSFERENCIA','CHEQUE','CRUCE'))");
-        // No se paga lo que no está aprobado
         DB::statement("ALTER TABLE settlement_payments ADD CONSTRAINT sp_pago_aprobado_check CHECK (payment_status IS NULL OR approval_status IN ('APROBADA','ANTERIOR'))");
-        DB::statement("ALTER TABLE producer_advances ADD CONSTRAINT pa_pago_aprobado_check CHECK (payment_status IS NULL OR approval_status IN ('APROBADA','ANTERIOR'))");
 
-        // 5) Líneas del lote al banco (OC, cuota de liquidación o anticipo) con la cuenta congelada
+        // 6) Líneas del lote al banco (una por orden, P20) con la cuenta congelada y cifrada
         Schema::create('bank_payment_batch_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('bank_payment_batch_id')->constrained('bank_payment_batches');
@@ -679,12 +678,11 @@ return new class extends Migration
             $table->foreignId('producer_advance_id')->nullable()->constrained('producer_advances');
             $table->foreignId('payee_third_party_id')->nullable()->constrained('third_parties');
             $table->decimal('amount', 12, 2);
-            // Copia de la cuenta al generar (null solo en líneas históricas de OC)
-            $table->foreignId('bank_id')->nullable()->constrained('banks');
+            $table->foreignId('bank_id')->nullable()->constrained('banks'); // null solo en líneas históricas de OC
             $table->string('account_type', 10)->nullable();
             $table->text('account_number')->nullable();           // cifrado (cast 'encrypted')
             $table->string('holder_id_type', 1)->nullable();
-            $table->string('holder_id', 20)->nullable();
+            $table->text('holder_id')->nullable();                // cifrado (cédula o RUC)
             $table->string('holder_name', 120)->nullable();
             $table->string('reference', 40)->nullable();
             $table->string('status', 10)->default('EN_BANCO');    // EN_BANCO | PAGADO | FALLIDO | ANULADO
@@ -695,6 +693,7 @@ return new class extends Migration
             $table->index('bank_payment_batch_id');
         });
         DB::statement("ALTER TABLE bank_payment_batch_items ADD CONSTRAINT bpbi_status_check CHECK (status IN ('EN_BANCO','PAGADO','FALLIDO','ANULADO'))");
+        DB::statement("ALTER TABLE bank_payment_batch_items ADD CONSTRAINT bpbi_source_type_check CHECK (source_type IN ('OC','LIQUIDACION','ANTICIPO'))");
         DB::statement("ALTER TABLE bank_payment_batch_items ADD CONSTRAINT bpbi_amount_check CHECK (amount > 0)");
         DB::statement("ALTER TABLE bank_payment_batch_items ADD CONSTRAINT bpbi_source_check CHECK (
             (source_type = 'OC'          AND purchase_order_id IS NOT NULL AND settlement_payment_id IS NULL AND producer_advance_id IS NULL) OR
@@ -704,29 +703,32 @@ return new class extends Migration
         foreach (['purchase_order_id', 'settlement_payment_id', 'producer_advance_id'] as $col) {
             DB::statement("CREATE UNIQUE INDEX bpbi_{$col}_vivo_unique ON bank_payment_batch_items ({$col}) WHERE status IN ('EN_BANCO','PAGADO')");
         }
-
-        // Las OC que ya están en lotes pasan a líneas (sin copia de cuenta: no se descifra en una migración)
+        // Las OC que ya están en lotes pasan a líneas (sin copia de cuenta: no se descifra en una migración).
+        // En producción hay 0 lotes (17/11); se deja por si cambia antes de subir.
         DB::statement("INSERT INTO bank_payment_batch_items (bank_payment_batch_id, source_type, purchase_order_id, payee_third_party_id, amount, status, created_at, updated_at)
             SELECT po.bank_payment_batch_id, 'OC', po.id, po.third_party_id,
                    GREATEST(COALESCE((SELECT SUM(l.total) FROM purchase_order_lines l WHERE l.purchase_order_id = po.id), 0), 0.01),
                    CASE b.status WHEN 'PAGADO' THEN 'PAGADO' WHEN 'ANULADO' THEN 'ANULADO' ELSE 'EN_BANCO' END, now(), now()
             FROM purchase_orders po JOIN bank_payment_batches b ON b.id = po.bank_payment_batch_id");
-        // OJO al programar: confirmar que SUM(l.total) es el mismo valor que PurchaseOrder::total (accesor).
-        // Si no, llenar amount con un comando aparte que use el modelo (con simulación).
 
-        // 6) Lote pagado en parte
+        // 7) Lote pagado en parte
         DB::statement('ALTER TABLE bank_payment_batches DROP CONSTRAINT IF EXISTS bpb_status_check');
         DB::statement("ALTER TABLE bank_payment_batches ADD CONSTRAINT bpb_status_check CHECK (status IN ('GENERADO','PAGADO','PAGADO_PARCIAL','ANULADO'))");
 
-        // 7) Perfiles: pantallas nuevas (no se le quita nada a nadie). Si el JSON es jsonb, ajustar.
-        $this->agregarPantalla('LIQUIDACIONES', 'aprobar_pagos_liquidacion');
-        $this->agregarPantalla('CONTABILIDAD', 'pagar_liquidaciones');
+        // 8) Perfiles: pantallas nuevas (no se le quita nada a nadie).
+        //    aprobar_pagos_liquidacion NO va al perfil LIQUIDACIONES: es solo del jefe, por excepción (P3).
+        $this->agregarPantalla('CONTABILIDAD', 'pagos_banco');
+        $this->agregarPantalla('CONTABILIDAD', 'confirmar_pagos');
+        $this->agregarPantalla('GERENCIA', 'tablero_pagos_lectura');
+        $this->agregarPantalla('FINANZAS', 'tablero_pagos_lectura');
     }
 
     public function down(): void
     {
-        $this->quitarPantalla('LIQUIDACIONES', 'aprobar_pagos_liquidacion');
-        $this->quitarPantalla('CONTABILIDAD', 'pagar_liquidaciones');
+        foreach ([['CONTABILIDAD', 'pagos_banco'], ['CONTABILIDAD', 'confirmar_pagos'],
+                  ['GERENCIA', 'tablero_pagos_lectura'], ['FINANZAS', 'tablero_pagos_lectura']] as [$perfil, $clave]) {
+            $this->quitarPantalla($perfil, $clave);
+        }
 
         DB::statement('ALTER TABLE bank_payment_batches DROP CONSTRAINT IF EXISTS bpb_status_check');
         DB::table('bank_payment_batches')->where('status', 'PAGADO_PARCIAL')->update(['status' => 'PAGADO']);
@@ -742,36 +744,36 @@ return new class extends Migration
             $table->dropConstrainedForeignId('approved_by');
             $table->dropConstrainedForeignId('payee_third_party_id');
             $table->dropUnique(['payment_order_code']);
-            $table->dropColumn(['payment_order_code', 'approval_status', 'approved_at', 'rejection_reason', 'scheduled_week', 'scheduled_year',
-                'payment_status', 'payment_method', 'voucher_path']);
+            $table->dropColumn(['payment_order_code', 'approval_status', 'approved_at', 'rejection_reason', 'scheduled_week',
+                'scheduled_year', 'payment_status', 'payment_method', 'voucher_path']);
         });
 
         DB::statement('DROP INDEX IF EXISTS producer_advances_spot80_activo_unique');
         Schema::table('producer_quota_lines', fn (Blueprint $table) => $table->dropIndex(['cut_date']));
         foreach (['pa_origin_check', 'pa_approval_status_check', 'pa_payment_status_check', 'pa_payment_method_check',
-                  'pa_spot80_quota_check', 'pa_pago_aprobado_check'] as $c) {
+                  'pa_spot80_check', 'pa_saldo_check', 'pa_pago_aprobado_check'] as $c) {
             DB::statement("ALTER TABLE producer_advances DROP CONSTRAINT IF EXISTS {$c}");
         }
-        // Los 80 % automáticos dejan de tener sentido sin estas columnas: se desactivan (no se borran)
+        // Los 80 % automáticos y los saldos a favor no tienen sentido sin estas columnas: se desactivan (no se borran)
         DB::table('producer_advances')->where('origin', '<>', 'MANUAL')->update(['status' => false]);
         Schema::table('producer_advances', function (Blueprint $table) {
             $table->dropIndex(['approval_status', 'payment_status']);
-            $table->dropConstrainedForeignId('producer_quota_id');
-            $table->dropConstrainedForeignId('producer_quota_line_id');
-            $table->dropConstrainedForeignId('approved_by');
-            $table->dropConstrainedForeignId('paid_by');
+            foreach (['producer_quota_id', 'producer_quota_line_id', 'source_settlement_id', 'approved_by', 'paid_by'] as $fk) {
+                $table->dropConstrainedForeignId($fk);
+            }
             $table->dropUnique(['payment_order_code']);
-            $table->dropColumn(['payment_order_code', 'origin', 'boxes', 'scheduled_week', 'scheduled_year', 'approval_status', 'approved_at',
-                'rejection_reason', 'payment_status', 'payment_method', 'paid_at', 'payment_reference', 'voucher_path']);
+            $table->dropColumn(['payment_order_code', 'origin', 'boxes', 'scheduled_week', 'scheduled_year', 'approval_status',
+                'approved_at', 'rejection_reason', 'payment_status', 'payment_method', 'paid_at', 'payment_reference', 'voucher_path']);
         });
 
-        // La retención solo se quita si esta migración la creó (si vino de la parte 3, se deja)
-        // → al programar: marcar con una bandera o separar la retención en la migración de la parte 3.
-
+        DB::statement('ALTER TABLE settlements DROP CONSTRAINT IF EXISTS settlements_advance_80_check');
+        Schema::table('settlements', fn (Blueprint $table) => $table->dropColumn('advance_80_amount'));
+        DB::statement('DROP SEQUENCE IF EXISTS payment_order_seq');
         DB::statement('ALTER TABLE contracts DROP CONSTRAINT IF EXISTS contracts_payment_week_offset_check');
         Schema::table('contracts', fn (Blueprint $table) => $table->dropColumn('payment_week_offset'));
     }
 
+    // profiles.screens es jsonb: llega como texto y se guarda como JSON
     private function agregarPantalla(string $perfil, string $clave): void
     {
         foreach (DB::table('profiles')->where('name', $perfil)->where('base_role', $perfil)->get() as $p) {
@@ -794,60 +796,114 @@ return new class extends Migration
 ```
 
 **Notas para quien programe:**
-- **Retención:** si la **parte 3** (LQ/LG) se programa antes, la retención va en esa migración y aquí se quita el bloque 2. Lo ideal es dejarla en una migración propia, **fase 0**.
-- **Perfil LIQUIDACIONES:** recibe `aprobar_pagos_liquidacion`. Lo correcto es que **solo el jefe** la tenga, porque es una excepción por persona. Si Peter prefiere que nadie la tenga por defecto, se quita de la migración (pregunta 3).
-- **Fase 2** (`company_bank_accounts` y `bank_payment_batches.company_bank_account_id`): va en otra migración.
+- Al programar, confirmar que `SUM(purchase_order_lines.total)` es el mismo valor que el accesor `PurchaseOrder::total`; si no, llenar `amount` con un comando aparte que use el modelo (con simulación).
+- Código de orden: `'ORD-' . $anio . '-' . str_pad(DB::selectOne("select nextval('payment_order_seq') as n")->n, 5, '0', STR_PAD_LEFT)`.
+- Semana ISO N+1 o N+2: con `Carbon::now()->setISODate($anio, $semana)->addWeeks(k)` y leer `isoWeek`/`isoWeekYear` (cruza bien el cambio de año).
 
-### 7.3 Modelos: `$fillable` y `$casts`
+### 7.4 Modelos: `$fillable` y `$casts`
 
-| Modelo | `$fillable` + | `$casts` + |
+| Modelo | `$fillable` + | `$casts` + / notas |
 |---|---|---|
-| `Contract` | `payment_week_offset` | `'payment_week_offset' => 'integer'` |
-| `Settlement` | `retention_regime`, `retention_rate`, `retention_amount` | `'retention_rate' => 'decimal:2'`, `'retention_amount' => 'decimal:2'` |
-| `ProducerAdvance` | `producer_quota_id`, `producer_quota_line_id`, `payment_order_code`, `origin`, `boxes`, `scheduled_week`, `scheduled_year`, `approval_status`, `approved_by`, `approved_at`, `rejection_reason`, `payment_status`, `payment_method`, `paid_at`, `payment_reference`, `paid_by`, `voucher_path` | `'approved_at' => 'datetime'`, `'paid_at' => 'date:Y-m-d'`, `'boxes' => 'integer'`. Constantes `ORIGENES`. **`saldo()`** debe contar solo anticipos con `approval_status` APROBADA o ANTERIOR. |
+| `TallySheet` (1a) | `status`, `deactivation_reason`, `client_key` | `'status' => 'boolean'` |
+| `Profile` (1a) | — | `TIPOS_BASE` + TARJADOR; `PANTALLAS_PERMITIDAS` |
+| `Contract` | `payment_week_offset` | `'integer'`. LEGAL lo edita en `saveContracts` (`in:0,1`). |
+| `Settlement` | `advance_80_amount` | `'decimal:2'` |
+| `ProducerAdvance` | `producer_quota_id`, `producer_quota_line_id`, `source_settlement_id`, `payment_order_code`, `origin`, `boxes`, `scheduled_week`, `scheduled_year`, `approval_status`, `approved_by`, `approved_at`, `rejection_reason`, `payment_status`, `payment_method`, `paid_at`, `payment_reference`, `paid_by`, `voucher_path` | `'approved_at' => 'datetime'`, `'paid_at' => 'date:Y-m-d'`, `'boxes' => 'integer'`. Constante `ORIGENES`. **`saldo()`** devuelve 0 si no está ANTERIOR, EN_BANCO o PAGADA. |
 | `SettlementPayment` | `payment_order_code`, `approval_status`, `approved_by`, `approved_at`, `rejection_reason`, `scheduled_week`, `scheduled_year`, `payee_third_party_id`, `payment_status`, `payment_method`, `voucher_path` | `'approved_at' => 'datetime'` |
-| **`BankPaymentBatchItem`** *(nuevo, con `Auditable`)* | todas sus columnas | `'account_number' => 'encrypted'`, `'amount' => 'decimal:2'`, `'paid_at' => 'date:Y-m-d'`. `$hidden = ['account_number', 'holder_id']` (se enmascaran al mostrar). |
+| **`BankPaymentBatchItem`** *(nuevo, `Auditable`)* | todas sus columnas | `'account_number' => 'encrypted'`, `'holder_id' => 'encrypted'`, `'amount' => 'decimal:2'`, `'paid_at' => 'date:Y-m-d'`; `$hidden = ['account_number', 'holder_id']`; agregar `holder_id` a `$auditarEnmascarar` del trait. |
 | `BankPaymentBatch` | — | relación `items()` |
 
-Todos usan `Auditable`, ya existente o nuevo.
+**Servicio nuevo `App\Services\Anticipo80`:** `recalcular(int $producerQuotaLineId)`, llamado dentro de la misma transacción al guardar o quitar un camión, y al cambiar `real_price` o `payment_scheme` de la compra. Reglas en 3.1 y 3.4. Avisa en la campanita (`Notificaciones`) a quien tiene `aprobar_pagos_liquidacion` cuando hay órdenes nuevas o que volvieron a POR APROBAR.
 
-### 7.4 Endpoints
+**`SettlementController@store`** (fase 1b):
+- En la LQ SPOT, por cada compra con 80 % activo: EN BANCO o PAGADA → se descuenta (fila en `settlement_advances` y suma en `advance_80_amount`); si no → ANULADA.
+- Neto antes del 80 % < 0 → error como hoy. Neto final < 0 → cuota 0 y anticipo SALDO por la diferencia.
+- `pagos()` deja **una cuota por LQ**: CONTRATO "PAGO ÚNICO (100 %)", SPOT "SALDO SPOT"; con código de orden, POR_APROBAR y semana programada.
+- `annul`: pide cuotas sin aprobar ni pagar; anula cuotas y SALDO.
+- **Se retiran** `PATCH /settlements/{id}/payments/{n}/pay` y `/unpay` (P12).
+
+### 7.5 Endpoints
+
+**Fase 1a (tarjas):**
 
 | Método y ruta | Middleware | Qué hace |
 |---|---|---|
-| `GET /settlement-payables?estado=&semana=&anio=` | `pantalla:pagos,aprobar_pagos_liquidacion` | Cuotas y anticipos 80 % (unifica las dos tablas para la pantalla) |
-| `GET /settlement-payables/board?anio=&semana=&negociacion=&dia=&estado=&cuota=&vendedor=` | `pantalla:aprobar_pagos_liquidacion,pagos` (+ `tablero_pagos_lectura` si se aprueba la pregunta 19) | **Tablero.** Devuelve `{filas, grupos:[{dia, cajas, total, negociaciones, precio_ponderado}], totales:{cajas, total, negociaciones, precio_ponderado}}`, todo calculado en el servidor **con los mismos filtros** que las filas |
-| `GET /settlement-payables/board/export?…` | ídem | Excel de las mismas filas y totales (sin cuentas bancarias) |
-| `PATCH /settlement-payables/approve` `{items:[{tipo,id,scheduled_week?}]}` | `pantalla:aprobar_pagos_liquidacion` | Aprueba en lote, en una transacción con `lockForUpdate` |
-| `PATCH /settlement-payables/{tipo}/{id}/reject` `{reason}` | `pantalla:aprobar_pagos_liquidacion,pagar_liquidaciones` | Rechaza o devuelve con motivo |
-| `POST /producer-advances/spot80/recalcular?semana=&anio=` | interno, al guardar tarjas (`TallySheetController@update`) | Crea o ajusta el 80 % de cada cupo SPOT |
-| `GET /accounting/payables` | `pantalla:aprobar_oc,pagar_liquidaciones` | POR PAGAR unificado; cada usuario recibe solo los orígenes de sus pantallas |
-| `POST /accounting/bank-batches/preview` y `POST /accounting/bank-batches` `{items:[{tipo,id}]}` | `pantalla:aprobar_oc,pagar_liquidaciones` | Como hoy, pero acepta los tres orígenes. El backend revisa la pantalla según el origen de cada línea. |
-| `PATCH /accounting/bank-batches/{id}/paid` `{paid_at, bank_reference, fallidas:[{item_id, motivo}]}` | ídem | Pagado o pagado en parte |
-| `PATCH /accounting/bank-batches/{id}/cancel` | ídem | Como hoy |
-| `PATCH /accounting/payables/{tipo}/{id}/manual-pay` (multipart con comprobante) | `pantalla:pagar_liquidaciones` | Pago fuera del TXT |
-| `PATCH /accounting/payables/{tipo}/{id}/reverse` `{reason}` | `pantalla:pagar_liquidaciones` | Reverso con motivo |
-| `GET /accounting/exports/pagos-retenciones?desde=&hasta=` | `pantalla:pagar_liquidaciones` | Exportable de la opción (a) |
+| `GET /tallies/weeks` | `pantalla:tarjas` | Semanas con compras: cajas compradas, con tarja y camiones. Sin dinero. |
+| `GET /customer-orders/{id}/tallies?quitadas=0\|1` | `pantalla:tarjas` | Como hoy, **sin** `real_price` ni `payment_scheme` |
+| `PUT /customer-orders/{id}/tallies` | `pantalla:tarjas` | Escritorio: filas nuevas o cambiadas (con `updated_at`) + `removed:[{id,reason}]`. Sin borrado implícito. |
+| `POST /tallies` `{customer_order_id, client_key, …}` | `pantalla:tarjas` | Un camión nuevo. Si el `client_key` ya existe, devuelve el mismo (200). |
+| `PUT /tallies/{id}` `{…, updated_at}` | `pantalla:tarjas` | Un camión; 409 si cambió. |
+| `PATCH /tallies/{id}/deactivate` `{reason}` · `PATCH /tallies/{id}/reactivate` | `pantalla:tarjas` | Quitar con motivo ("ESCRIBE EL MOTIVO PARA QUITAR LA TARJA.") / volver a poner. Bloqueado si el cupo está LIQUIDADO. |
+| `GET /tallies/{id}/history` · `GET /tallies/history?producer_quota_line_id=` | `pantalla:tarjas,liquidar` | Historial acotado (3.5 A) |
 
-**Cambian:**
-- `PATCH /settlements/{id}/payments/{n}/pay` y `/unpay` (hoy `pantalla:pagos`) **se retiran**, porque su función pasa a `manual-pay` y `reverse` de Contabilidad.
-- `SettlementController@store` crea las cuotas en POR_APROBAR, con la semana programada y descontando el SPOT_80.
-- `annul` exige que no haya cuotas aprobadas.
+**Fase 1b (pagos):**
 
-### 7.5 Pantallas (frontend)
-- **Nuevo** `src/pages/liquidacion/SettlementPaymentsBoardPage.jsx` (**Tablero de anticipos y pagos**, sección 4.0):
-  - filtros, tres indicadores, tabla agrupada por día de proceso con subtotales y total general;
-  - checks y "Aprobar seleccionados" en verde; rechazar con `DialogoConfirmacion` y motivo;
-  - exportar e imprimir.
-  - Nueva clave de pantalla: se reutiliza `aprobar_pagos_liquidacion` para aprobar, y `pagos` para ver sin aprobar.
-- `src/pages/liquidacion/SettlementHistoryPage.jsx`: pestañas de seguimiento (APROBADAS / EN BANCO / PAGADAS / DEVUELTAS) con `EstadoBadge`.
-- `src/pages/liquidacion/SettlementDetailPage.jsx`: los botones "Registrar pago" y "Deshacer" se reemplazan por el **estado de cada cuota**.
-- `src/pages/contabilidad/AccountingOrdersPage.jsx`: POR PAGAR con el filtro ORIGEN; LOTES con el detalle por línea y "Marcar fallidas"; "Pago manual" y "Reversar".
-- `config/pantallas.php`:
-  - `aprobar_pagos_liquidacion` (LIQUIDACIÓN, `solo: ['LIQUIDACIONES']`).
-  - `pagar_liquidaciones` (CONTABILIDAD, `solo: ['CONTABILIDAD']`).
-  - Cambiar el nombre de `aprobar_oc` a "Aprobación y pago (OC y liquidaciones)", **sin cambiar la clave**.
-- `src/routes/menu.js`: **no se toca**, porque Peter tiene cambios de espacios ahí. Si hace falta, se avisa antes.
+| Método y ruta | Middleware | Qué hace |
+|---|---|---|
+| `GET /settlement-payables/board?anio=&semana=&negociacion=&dia=&estado=&orden=&vendedor=` | `pantalla:aprobar_pagos_liquidacion,pagos,tablero_pagos_lectura` | Tablero: `{filas, grupos, totales}` calculados en el servidor con los mismos filtros. Sin `cuenta` para `tablero_pagos_lectura`. |
+| `GET /settlement-payables/board/export?…` | ídem | Excel de las mismas filas (sin cuentas) |
+| `GET /settlement-payables?estado=` | `pantalla:pagos,aprobar_pagos_liquidacion` | Pestañas de seguimiento |
+| `PATCH /settlement-payables/approve` `{items:[{tipo,id,scheduled_week?,scheduled_year?}]}` | `pantalla:aprobar_pagos_liquidacion` | Aprueba en lote (transacción + `lockForUpdate`) |
+| `PATCH /settlement-payables/{tipo}/{id}/reject` `{reason}` | `pantalla:aprobar_pagos_liquidacion` | Rechaza con motivo |
+| `POST/PUT /producer-advances…` *(existen)* | `pantalla:anticipos,liquidar` | Los manuales nacen POR_APROBAR; solo se editan o desactivan si no están aprobados ni en el banco. |
+| `GET /accounting/payables?origen=&semana=` | `pantalla:pagos_banco` | POR PAGAR unificado |
+| `POST /accounting/bank-batches/preview` · `POST /accounting/bank-batches` `{items:[{tipo,id}]}` | `pantalla:pagos_banco` | Revisar y generar (OC + liquidaciones + anticipos) |
+| `GET /accounting/bank-batches` · `GET /accounting/bank-batches/{id}/file` | `pantalla:pagos_banco` | Lotes y TXT |
+| `PATCH /accounting/bank-batches/{id}/cancel` `{reason}` | `pantalla:pagos_banco` | Anular lote GENERADO |
+| `PATCH /accounting/payables/{tipo}/{id}/return` `{reason}` | `pantalla:pagos_banco` | Devolver a Liquidaciones |
+| `PATCH /accounting/bank-batches/{id}/paid` `{paid_at, bank_reference, fallidas:[{item_id, motivo}]}` | `pantalla:confirmar_pagos` | Pagado o pagado en parte |
+| `PATCH /accounting/payables/{tipo}/{id}/manual-pay` (multipart) | `pantalla:confirmar_pagos` | Pago fuera del TXT (TRANSFERENCIA / CHEQUE / CRUCE) |
+| `PATCH /accounting/payables/{tipo}/{id}/reverse` `{reason}` | `pantalla:confirmar_pagos` | Reverso con motivo |
+| Rutas de OC (`/accounting/purchase-orders…`) | `pantalla:aprobar_oc` | Sin cambio (aprobar y rechazar) |
+
+### 7.6 Pantallas y permisos (`config/pantallas.php`)
+
+| Clave | Sección | Nombre | `roles` | `solo` |
+|---|---|---|---|---|
+| `tarjas` *(existe)* | EXPORTACIONES | Tarjas | LIQUIDACIONES (+ perfil TARJADOR por migración) | — |
+| `aprobar_pagos_liquidacion` *(nueva)* | LIQUIDACIÓN | Aprobar anticipos y pagos (jefe) | — (excepción por persona) | LIQUIDACIONES |
+| `tablero_pagos_lectura` *(nueva)* | LIQUIDACIÓN | Tablero de anticipos y pagos (solo lectura) | GERENCIA, FINANZAS | — |
+| `pagos_banco` *(nueva)* | CONTABILIDAD | Pagos al banco (preparar lote y TXT) | CONTABILIDAD | CONTABILIDAD |
+| `confirmar_pagos` *(nueva, permiso)* | CONTABILIDAD | Confirmar pagos del banco (permiso) | CONTABILIDAD | CONTABILIDAD |
+| `aprobar_oc` *(existe)* | CONTABILIDAD | **Aprobación de OC** (nombre nuevo, misma clave) | CONTABILIDAD | — |
+
+**Frontend:**
+- Nuevo `src/pages/liquidacion/SettlementPaymentsBoardPage.jsx` (`/liquidacion/tablero-pagos`, `P(['aprobar_pagos_liquidacion','pagos','tablero_pagos_lectura'], …)`).
+- Nuevo `src/pages/contabilidad/BankPaymentsPage.jsx` (`/contabilidad/pagos-banco`, `pagos_banco`); los botones de confirmar solo con `confirmar_pagos`.
+- `AccountingOrdersPage.jsx`: queda con POR APROBAR y TODAS de OC; sin lotes.
+- `SettlementHistoryPage.jsx`: pestañas de seguimiento. `SettlementDetailPage.jsx`: estado de cada cuota en lugar de "Registrar pago"; enlace "Historial de tarjas"; fila "ANTICIPO 80 %".
+- `ProducerAdvancesPage` (anticipos): estado de aprobación y pago de cada anticipo manual.
+- `src/routes/menu.js` y `AppRouter.jsx`: ítems nuevos. ⚠️ Los dos tienen cambios de espacios de Peter que **no** van en el commit: agregar solo las líneas nuevas.
+
+### 7.7 Pruebas que debe hacer QA
+
+**Fase 1a (tarjas):**
+1. Usuario TARJADOR: entra directo a Tarjas; el menú solo muestra Tarjas. `GET /port-tariff-items`, `/customers`, `/shipments`, `/customer-orders`, `/settlements`, `/producer-advances` → 403.
+2. El ADMIN intenta darle `liquidar`, `pagos` o `dashboard` al perfil TARJADOR o como excepción → rechazado con mensaje en MAYÚSCULAS; `/me` no las trae aunque estén en la base.
+3. `GET /customer-orders/{id}/tallies` no trae `real_price` ni `payment_scheme` (para nadie).
+4. Concurrencia: el celular agrega un camión mientras la laptop tiene la semana abierta; la laptop guarda → el camión del celular **sigue**.
+5. Dos personas editan el mismo camión → la segunda recibe 409 con el nombre de quien cambió.
+6. Doble envío con el mismo `client_key` → un solo camión.
+7. Quitar tarja sin motivo → 422; con motivo → `status false`; deja de sumar en liquidación (preview), Cierre de embarque, Ganancia por viaje, Tablero financiero y "tiene tarjas" de Compra de fruta. Reactivar la vuelve a sumar.
+8. Cupo LIQUIDADO: no se agrega, cambia, quita ni reactiva una tarja (mensaje "YA FUE LIQUIDADO"). Al anular la LQ, se puede de nuevo.
+9. Historial de la tarja WK45 id 1 (en una copia local, no en producción): CREADA el 05/11 con 500 / 10 / 20 y recibidas 470; cada edición con usuario y fecha; LIQUIDADA si aplica. **No** trae IP, ruta ni registros de otras tablas; un usuario sin `tarjas` ni `liquidar` → 403; `table_name` en la URL se ignora.
+10. Celular (Chrome, 375 px): tarjetas, teclado numérico, "Guardar camión" guarda solo ese camión; sin red, los datos no se pierden. Escritorio (≥ 768 px): la tabla se ve como antes.
+11. `npm run build` sin errores; `php -l` en cada PHP; migración aplicada en `SIAE` y `siae_test`; `down()` probado en local.
+
+**Fase 1b (pagos):**
+1. Compra SPOT 80_20 con tarja de 1.000 embarcadas a $7,00 → orden 80 % de 5.600,00 POR APROBAR con `ORD-…`. Sin tarja → SIN TARJA; sin precio → SIN PRECIO; CONTRATO o SPOT 100 → sin 80 %.
+2. Segundo camión de la misma compra → la **misma** orden sube de monto (índice único). Con la orden APROBADA, el tarjador no puede cambiar embarcadas (mensaje); Liquidaciones sí, y la orden vuelve a POR APROBAR.
+3. El aprobador no puede aprobar una LQ ni un anticipo que él mismo creó (salvo ADMIN). Aprobar dos veces la misma → la segunda dice cuál ya cambió.
+4. Totales del tablero = suma de las filas visibles con cada combinación de filtros; precio ponderado; exportar trae las mismas filas. `tablero_pagos_lectura` no ve cuentas ni botones.
+5. Liquidar SPOT con el 80 % PAGADO → `advance_80_amount` = 5.600, cuota SALDO SPOT = neto − 5.600 (ejemplo 3.2: 648,00), semana N+1. Con el 80 % POR APROBAR → queda ANULADO y la cuota es el neto completo. 80 % mayor que el neto → cuota 0 y SALDO a favor, que sale preseleccionado en la siguiente LQ.
+6. LQ CONTRATO con `payment_week_offset = 1` → cuota 100 % con semana N+2; el aprobador puede cambiarla a N+1.
+7. Anticipo manual: nace POR APROBAR; no se ofrece para descontar hasta que esté EN BANCO o PAGADO; los ANTERIOR sí.
+8. Contabilidad: con solo `pagos_banco` genera el lote y el TXT, pero no puede marcar pagado (403). Con `confirmar_pagos`, marca PAGADO_PARCIAL con una línea FALLIDA → esa orden vuelve a POR PAGAR y puede ir a otro lote.
+9. Doble pago: la misma orden en dos lotes vivos → error de la base (índice único). Una orden sin aprobar no se puede pagar (CHECK).
+10. Un usuario de Liquidaciones no puede recibir `pagos_banco` ni `confirmar_pagos`; uno de Contabilidad no puede recibir `aprobar_pagos_liquidacion` (`solo`).
+11. Los lotes de OC siguen funcionando igual para Andrea después de la migración (OC → aprobar → lote → TXT → pagado).
+12. Anular una LQ con la cuota aprobada → error; con la cuota rechazada → se anula, la cuota queda ANULADA y el SALDO a favor se desactiva.
+13. El TXT y la bitácora no muestran cuentas ni cédulas completas (`****1234`).
 
 ---
 
@@ -855,35 +911,29 @@ Todos usan `Auditable`, ya existente o nuevo.
 
 | Dato | Qué se hace | Cómo se verifica |
 |---|---|---|
-| Liquidaciones en producción | **0 liquidaciones, 0 cuotas, 0 lotes al banco** (revisado por `siae-datos` el 17/11, solo lectura). **Se puede rediseñar sin migrar pagos.** | Volver a contar justo antes de subir |
-| OC de departamento | 0 reales; las 15 que hay están ANTERIOR. La copia de líneas de lotes viejos no mueve nada hoy. | Ídem |
-| Anticipos | **1 anticipo pendiente** de descontar. Queda ANTERIOR + PAGADA (se entregó por fuera) y se sigue descontando como hoy. | Preguntar a Liquidaciones si de verdad se entregó |
-| Perfiles | LIQUIDACIONES: 3 usuarios. CONTABILIDAD: 1 usuario, que hoy **no ve nada de liquidaciones** (solo `aprobar_oc` y `cuentas_bancarias`). La migración le agrega `pagar_liquidaciones`. | Peter elige a cuál de los 3 de Liquidaciones darle `aprobar_pagos_liquidacion` (excepción por persona) |
-| `settlement_payments` ya pagadas | Pasan a ANTERIOR + PAGADA (la migración lo hace) | Contar antes y después |
-| `settlement_payments` pendientes | Pasan a POR_APROBAR, sin semana programada | Liquidaciones las aprueba en la pantalla nueva |
-| `producer_advances` existentes | ANTERIOR + PAGADA + MANUAL | Ninguno entra a las bandejas |
-| OC que ya están en lotes | Se crean sus líneas (sin copia de cuenta) | Suma de las líneas = `total` del lote, comprobado con una **simulación** antes |
-| `contracts.payment_week_offset` | Todos en 0 (semana de la liquidación) | Si Peter dice que algún contrato paga a la semana siguiente, se carga con un script `CARGA_BD` y `CARGA_SIMULAR=1` usando el endpoint de contratos |
-| Cuentas bancarias | **0 registradas en producción.** Sin cuentas no sale ningún TXT. | — |
-| Cuentas bancarias de **productores** | Hoy `bankAccounts()` solo lista PROVEEDOR y terceros con OC. **Hay que incluir PRODUCTOR y COMERCIALIZADORA**, y Contabilidad tiene que cargarlas. | Lista de vendedores con liquidación y sin cuenta (sin números en el chat) |
-| Retención (fase 0) | Las liquidaciones viejas quedan con retención 0 | Solo si hay liquidaciones; si no, no aplica |
+| Tarja WK45 id 1 (500 / 10 / 20) | **Correcta, no se toca** (Peter, 17/11). Recibidas = 470. | La pantalla muestra 470 |
+| Tarjas existentes (1a) | Quedan `status = true` | Contar antes y después |
+| Liquidaciones en producción | 0 liquidaciones, 0 cuotas, 0 lotes (`siae-datos`, 17/11). No hay pagos que migrar. | Volver a contar justo antes de subir |
+| Anticipos | 1 pendiente de descontar → ANTERIOR + PAGADA + MANUAL; se sigue descontando como hoy | Preguntar a Liquidaciones si de verdad se entregó |
+| Perfiles | TARJADOR nuevo. CONTABILIDAD + `pagos_banco` y `confirmar_pagos`. GERENCIA y FINANZAS + `tablero_pagos_lectura`. **LIQUIDACIONES no cambia**: Peter da `aprobar_pagos_liquidacion` al jefe por excepción. | Revisar en Perfiles y permisos |
+| `contracts.payment_week_offset` | Todos en 0. Si algún contrato paga una semana más tarde, LEGAL lo cambia en su pantalla. | — |
+| Compras CONTRATO con 80_20 | No se migran: la LQ CONTRATO las paga al 100 % desde la fase 1b. | — |
+| Cuentas bancarias | **0 registradas.** Sin cuentas no sale ningún TXT. Hay que incluir PRODUCTOR y COMERCIALIZADORA en `bankAccounts()`. | Lista de vendedores con LQ y sin cuenta (sin números en el chat) |
 
 Orden en producción: simulación → respaldo de la base, del `dist` y de los `.env` (la `APP_KEY` es necesaria para las cuentas cifradas) → migración → revisión.
 
-### 8.1 Bloqueos previos (requisitos antes de pagar con el sistema)
+### 8.1 Requisitos antes de pagar con el sistema
 
-Datos de producción revisados por `siae-datos` el 17/11. Sin resolver esto, el cálculo saldría mal o no habría a quién pagar. Las cargas se hacen con `siae-datos`: script con `CARGA_BD`, simulación, respaldo y luego el real.
-
-| # | Bloqueo | Por qué bloquea | Quién lo resuelve | Validación que se agrega |
-|---|---|---|---|---|
-| R1 | **Compras CONTRATO sin contrato asignado**: WK40 120 de 120, WK39 23 de 42, WK45 2 de 3 | La LQ por contrato (1, 1.1, 2…) y la semana de pago dependen del contrato | Comercial con LEGAL (lista de dudas, cargas por partes) | No se **liquida** una compra CONTRATO sin `contract_id`: "ASIGNA EL CONTRATO DE LA COMPRA …" |
-| R2 | **3 compras sin precio real** | Sin precio no hay fruta ni 80 % | Comercial | Ya existe para liquidar; se agrega al cálculo del 80 % (no se genera la orden y sale un aviso) |
-| R3 | **Faltan los parámetros de la semana** (`settlement_week_parameters` vacío) | Sin mínimo oficial ni tasa BPA no hay retención ni precio liquidado | Liquidaciones | No se liquida una semana sin parámetros: "REGISTRA LOS PARÁMETROS DE LA WKnn" |
-| R4 | **0 cuentas bancarias** de proveedores o productores | El TXT no se puede generar | Contabilidad (Andrea), en su pantalla | Ya existe ("no tiene cuenta bancaria") |
-| R5 | **Códigos de banco** sin llenar | Ídem | Contabilidad | Ya existe |
-| R6 | **TXT real del Pichincha** sin confirmar | El formato es PROVISIONAL | Andrea manda un archivo ya subido | No usar con dinero real hasta confirmarlo |
-| R7 | **Fase 0** sin hacer: retención, **FALTANTES y pago sobre RECIBIDAS** (3.3), LQ separadas contrato/spot | Cambia los montos a pagar | Desarrollo (con aprobación de este diseño) | — |
-| R8 | **Tarjas históricas sin cargar**: en producción hay 1 sola tarja (WK45); la WK40 tiene 0 tarjas y 0 bookings cerrados | Sin tarja no hay cajas embarcadas, ni 80 %, ni liquidación | `siae-datos`, en el orden acordado: logística → comercial → **tarjas** → liquidaciones (con simulación) | Fila "SIN TARJA" no aprobable |
+| # | Requisito | Estado (17/11) | Bloquea |
+|---|---|---|---|
+| R1 | Compras CONTRATO sin contrato | **Se deja así** (P17): Comercial y LEGAL las revisan a mano. El sistema ya no deja **liquidarlas**. | Solo la liquidación de esas compras; **no** la fase 1 (el 80 % es solo SPOT) |
+| R2 | Compras sin precio real | Igual que R1. Además, sin precio no hay 80 % (fila SIN PRECIO). | La LQ y el 80 % de esa compra |
+| R3 | Parámetros de la semana | **Validado** desde la fase 0 | La LQ de esa semana |
+| R4 | Cuentas bancarias de vendedores | 0 cargadas; las carga Contabilidad en su pantalla | El TXT |
+| R5 | Códigos de banco | Sin llenar | El TXT |
+| R6 | TXT real del Pichincha | Sin confirmar; formato PROVISIONAL | Usar el TXT con dinero real |
+| R7 | Fase 0 | ✅ **En producción** | — |
+| R8 | Tarjas al día | 1 tarja en producción; la WK40 sin tarjas. Con la fase 1a, el tarjador las carga desde el puerto; las históricas, con `siae-datos` (logística → comercial → tarjas → liquidaciones) | El 80 % y la LQ de esas semanas |
 
 ---
 
@@ -891,135 +941,88 @@ Datos de producción revisados por `siae-datos` el 17/11. Sin resolver esto, el 
 
 | Riesgo | Control |
 |---|---|
-| **Pagar dos veces** | Índices únicos parciales en `bank_payment_batch_items` (nada en dos lotes vivos). `lockForUpdate` al generar. Una cuota PAGADA no vuelve a POR PAGAR sin un reverso con motivo. El 80 % es único por cupo (índice) y la liquidación lo descuenta automáticamente. |
-| **Pagar sin aprobar** | CHECK `sp_pago_aprobado_check` / `pa_pago_aprobado_check` en la base, y el backend lo vuelve a validar. |
-| **Cuenta cambiada a última hora** (fraude típico) | El lote copia la cuenta al generar. Si la cuenta del beneficiario cambió **después de aprobar la cuota** o en los **últimos X días**, la línea sale bloqueada con "CUENTA CAMBIADA EL dd/mm POR <usuario>: CONFIRMA CON EL PRODUCTOR". Se libera con un check de confirmación que queda en la bitácora (pregunta 11). Además, aviso en la campanita al ADMIN cuando cambia la cuenta de un tercero con pagos pendientes. |
-| **Quien liquida, se aprueba y se paga** | Pantallas con `solo` (LIQUIDACIONES ≠ CONTABILIDAD). El backend impide aprobar una cuota de una liquidación que creó el mismo usuario. El ADMIN queda fuera de la regla (es Peter). |
-| Monto "ajustado" a mano | El monto no se edita: solo se recalcula desde el origen. |
-| El 80 % se paga y la fruta no se embarca | Se calcula **sobre las embarcadas de la tarja**, no sobre lo comprado. |
-| Saldo negativo del productor | Pasa a "saldo a favor de AGAT" (préstamo automático) y no se paga en negativo. |
-| Formato del TXT equivocado | Sigue siendo **PROVISIONAL**: no se usa con dinero real sin un TXT real de Andrea. |
-| Ver cuentas sin permiso | Cifradas. Fuera de `cuentas_bancarias` solo se ven enmascaradas (`****1234`). El TXT solo lo baja `pagar_liquidaciones` o `aprobar_oc`. |
+| **Pagar dos veces** | Índices únicos parciales en `bank_payment_batch_items`; `lockForUpdate` al generar y al liquidar; 80 % único por negociación; la LQ anula el 80 % que no salió y descuenta el que salió. |
+| **Pagar sin aprobar** | CHECK `sp_pago_aprobado_check` / `pa_pago_aprobado_check` y validación en el backend. |
+| **Borrar el camión de otro** (laptop y celular a la vez) | Guardado por camión, sin borrado implícito, `updated_at` (409) y `client_key`. |
+| **Inflar las embarcadas después de aprobar el 80 %** | Solo `liquidar` las cambia; el 80 % vuelve a POR APROBAR o, si ya salió, la LQ lo ajusta. Todo queda en el historial. |
+| **El tarjador ve precios** | Lista blanca del tipo TARJADOR; `tarjas` fuera de `$lectura`; respuesta de tarjas sin precios. |
+| **Cuenta cambiada a última hora** | Copia congelada en el lote; bloqueo de 3 días o cambio posterior a la aprobación (P11, fase 2). |
+| **Quien liquida, se aprueba y se paga** | `solo` en las pantallas; el backend impide aprobar lo propio (salvo ADMIN). |
+| **Monto ajustado a mano** | El monto no se edita: se recalcula desde el origen. |
+| **Formato del TXT equivocado** | PROVISIONAL hasta tener uno real (R6). |
+| **Ver cuentas o cédulas sin permiso** | Cifradas; fuera de `cuentas_bancarias` se ven `****1234`. |
 
 ---
 
-## 10. Fases sugeridas
+## 10. Fases y orden de implementación
 
-| Fase | Contenido | Depende de |
+| Fase | Contenido | Estado / depende de |
 |---|---|---|
-| **0** | Retención IR en la liquidación; **FALTANTES en la tarja y pago sobre RECIBIDAS** (regla del 17/11, sección 3.3: migración `2026_11_18_000000`, cambios en liquidación, tarjas, ganancia por viaje y cierre); **LQ separadas por contrato y SPOT**. Más las validaciones R1 a R3. | Respuestas 31 a 34 |
-| **1** | Requisitos R1 a R5 y **R8 (tarjas)** cargados. Migración de 7.2. Anticipo 80 % automático **por negociación**. **Tablero de anticipos y pagos** (4.0) para aprobar en Liquidaciones. POR PAGAR unificado en Contabilidad. Lotes con líneas, fallidas, pago manual y reverso. Cuentas de productores en Cuentas bancarias. | Fase 0 y las respuestas 1 a 7 |
-| **2** | Cuentas bancarias de AGAT (origen), comprobantes adjuntos, exportable PAGOS Y RETENCIONES, aviso de cuenta cambiada | TXT real del Pichincha |
-| **2b** | Pago a otra persona con carta (diseño aparte; usa `payee_third_party_id`) | Diseño aparte |
-| **3** *(opcional)* | Plan de cuentas mínimo, reglas concepto → cuenta y asientos sugeridos exportables | Plan de cuentas de Andrea o del contador; decisión sobre Contífico |
+| **0** | Faltantes y recibidas, LQ por contrato y SPOT, retención IR, R1–R3 | ✅ **En producción** (17/11) |
+| **1a** | Tipo TARJADOR, cierre de fugas de `tarjas`, tarjas con baja lógica, guardado por camión, vista celular, historial | OK de Peter a la sección 12 (puntos 1 a 3) |
+| **1b** | Migración 7.3, `Anticipo80`, LQ que descuenta el 80 % y deja una cuota programada, anticipos manuales con aprobación, Tablero de anticipos y pagos, Pagos al banco con líneas, fallidas, pago manual y reverso, cuentas de productores | Fase 1a en producción |
+| **2** | Cuentas de AGAT de origen (P9), comprobantes, exportable PAGOS Y RETENCIONES, bloqueo por cuenta cambiada (P11) | TXT real (R6) |
+| **2b** | Pago a otra persona con carta (`payee_third_party_id`, P8) | Diseño aparte |
+| **3** | Plan de cuentas y asientos sugeridos (sección 6) | Preguntas 24 a 30 de Contabilidad |
+
+**Orden sugerido:**
+1. **1a** completa → QA → producción. El tarjador empieza a cargar la semana en curso.
+2. **1b en una sola subida.** El 80 % automático y el cambio de la LQ deben salir **juntos**: si sale el 80 % sin el cambio de la LQ, la LQ volvería a pagar el 80 % (doble pago).
+3. Antes de usar el TXT con dinero real: R4, R5 y R6.
 
 ---
 
-## 11. Preguntas para Peter (con mi recomendación)
+## 11. Preguntas para Peter: respuestas
 
-1. ✅ **RESPONDIDA por Peter (17/11):** el 80 % SPOT se calcula sobre las **CAJAS EMBARCADAS**. Va en una orden de pago antes de la liquidación, y la LQ SPOT paga el 20 %. Confirmado con su "REPORTE DE ANTICIPOS WK 40". Cambia la regla que hoy está programada (el 80 % se paga después de liquidar).
+1. ✅ **RESPONDIDA (17/11):** el 80 % SPOT se calcula sobre las **CAJAS EMBARCADAS**, en una orden antes de la LQ; la LQ SPOT paga el saldo.
+2. ✅ **APROBADA (17/11):** cada contrato tiene su valor por defecto (`payment_week_offset`, lo pone LEGAL) y el jefe de Liquidaciones lo puede cambiar al aprobar.
+3. ✅ **APROBADA (17/11):** aprueba solo el jefe de Liquidaciones (pantalla por persona), nunca lo que él mismo creó. Si no hay jefe, aprueba el ADMIN.
+4. ✅ **APROBADA (17/11):** si los descuentos pasan el saldo, no se paga y queda **SALDO A FAVOR DE AGAT**, que se descuenta en la siguiente LQ.
+5. ✅ **RESPONDIDA (17/11):** con el **PRECIO PACTADO**: cajas embarcadas × precio pactado × 0,80.
+6. ✅ **APROBADA (17/11):** una sola bandeja y un solo TXT por corrida, con filtro por origen (pantalla Pagos al banco).
+7. ✅ **APROBADA (17/11):** no se pagan cuotas en partes; "PARCIAL" se cubre con el lote PAGADO_PARCIAL y la línea FALLIDA.
+8. ✅ **APROBADA (17/11):** con dos beneficiarios, los descuentos se prorratean; se detalla en el diseño de pago a otra persona (fase 2b).
+9. ✅ **APROBADA (17/11):** se registran las cuentas de origen de AGAT en la fase 2; los números los escribe Contabilidad en la pantalla.
+10. ✅ **APROBADA (17/11):** por ahora solo el exportable (opción a); el plan de cuentas dentro del SIAE, en la fase 3.
+11. ✅ **APROBADA (17/11):** cuarentena de 3 días o cualquier cambio posterior a la aprobación; la libera Contabilidad con un check que queda en la bitácora (fase 2).
+12. ✅ **APROBADA (17/11):** Liquidaciones deja de registrar pagos; solo Contabilidad los registra.
+13. ✅ **RESUELTA con la fase 0:** las caídas ya no se pagan (se pagan las RECIBIDAS) y la retención IR entró en la misma entrega.
+14. ✅ **RESPONDIDA (17/11):** sí, los anticipos y préstamos manuales pasan por aprobación y por el TXT.
+15. ✅ **RESPONDIDA (17/11):** "PAGADO DE MES" se registra como pago manual con forma **CRUCE**.
+16. ✅ **RESUELTA con la fase 0:** materiales y anticipos manuales se descuentan en la LQ de **mayor valor de fruta**. El 80 % se descuenta en la LQ SPOT.
+17. ✅ **RESPONDIDA (17/11):** las compras CONTRATO sin contrato y sin precio real se dejan así; Comercial y LEGAL las revisan a mano. El sistema sigue bloqueando su **liquidación** (R1/R2), pero **no** bloquea el resto de la fase 1, porque el 80 % es solo SPOT.
+18. ✅ **RESPONDIDA (17/11):** el día de proceso es el **DÍA DE CORTE** (`cut_date`).
+19. ✅ **RESPONDIDA (17/11):** GERENCIA y FINANZAS ven el tablero solo para leer (`tablero_pagos_lectura`), sin cuentas ni botones.
+20. ✅ **RESPONDIDA (17/11):** una línea del TXT por cada orden (1 a 1).
+21. ✅ **RESPONDIDA (17/11):** en Contabilidad hay varias personas; el diseño usa pantallas por persona: `pagos_banco` (preparar) y `confirmar_pagos` (confirmar), además de `aprobar_oc` (5.5). Quién valida el plan de cuentas pasa a la fase 3 con las preguntas 24 a 30.
+22. ⚠️ **SUPUESTO (sin respuesta de Comercial):** un anticipo por negociación, calculado con **todas** las tarjas de esa compra; si embarca en varios días, la orden se recalcula mientras esté POR APROBAR, y lo que llegue después de aprobada se paga en la LQ. Datos para Comercial: en el SIAE la WK40 SPOT tiene 68 negociaciones y ##### cajas compradas; el reporte trae 15 negociaciones y ##### cajas embarcadas. Falta saber de qué hoja sale "CAJAS/EMB" y qué eran las 3 filas ocultas.
+23. ⚠️ **SUPUESTO (sin respuesta):** se agrupa por la fecha de corte real de cada compra; el 06/11 del Excel se toma como la fecha del reporte y no se guarda.
 
-2. **CONTRATO, "esta semana o la próxima": ¿quién decide?**
-   *Recomiendo:* que cada contrato tenga un valor por defecto (LEGAL lo pone: semana de liquidación o la siguiente) y que el jefe de Liquidaciones lo pueda cambiar al aprobar.
+**Para Contabilidad (fase 3, no bloquean la fase 1):** 24 a 30 siguen **pendientes**, tal como están en la sección 6.5:
+24. ¿La fruta va directo al costo (5.1.1.3.1) o pasa por inventario (1.1.3.1.1)? *Recomiendo:* directo al costo.
+25. ¿La NC reduce 5.1.1.3.1 o va a 4.3.5 OTRAS RENTAS? *Recomiendo:* que reduzca la compra.
+26. ¿Préstamos a productores en 1.1.4.4 o en una subcuenta nueva? *Recomiendo:* subcuenta propia.
+27. ¿Se provisiona la fruta al embarcar (2.1.5.1.1)? *Recomiendo:* sí, si el cierre de mes cae entre embarque y LQ.
+28. ¿Materiales descontados contra el inventario de cada insumo al liquidar? *Recomiendo:* sí, al costo con que salieron.
+29. ¿La cuenta 1.1.4.1 con tipo "Seguros pagados por anticipado" es un error de Contífico? *Recomiendo:* corregirla antes de usar 1.1.4.1.1.
+30. ¿Cuenta de transporte de fruta? *Recomiendo:* crear "TRANSPORTE DE FRUTA" para reconocido y descontado.
 
-3. **¿Quién aprueba los pagos en Liquidaciones? ¿Puede aprobar la misma persona que liquidó?**
-   *Recomiendo:* solo el jefe de Liquidaciones (pantalla dada por persona), y nunca su propia liquidación. Si en Liquidaciones hay una sola persona, apruebas tú (ADMIN).
+**Sobre las cajas de la tarja (regla del 17/11):** todas ✅ **RESUELTAS con la fase 0**:
+31. ✅ FALTANTES las registra el personal de tarjas en la misma tarja; se pueden corregir mientras el cupo no esté liquidado.
+32. ✅ CONTRATO también se paga sobre RECIBIDAS.
+33. ✅ Retención (tramo y base), transporte reconocido y bono, sobre RECIBIDAS. La base usa el mayor entre el precio real y el oficial.
+34. ✅ La hoja de tarjas muestra RECIBIDAS calculada (no se escribe), con su total.
 
-4. **Si los descuentos (materiales, retención, anticipos) pasan el 20 %, ¿qué se hace?**
-   *Recomiendo:* no pagar nada esa semana y dejar el saldo como **SALDO A FAVOR DE AGAT**, que se descuenta en la siguiente liquidación del vendedor.
+---
 
-5. ✅ **RESPONDIDA por Peter (17/11):** con el **PRECIO PACTADO** (no el oficial). Fórmula: 80 % anticipo = cajas embarcadas × precio pactado × 0,80.
+## 12. Lo que todavía necesita respuesta de Peter (lista corta)
 
-6. **¿Contabilidad ve las OC y las liquidaciones en la misma bandeja y en el mismo TXT?**
-   *Recomiendo:* sí, una sola pantalla y un solo TXT por corrida, con un filtro por origen.
-
-7. **¿Se permite pagar una cuota en partes (por ejemplo, la mitad esta semana)?** El Excel tiene el estado "PARCIAL": ¿cuándo se usa?
-   *Recomiendo:* no, por ahora. Una cuota se paga entera o falla entera. Si "PARCIAL" sale de cuando el banco rechaza una parte, el diseño lo cubre con el lote PAGADO_PARCIAL y la línea FALLIDA.
-
-8. **Pago a otra persona: si en una liquidación hay compras para dos beneficiarios, ¿de quién salen los descuentos (materiales, retención, anticipos)?**
-   *Recomiendo:* de cada beneficiario según sus compras (prorrateo), pero lo vemos en el diseño aparte de "pago a otra persona".
-
-9. **¿Desde cuántas cuentas bancarias de AGAT se paga (solo Pichincha, o también otras)?**
-   *Recomiendo:* registrar en el sistema las cuentas de origen de AGAT (fase 2). Los números los escribe Andrea en la pantalla, no en el chat.
-
-10. *(En parte respondida el 17/11: Peter mandó el plan de cuentas de Contífico; el mapeo propuesto está en 6.5 y lo confirma Contabilidad en las preguntas 24 a 30.)* **Cuentas contables: ¿Andrea o el contador nos pasan el plan de cuentas (código y nombre) de compras de fruta, proveedores productores, retención IR banano, anticipos, notas de crédito, materiales cobrados y bancos? ¿Y en qué sistema contable se registra hoy?**
-    *Recomiendo:* por ahora, solo el **exportable** (opción a). El plan de cuentas dentro del SIAE (opción b) lo hacemos cuando esté decidido si es Contífico u otro.
-
-11. **Cuenta cambiada a última hora: ¿cuántos días de "cuarentena" bloquean el pago hasta que alguien confirme?**
-    *Recomiendo:* 3 días, o cualquier cambio posterior a la aprobación. Confirma Andrea, con un check que queda en la bitácora.
-
-12. **¿Liquidaciones deja de registrar pagos (hoy lo hace en "Pagos e historial")?**
-    *Recomiendo:* sí. Solo Contabilidad registra pagos, y Liquidaciones solo aprueba y ve el estado.
-
-13. **Fase 0: ¿confirmas que las cajas caídas ya no se pagan y que la retención entra en esta misma entrega?**
-    *Recomiendo:* sí; está decidido desde el 06/11, pero el sistema todavía no lo hace.
-
-14. **¿Los anticipos y préstamos manuales (no el 80 %) también pasan por aprobar y por el TXT, o se siguen entregando por fuera?**
-    *Recomiendo:* que pasen por el mismo flujo, para tener todo lo que sale del banco en un solo lugar.
-
-15. **¿Qué significa "PAGADO DE MES" en la hoja PAGOS del Excel?** ¿Es un pago que se hizo junto con otros a fin de mes, o un cruce de cuentas?
-    *Recomiendo:* si es un cruce (se compensa con algo que el productor le debe a AGAT), registrarlo como pago manual con la forma **CRUCE**, que el diseño ya tiene.
-
-16. **Con LQ separadas por contrato y SPOT, ¿en cuál se descuentan los materiales y los anticipos manuales de la semana?**
-    *Recomiendo:* en la LQ de mayor valor de esa semana. Si no alcanza, el resto en la siguiente. Hay que confirmarlo con Liquidaciones según cómo lo hacen en el Excel.
-
-17. **Requisitos R1 y R2 (compras CONTRATO sin contrato y compras sin precio real): ¿quién los corrige y para cuándo?**
-    *Recomiendo:* Comercial con LEGAL, por partes y con lista de dudas, antes de la fase 1.
-
-18. ✅ **RESPONDIDA por Peter (17/11):** el día de proceso es el **DÍA DE CORTE** (`producer_quota_lines.cut_date`). Hay que verificar el 06/11 del Excel (pregunta 23).
-
-19. **¿GERENCIA y FINANZAS ven el Tablero de anticipos y pagos solo para leer (sin aprobar)?**
-    *Recomiendo:* sí, con una pantalla nueva de solo lectura, `tablero_pagos_lectura` (roles GERENCIA y FINANZAS), sin cuentas bancarias ni botones.
-
-20. **El 80 % va en una orden por negociación (compra). ¿En el TXT del banco va una línea por orden o una sola transferencia por vendedor y día?**
-    *Recomiendo:* una línea por orden, porque cada pago se cruza 1 a 1 con su orden ("ID ORDEN" del Excel). Si el banco cobra comisión por transferencia, lo cambiamos a una por vendedor y día.
-
-21. **Plan de cuentas:** cuando lo mandes, ¿quién valida la tabla CONCEPTO → CUENTA (sección 6.5): Andrea o el contador externo?
-    *Recomiendo:* Andrea la llena y el contador la firma; la cargamos solo cuando esté validada.
-
-22. **Para Comercial (WK40 no cuadra):**
-    - En el SIAE, la WK40 SPOT tiene **68 negociaciones y 70.388 cajas compradas**; tu reporte trae **15 negociaciones y 14.049 cajas embarcadas**. Parece que el reporte es solo lo procesado el 06/11.
-    - **a)** ¿De qué hoja o fuente sale "CAJAS/EMB"?
-    - **b)** ¿El 80 % se paga por lo embarcado **hasta ese día** (varios anticipos en la semana) o por **toda la semana** de una vez?
-    - **c)** ¿Qué son las 3 filas ocultas que sumaban al total?
-    - *Recomiendo:* un anticipo por negociación, calculado con **todas las tarjas** de esa compra. Si una compra embarca en dos días distintos, la orden se recalcula mientras esté POR APROBAR; una vez aprobada, lo que llegue después se paga en la LQ del 20 %.
-
-23. **Verificación del DÍA DE CORTE:** en el SIAE, la WK40 tiene fechas de corte del 25/09 al 03/10, pero tu Excel agrupa la WK40 en **06/11/2026**. ¿El 06/11 es la fecha en que se hizo el reporte?
-    *Recomiendo:* agrupar por la fecha de corte real de cada compra. Si el 06/11 era la fecha del reporte, no se guarda.
-
-**Preguntas para Contabilidad (Andrea o el contador) sobre el plan de cuentas:**
-
-24. **¿La fruta va directo al costo (5.1.1.3.1 COMPRA DE BANANO) o pasa por inventario (1.1.3.1.1 FRUTA)?**
-    *Recomiendo:* directo al costo, porque la fruta se embarca la misma semana y no queda en bodega.
-
-25. **Nota de crédito (diferencia oficial − pactado): ¿reduce 5.1.1.3.1 o va a 4.3.5 OTRAS RENTAS?**
-    *Recomiendo:* que reduzca la compra (5.1.1.3.1), porque el costo real de la fruta es el pactado. Si el contador prefiere una cuenta propia, se crea en Contífico.
-
-26. **Préstamos a productores: no hay cuenta (solo de empleados). ¿Se usa 1.1.4.4 OTROS ANTICIPOS ENTREGADOS o se crea "PRÉSTAMOS A PRODUCTORES"?**
-    *Recomiendo:* crear una subcuenta propia, para no mezclarla con otros anticipos.
-
-27. **¿Se provisiona la fruta al embarcar (2.1.5.1.1 PROVISIÓN DE FRUTA LC) y se cancela al liquidar?**
-    *Recomiendo:* sí, si el cierre de mes cae entre el embarque y la liquidación. Si no, se registra directo al liquidar.
-
-28. **Materiales descontados: ¿se acreditan al inventario de cada insumo (1.1.3.1.2 CARTON, 1.1.3.1.3 FUNDA…) al liquidar, o se registra antes una cuenta por cobrar al productor cuando sale de bodega?** No existe "Cuentas por cobrar productores".
-    *Recomiendo:* acreditar el inventario al liquidar, con el costo promedio con que salió, que ya está en `settlement_materials`.
-
-29. **La cuenta 1.1.4.1 "Anticipo proveedores" tiene el Tipo "Seguros pagados por anticipado" en Contífico. ¿Es un error?**
-    *Recomiendo:* que Contabilidad lo corrija en Contífico antes de usar 1.1.4.1.1 para los anticipos del 80 %.
-
-30. **Transporte: no hay cuenta de transporte de fruta. ¿El transporte reconocido va a 5.1.4.9 TRANSPORTE DE CARTONES Y MATERIALES o se crea una? ¿Y a qué cuenta va el transporte descontado?**
-    *Recomiendo:* crear "TRANSPORTE DE FRUTA" en el costo y usarla en los dos casos (reconocido en el debe, descontado en el haber).
-
-**Preguntas para Peter sobre las cajas de la tarja (regla del 17/11):**
-
-31. **¿Qué son exactamente las FALTANTES? ¿Quién las registra y cuándo?** Puede ser el personal de tarjas en el puerto, o alguien después, con el reporte del cliente.
-    *Recomiendo:* que las registre el personal de tarjas en la misma tarja. Si llegan después con el reporte del cliente, se pueden corregir mientras la compra no esté liquidada (después, la liquidación queda cerrada).
-
-32. **¿El CONTRATO al 100 % también se paga sobre RECIBIDAS?**
-    *Recomiendo:* sí, por coherencia con SPOT. Si no, un contrato pagaría cajas caídas o faltantes que el SPOT no paga.
-
-33. **¿La retención (tramo y base) y el transporte reconocido y el bono se calculan sobre RECIBIDAS?**
-    *Recomiendo:* sí, todo sobre recibidas. La retención sigue a la factura, y la factura es por lo recibido.
-
-34. **¿La pantalla de Tarjas muestra RECIBIDAS calculado (no se escribe)?**
-    *Recomiendo:* sí, una columna gris de solo lectura con la resta, y el total por barco.
+1. **Tipo base TARJADOR** (recomendado) en lugar de un perfil LIQUIDACIONES restringido. ¿OK?
+2. **Candado de EMBARCADAS** cuando el 80 % ya está aprobado: solo Liquidaciones las cambia; el tarjador sigue con caídas, rechazadas y faltantes hasta la liquidación. ¿OK?
+3. **¿Qué semanas ve el tarjador?** *Recomiendo:* solo las que tienen compras sin liquidar (las liquidadas, en solo lectura). ¿Hace falta limitarlo a **su puerto**, como el bodeguero con su bodega?
+4. **Padding en celular:** cambiar `<main>` de `Layout.jsx` a `p-3 md:p-6` (en escritorio no cambia nada). ¿OK?
+5. **Sin señal en el puerto:** ¿basta con no perder lo escrito y reintentar, o necesitan trabajar **sin internet** toda la jornada? Lo segundo es otro alcance (modo sin conexión).
+6. **Nombres para los permisos** (en Perfiles, no en este documento): quién es el **jefe de Liquidaciones** (`aprobar_pagos_liquidacion`) y, en Contabilidad, quién **confirma** pagos (`confirmar_pagos`) y quién solo **prepara** (`pagos_banco`).
+7. **¿Bloquear que la misma persona genere el TXT y lo confirme como pagado?** *Recomiendo:* no, porque el portal del Pichincha ya pide el token de quien sube.
+8. **Comercial:** P22 y P23 quedan como supuestos; confirmar cuando puedan.
+9. **Contabilidad:** TXT real del Pichincha (R6), cuentas de vendedores (R4) y códigos de banco (R5), antes de pagar con dinero real.
