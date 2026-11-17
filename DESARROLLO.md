@@ -281,6 +281,8 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 - `routes/api.php`: `tarjas` sale del grupo de LECTURA general. Antes, quien tenía Tarjas podía leer tarifas de puerto, contratos de clientes y pedidos.
 - Nuevo `GET /tallies/weeks` (`TallySheetController::weeks`): semanas con cajas pedidas y compradas, sin precios. `TalliesPage` lo usa en vez de `GET /customer-orders`.
 - `GET /customer-orders/{id}/tallies` ya no devuelve `real_price` (la hoja no lo usaba).
+  - Tampoco devuelve `payment_scheme`. Peter: "el tarjador no sabe nada de precio y 80/20 ni nada".
+  - La prueba revisa también claves de pago, negociación y contrato.
 - Middleware nuevo `solo_tarjas` (`app/Http/Middleware/SoloTarjas.php`) en todo el grupo autenticado. Es una lista blanca: el TARJADOR solo usa `/me`, `/me/password`, `/logout`, `tallies/weeks` y `customer-orders/*/tallies`; todo lo demás le da 403.
   - QA encontró 17 rutas de lectura abierta a cualquier usuario: precios MAG, terceros, marcas, insumos, bodegas, etc.
   - Para los demás perfiles esas rutas no cambian.
