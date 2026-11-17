@@ -273,6 +273,11 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 17/11/2026 — Tarjas pasa al menú de EXPORTACIONES
+- A pedido de Peter, "Tarjas" sale de LIQUIDACIÓN y queda en EXPORTACIONES, entre "Distribución en barcos" y "Cierre de embarque" (`src/routes/menu.js`).
+- En Perfiles y permisos también aparece bajo EXPORTACIONES (`config/pantallas.php`, campo `seccion`).
+- No cambian la ruta (`/liquidacion/tarjas`), la clave del permiso (`tarjas`) ni el rol por defecto (LIQUIDACIONES): quien la veía la sigue viendo.
+
 ### 17/11/2026 — Liquidación FASE 0: faltantes, pago sobre recibidas, LQ por contrato y SPOT, retención IR
 - Es la fase 0 del diseño de pagos de liquidaciones (`docs/modulos/pagos-liquidaciones.md`), aprobado por Peter el 17/11.
 - **Migración** `2026_11_17_000001_liquidacion_fase0`:

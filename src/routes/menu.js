@@ -28,6 +28,8 @@ export const menuItems = [
             { label: "Pedido semanal", ruta: "/exportaciones/pedidos", icono: ClipboardList, pantalla: "pedido_semanal" },
             // Fase 2: Logística reparte el pedido en barcos
             { label: "Distribución en barcos", ruta: "/exportaciones/embarques", icono: Anchor, pantalla: "distribucion_barcos" },
+            // 17/11/2026: Tarjas se movió desde LIQUIDACIÓN (la ruta /liquidacion/tarjas y el permiso no cambian)
+            { label: "Tarjas", ruta: "/liquidacion/tarjas", icono: ClipboardCheck, pantalla: "tarjas" },
             // 29/10/2026: lo realmente embarcado por booking (DAE, B/L, tarja del puerto)
             { label: "Cierre de embarque", ruta: "/exportaciones/cierre", icono: ClipboardCheck, pantalla: "cierre_embarque" },
             { label: "Navieras", ruta: "/navieras", icono: Ship, pantalla: "navieras" },
@@ -75,7 +77,6 @@ export const menuItems = [
             // 12/11/2026: Liquidaciones ya no mete contratos (los registra LEGAL): edita la retención y ve los contratos
             { label: "Retención de productores", ruta: "/liquidacion/contratos", icono: FileSignature, pantalla: "contratos_productores" },
             { label: "Parámetros de la semana", ruta: "/liquidacion/parametros", icono: SlidersHorizontal, pantalla: "parametros_liquidacion" },
-            { label: "Tarjas", ruta: "/liquidacion/tarjas", icono: ClipboardCheck, pantalla: "tarjas" },
             { label: "Anticipos y préstamos", ruta: "/liquidacion/anticipos", icono: HandCoins, pantalla: "anticipos" },
             { label: "Liquidar", ruta: "/liquidacion", icono: Calculator, pantalla: "liquidar" },
             { label: "Pagos e historial", ruta: "/liquidacion/pagos", icono: CircleDollarSign, pantalla: "pagos" },
