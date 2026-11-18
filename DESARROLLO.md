@@ -273,6 +273,12 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 18/11/2026 — Compra de fruta: la grilla se ve como SAP
+Peter mostró la grilla de SAP como modelo. Aplica solo a la tabla de compras de Compra de fruta (excepción al estándar de inputs redondeados, aprobada para probar).
+- Celdas planas con línea gris fina, sin cuadros redondeados. La celda activa se pinta de amarillo.
+- N° en gris, como encabezado de fila.
+- **2 compras vacías siempre al final de cada bloque**, listas para escribir. Copian de la anterior lo mismo que antes (comerciales, corte, entrega, bodega y oficial). Si quedan vacías no se guardan, no cuentan como cambio sin guardar y no muestran avisos ni botones. "Agregar compra" lleva a la primera fila vacía.
+
 ### 18/11/2026 — Compra de fruta como grilla tipo SAP (fase 1, solo frontend)
 Pedido de Peter: llenar las compras con el teclado, con menos clics. Diseño en `docs/modulos/compra-fruta-grilla.md` (parte A); las fases 2 y 2b (alta rápida de vendedor, ficha y cuenta bancaria desde Liquidaciones) esperan respuestas de Peter.
 - **Teclado** en la tabla de compras de cada bloque:
