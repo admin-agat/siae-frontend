@@ -273,6 +273,13 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 18/11/2026 — Pedido semanal más compacto, con la grilla como Compra de fruta
+- **Cabecera** (semana, año, total, fecha, comentario): menos relleno y etiquetas más chicas.
+- **Líneas del pedido**:
+  - mismo estilo que la grilla de Compra de fruta: celdas planas con línea gris fina, la celda activa en amarillo y el # en gris;
+  - filas más bajas y la barra NORMAL / BANDA más baja.
+- La barra de puertos conserva su estilo.
+
 ### 18/11/2026 — NORMAL y BANDA en todo el sistema; Compra de fruta sin montos
 - **NORMAL / BANDA** en todas las pantallas, no solo en el pedido:
   - en Compra de fruta, el bloque y la lista de presentación;

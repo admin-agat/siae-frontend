@@ -407,7 +407,12 @@ export default function CustomerOrderFormPage() {
   // ---------------- Vista ----------------
 
   const inputClass = 'w-full bg-gray-100 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-primario';
-  const labelClass = 'block text-sm font-semibold text-gray-700 mb-1.5';
+  // 18/11/2026 (Peter): cabecera más compacta
+  const labelClass = 'block text-xs font-semibold text-gray-600 uppercase mb-1';
+  // 18/11/2026 (Peter): las líneas se ven como la grilla de Compra de fruta (tipo SAP): celdas planas, línea gris
+  // fina y la celda activa en amarillo
+  const tdGrilla = 'px-0.5 py-0 border border-gray-200 align-middle focus-within:bg-yellow-100';
+  const celda = 'w-full bg-transparent border-0 rounded-none px-1.5 py-0.5 text-sm text-gray-800 outline-none disabled:opacity-60 disabled:cursor-not-allowed';
 
   if (cargando) {
     return <div className="p-6 text-gray-400">Cargando pedido...</div>;
@@ -418,7 +423,7 @@ export default function CustomerOrderFormPage() {
       <ToastFlotante toast={toast} onCerrar={() => setToast(null)} />
 
       {/* Encabezado */}
-      <div className="flex items-center gap-3 mb-6">
+      <div className="flex items-center gap-3 mb-4">
         <button type="button" onClick={volver} title="Volver" className="p-2 rounded-lg hover:bg-gray-200 text-gray-600">
           <ArrowLeft size={20} />
         </button>
@@ -431,7 +436,7 @@ export default function CustomerOrderFormPage() {
       </div>
 
       {/* Cabecera del pedido */}
-      <div className="bg-white rounded-xl shadow p-4 mb-4 grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="bg-white rounded-xl shadow px-4 py-3 mb-4 grid grid-cols-1 md:grid-cols-5 gap-3">
         <div>
           <label className={labelClass}>Semana *</label>
           <CampoNumero decimales={0} max="53" name="week" value={cabecera.week} onChange={cambiarCabecera} className={inputClass} />
@@ -480,22 +485,22 @@ export default function CustomerOrderFormPage() {
       {/* 11/11/2026: se ven ~5 líneas y la tabla se desplaza sola (barra ancha), así no hay que bajar toda la página */}
       <div className="bg-white rounded-xl shadow overflow-hidden mb-4">
        <div ref={tablaLineasRef} className="overflow-auto max-h-[19rem] scroll-ancho">
-        <table className="w-full text-sm min-w-[1550px]">
+        <table className="w-full text-sm min-w-[1400px] border-collapse">
           <thead className="bg-primario text-white sticky top-0 z-10">
             <tr>
-              <th className="text-left px-2 py-3 uppercase w-8">#</th>
-              <th className="text-left px-2 py-3 uppercase">Cliente</th>
-              <th className="text-left px-2 py-3 uppercase">Marca</th>
-              <th className="text-left px-2 py-3 uppercase">Presentación</th>
-              <th className="text-left px-2 py-3 uppercase">Modalidad</th>
-              <th className="text-left px-2 py-3 uppercase">Cont. × cajas</th>
-              <th className="text-left px-2 py-3 uppercase">Cajas</th>
-              <th className="text-left px-2 py-3 uppercase">Incoterm</th>
-              <th className="text-left px-2 py-3 uppercase">Puerto</th>
-              <th className="text-left px-2 py-3 uppercase">Tipo</th>
-              <th className="text-left px-2 py-3 uppercase">Precio caja</th>
-              <th className="text-left px-2 py-3 uppercase">N° pedido</th>
-              <th className="text-left px-2 py-3 uppercase">Notas</th>
+              <th className="text-left px-2 py-2 uppercase text-xs w-8">#</th>
+              <th className="text-left px-2 py-2 uppercase text-xs">Cliente</th>
+              <th className="text-left px-2 py-2 uppercase text-xs">Marca</th>
+              <th className="text-left px-2 py-2 uppercase text-xs">Presentación</th>
+              <th className="text-left px-2 py-2 uppercase text-xs">Modalidad</th>
+              <th className="text-left px-2 py-2 uppercase text-xs">Cont. × cajas</th>
+              <th className="text-left px-2 py-2 uppercase text-xs">Cajas</th>
+              <th className="text-left px-2 py-2 uppercase text-xs">Incoterm</th>
+              <th className="text-left px-2 py-2 uppercase text-xs">Puerto</th>
+              <th className="text-left px-2 py-2 uppercase text-xs">Tipo</th>
+              <th className="text-left px-2 py-2 uppercase text-xs">Precio caja</th>
+              <th className="text-left px-2 py-2 uppercase text-xs">N° pedido</th>
+              <th className="text-left px-2 py-2 uppercase text-xs">Notas</th>
               <th className="px-2 py-3 w-10"></th>
             </tr>
           </thead>
@@ -504,76 +509,76 @@ export default function CustomerOrderFormPage() {
               const { precio, origen } = precioLinea(l);
               const contenedor = esContenedor(l.cargo_type);
               return (
-                <tr key={l._key} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                  <td className="px-2 py-2 text-gray-400">{i + 1}</td>
-                  <td className="px-2 py-2 min-w-[160px]">
-                    <SelectBuscable value={l.customer_id} onChange={(e) => cambiarLinea(l._key, 'customer_id', e.target.value)} className={inputClass}>
+                <tr key={l._key} className="bg-white">
+                  <td className="bg-gray-200 border border-gray-300 px-1 py-0.5 text-center text-sm font-bold text-gray-700 w-8">{i + 1}</td>
+                  <td className={`${tdGrilla} min-w-[160px]`}>
+                    <SelectBuscable value={l.customer_id} onChange={(e) => cambiarLinea(l._key, 'customer_id', e.target.value)} className={celda}>
                       <option value="">SELECCIONAR...</option>
                       {clientes.map((c) => (
                         <option key={c.id} value={String(c.id)}>{c.third_party?.name}</option>
                       ))}
                     </SelectBuscable>
                   </td>
-                  <td className="px-2 py-2 min-w-[160px]">
-                    <SelectBuscable value={l.brand_id} onChange={(e) => cambiarLinea(l._key, 'brand_id', e.target.value)} className={inputClass} disabled={!l.customer_id}>
+                  <td className={`${tdGrilla} min-w-[160px]`}>
+                    <SelectBuscable value={l.brand_id} onChange={(e) => cambiarLinea(l._key, 'brand_id', e.target.value)} className={celda} disabled={!l.customer_id}>
                       <option value="">{l.customer_id && marcasDe(l.customer_id).length === 0 ? 'SIN MARCAS' : 'SELECCIONAR...'}</option>
                       {marcasDe(l.customer_id).map((m) => <option key={m.id} value={String(m.id)}>{m.name}</option>)}
                     </SelectBuscable>
                   </td>
-                  <td className="px-2 py-2 min-w-[175px]">
+                  <td className={`${tdGrilla} min-w-[175px]`}>
                     {/* 14/11/2026: un clic para CONVENCIONAL/PACKED (como CONTRATO/SPOT en Compra de fruta), sin abrir lista */}
                     <div className="inline-flex rounded-lg border border-primario/30 overflow-hidden text-xs font-semibold" role="group" aria-label={`Línea ${i + 1}: presentación`}>
                       {PRESENTACIONES.map((p) => (
                         <button key={p} type="button" onClick={() => l.presentation !== p && cambiarLinea(l._key, 'presentation', p)}
                           aria-pressed={l.presentation === p}
-                          className={`px-2.5 py-2 ${l.presentation === p ? 'bg-primario text-white' : 'bg-white text-primario hover:bg-primario-claro'}`}>
+                          className={`px-2.5 py-1 ${l.presentation === p ? 'bg-primario text-white' : 'bg-white text-primario hover:bg-primario-claro'}`}>
                           {ETIQUETA_PRESENTACION[p] /* 18/11/2026: NORMAL / BANDA */}
                         </button>
                       ))}
                     </div>
                   </td>
-                  <td className="px-2 py-2 min-w-[170px]">
-                    <SelectBuscable value={l.cargo_type} onChange={(e) => cambiarLinea(l._key, 'cargo_type', e.target.value)} className={inputClass}>
+                  <td className={`${tdGrilla} min-w-[170px]`}>
+                    <SelectBuscable value={l.cargo_type} onChange={(e) => cambiarLinea(l._key, 'cargo_type', e.target.value)} className={celda}>
                       {TIPOS_CARGA.map((t) => <option key={t.valor} value={t.valor}>{t.etiqueta}</option>)}
                     </SelectBuscable>
                   </td>
-                  <td className="px-2 py-2 min-w-[150px]">
+                  <td className={`${tdGrilla} min-w-[150px]`}>
                     {contenedor ? (
                       <div className="flex items-center gap-1">
-                        <CampoNumero decimales={0} value={l.containers_qty} onChange={(e) => cambiarLinea(l._key, 'containers_qty', e.target.value)} placeholder="9" className={inputClass} />
+                        <CampoNumero decimales={0} value={l.containers_qty} onChange={(e) => cambiarLinea(l._key, 'containers_qty', e.target.value)} placeholder="9" className={celda} />
                         <span className="text-gray-400">×</span>
-                        <CampoNumero decimales={0} value={l.boxes_per_container} onChange={(e) => cambiarLinea(l._key, 'boxes_per_container', e.target.value)} placeholder="1200" className={inputClass} />
+                        <CampoNumero decimales={0} value={l.boxes_per_container} onChange={(e) => cambiarLinea(l._key, 'boxes_per_container', e.target.value)} placeholder="1200" className={celda} />
                       </div>
                     ) : <span className="text-gray-300">—</span>}
                   </td>
-                  <td className="px-2 py-2 min-w-[100px]">
+                  <td className={`${tdGrilla} min-w-[100px]`}>
                     {/* En contenedor las cajas se calculan solas */}
                     <CampoNumero decimales={0} value={l.boxes}
                       onChange={(e) => cambiarLinea(l._key, 'boxes', e.target.value)}
                       readOnly={contenedor}
                       title={contenedor ? 'Se calcula: contenedores × cajas por contenedor' : ''}
-                      className={`${inputClass} ${contenedor ? 'bg-gray-200 text-gray-500' : ''}`}
+                      className={`${celda} ${contenedor ? 'text-gray-500' : ''}`}
                     />
                   </td>
-                  <td className="px-2 py-2 min-w-[80px]">
-                    <SelectBuscable value={l.incoterm} onChange={(e) => cambiarLinea(l._key, 'incoterm', e.target.value)} className={inputClass}>
+                  <td className={`${tdGrilla} min-w-[80px]`}>
+                    <SelectBuscable value={l.incoterm} onChange={(e) => cambiarLinea(l._key, 'incoterm', e.target.value)} className={celda}>
                       {INCOTERMS.map((x) => <option key={x} value={x}>{x}</option>)}
                     </SelectBuscable>
                   </td>
-                  <td className="px-2 py-2 min-w-[140px]">
+                  <td className={`${tdGrilla} min-w-[140px]`}>
                     {/* 16/11/2026: puerto de salida con un clic (barra), como la presentación */}
                     <BarraPuertos puertos={puertos} value={l.departure_port_id} onChange={(v) => cambiarLinea(l._key, 'departure_port_id', v)}
                       ariaLabel={`Línea ${i + 1}: puerto de salida`} className={inputClass} />
                   </td>
-                  <td className="px-2 py-2 min-w-[110px]">
-                    <SelectBuscable value={l.negotiation_type} onChange={(e) => cambiarLinea(l._key, 'negotiation_type', e.target.value)} className={inputClass}>
+                  <td className={`${tdGrilla} min-w-[110px]`}>
+                    <SelectBuscable value={l.negotiation_type} onChange={(e) => cambiarLinea(l._key, 'negotiation_type', e.target.value)} className={celda}>
                       <option value="CONTRATO">CONTRATO</option>
                       <option value="SPOT">SPOT</option>
                     </SelectBuscable>
                   </td>
-                  <td className="px-2 py-2 min-w-[120px]">
+                  <td className={`${tdGrilla} min-w-[120px]`}>
                     {l.negotiation_type === 'SPOT' ? (
-                      <CampoNumero decimales={2} value={l.box_price} onChange={(e) => cambiarLinea(l._key, 'box_price', e.target.value)} placeholder="Pendiente" className={inputClass} />
+                      <CampoNumero decimales={2} value={l.box_price} onChange={(e) => cambiarLinea(l._key, 'box_price', e.target.value)} placeholder="Pendiente" className={celda} />
                     ) : origen === 'SIN_CONTRATO' ? (
                       <span className="text-xs font-semibold text-red-600">{l.customer_id ? 'SIN CONTRATO VIGENTE' : '—'}</span>
                     ) : origen === 'SIN_PRECIO' ? (
@@ -588,13 +593,13 @@ export default function CustomerOrderFormPage() {
                       </span>
                     )}
                   </td>
-                  <td className="px-2 py-2 min-w-[110px]">
-                    <input value={l.order_number} onChange={(e) => cambiarLinea(l._key, 'order_number', e.target.value.toUpperCase())} placeholder="Después" className={inputClass} />
+                  <td className={`${tdGrilla} min-w-[110px]`}>
+                    <input value={l.order_number} onChange={(e) => cambiarLinea(l._key, 'order_number', e.target.value.toUpperCase())} placeholder="Después" className={celda} />
                   </td>
-                  <td className="px-2 py-2 min-w-[160px]">
-                    <input value={l.notes} onChange={(e) => cambiarLinea(l._key, 'notes', e.target.value.toUpperCase())} placeholder="Ej: CINTA AZUL" className={inputClass} />
+                  <td className={`${tdGrilla} min-w-[160px]`}>
+                    <input value={l.notes} onChange={(e) => cambiarLinea(l._key, 'notes', e.target.value.toUpperCase())} placeholder="Ej: CINTA AZUL" className={celda} />
                   </td>
-                  <td className="px-2 py-2">
+                  <td className={`${tdGrilla}`}>
                     <button type="button" onClick={() => quitarLinea(l._key)} title="Quitar línea" className="text-white p-1.5 rounded-lg shadow-sm transition bg-red-600 hover:bg-red-700">
                       <Trash2 size={16} />
                     </button>
