@@ -932,8 +932,8 @@ export default function PurchaseAllocationPage() {
   const th = 'text-left px-2 py-2 uppercase text-xs whitespace-nowrap';
   // 18/11/2026 (Peter, grilla tipo SAP): en la tabla de compras las celdas son planas, con línea gris fina y la
   // celda activa en amarillo (excepción al estándar de inputs redondeados, solo en esta grilla)
-  const tdGrilla = 'px-0.5 py-0.5 border border-gray-200 align-middle focus-within:bg-yellow-100';
-  const celda = 'w-full bg-transparent border-0 rounded-none px-1.5 py-1 text-sm text-gray-800 outline-none disabled:opacity-60 disabled:cursor-not-allowed';
+  const tdGrilla = 'px-0.5 py-0 border border-gray-200 align-middle focus-within:bg-yellow-100';
+  const celda = 'w-full bg-transparent border-0 rounded-none px-1.5 py-0.5 text-sm text-gray-800 outline-none disabled:opacity-60 disabled:cursor-not-allowed';
   const celdaCorta = celda.replace('w-full ', '');
   const etiqueta = 'block text-xs font-semibold text-gray-600 uppercase mb-1';
 
@@ -1237,8 +1237,8 @@ export default function PurchaseAllocationPage() {
                     <table className="w-full text-sm min-w-[1750px] border-collapse" onKeyDownCapture={teclaGrilla(b)} aria-label={`Compras del bloque ${i + 1}`}>
                       <thead className="bg-primario text-white sticky top-0 z-30">
                         <tr>
-                          <th className={`${th} sticky left-0 z-20 bg-primario w-9 min-w-[36px]`} title="N° de la compra en el bloque (el mismo de los errores: BLOQUE 1, COMPRA 3)">N°</th>
-                          <th className={`${th} sticky left-9 z-20 bg-primario`}>Se le compra a *</th>
+                          <th className={`${th} sticky left-0 z-20 bg-primario w-16 min-w-[64px]`} title="N° de la compra en el bloque (el mismo de los errores: BLOQUE 1, COMPRA 3)">N°</th>
+                          <th className={`${th} sticky left-16 z-20 bg-primario`}>Se le compra a *</th>
                           <th className={th}>Productor real</th>
                           <th className={th}>Finca</th>
                           <th className={th} title="Uno o varios comerciales que hicieron la compra">Comerciales</th>
@@ -1272,18 +1272,18 @@ export default function PurchaseAllocationPage() {
                             <tr data-fila={c._key}
                               className={filaMarcada === c._key ? 'bg-red-50 outline outline-2 -outline-offset-2 outline-red-500' : fondo}>
                               {/* 18/11/2026: N° de la compra, ⋯ abre el detalle (F2) y las letras avisan qué tiene adentro */}
-                              <td className="sticky left-0 z-10 bg-gray-200 border border-gray-300 w-9 min-w-[36px] px-1 py-0.5 text-center align-middle">
-                                <span className={`block text-sm font-bold ${vacia ? 'text-gray-400' : 'text-gray-700'}`}>{j + 1}</span>
+                              <td className="sticky left-0 z-10 bg-gray-200 border border-gray-300 w-16 min-w-[64px] px-1 py-0.5 text-center align-middle whitespace-nowrap">
+                                <span className={`text-sm font-bold ${vacia ? 'text-gray-400' : 'text-gray-700'}`}>{j + 1}</span>
                                 <button type="button" tabIndex={-1} onClick={() => setDetalle((p) => ({ ...p, [c._key]: !conDetalle }))} aria-expanded={conDetalle}
                                   title="Transporte, bono y notas de la compra (F2)" aria-label={`Detalle de la compra ${j + 1}`}
-                                  className={`mt-0.5 rounded px-1 text-xs font-bold leading-4 ${conDetalle ? 'bg-primario text-white' : 'text-primario hover:bg-primario-claro'}`}>⋯</button>
+                                  className={`ml-1 rounded px-1 text-xs font-bold leading-4 ${conDetalle ? 'bg-primario text-white' : 'text-primario hover:bg-primario-claro'}`}>⋯</button>
                                 {(c.reconoce_transporte || n(c.transport_deduction) > 0 || c.con_bono || c.notes) && (
-                                  <span className="block text-[10px] font-bold text-amber-700" title={[c.reconoce_transporte || n(c.transport_deduction) > 0 ? 'T = transporte' : '', c.con_bono ? 'B = bono' : '', c.notes ? 'N = notas' : ''].filter(Boolean).join(' · ')}>
+                                  <span className="ml-1 text-[10px] font-bold text-amber-700" title={[c.reconoce_transporte || n(c.transport_deduction) > 0 ? 'T = transporte' : '', c.con_bono ? 'B = bono' : '', c.notes ? 'N = notas' : ''].filter(Boolean).join(' · ')}>
                                     {c.reconoce_transporte || n(c.transport_deduction) > 0 ? 'T' : ''}{c.con_bono ? 'B' : ''}{c.notes ? 'N' : ''}
                                   </span>
                                 )}
                               </td>
-                              <td data-campo="vendedor" data-copiar="third_party_id" className={`sticky left-9 z-10 bg-inherit shadow-[2px_0_0_#e5e7eb] ${tdGrilla} min-w-[220px]`}>
+                              <td data-campo="vendedor" data-copiar="third_party_id" className={`sticky left-16 z-10 bg-inherit shadow-[2px_0_0_#e5e7eb] ${tdGrilla} min-w-[220px]`}>
                                 <SelectBuscable value={c.third_party_id} onChange={cambiar('third_party_id')} disabled={fijo} abrirAlEnfocar={false} tabElige aria-label={`Compra ${j + 1}: se le compra a`} className={`${celda} ${c.third_party_id ? '' : (vacia ? '' : 'shadow-[inset_0_0_0_1px_#fbbf24]')}`}>
                                   <option value="">SELECCIONAR...</option>
                                   <optgroup label="COMERCIALES / COMERCIALIZADORAS">
@@ -1313,14 +1313,14 @@ export default function PurchaseAllocationPage() {
                                 <SelectBuscable value={c.farm_id}
                                   onChange={(e) => (e.target.value === '__nueva' ? abrirNuevaFinca(b._key, c) : cambiarCompra(b._key, c._key, 'farm_id', e.target.value))}
                                   disabled={c.liquidada || !duenoFinca(c) || c.pending_split} abrirAlEnfocar={false} tabElige
-                                  title={c.pending_split ? 'La finca se elige al dividir la compra' : !duenoFinca(c) ? 'Elige primero a quién se le compra' : 'Fincas del productor real (o del vendedor si es compra directa)'}
+                                  title={c.pending_split ? 'La finca se elige al dividir la compra' : !duenoFinca(c) ? 'Elige primero a quién se le compra' : c.mag_code ? `Código MAG ${c.mag_code} (sale de la finca; se corrige en Configuración → Fincas)` : 'Fincas del productor real (o del vendedor si es compra directa)'}
                                   className={`${celda} ${!c.farm_id && !c.liquidada && duenoFinca(c) && !c.pending_split ? (vacia ? '' : 'shadow-[inset_0_0_0_1px_#fbbf24]') : ''}`}>
                                   <option value="">{c.farm_name && !c.farm_id ? `${c.farm_name} (SIN CATÁLOGO)` : 'SELECCIONAR...'}</option>
                                   {fincasDe(duenoFinca(c), c.farm_id).map((f) => <option key={f.id} value={String(f.id)}>{f.name}{f.magap_code ? ` · ${f.magap_code}` : ''}</option>)}
                                   <option value="__nueva">+ NUEVA FINCA</option>
                                 </SelectBuscable>
                                 {/* 13/11/2026 (test de usabilidad): el código MAG va debajo de la finca (sale de ella; ya no es columna) */}
-                                {c.mag_code && <span className="block mt-0.5 text-xs text-gray-500" title="Código MAG: sale de la finca elegida (se corrige en Configuración → Fincas)">MAG {c.mag_code}</span>}
+                                {/* 18/11/2026 (filas más bajas): el código MAG se ve al pasar el mouse por la finca */}
                               </td>
                               <td data-campo="comerciales" data-copiar="executive" className={`${tdGrilla} min-w-[170px]`}>
                                 {/* 11/11/2026: uno o varios comerciales de la lista (los que ya tenía la compra se respetan) */}
@@ -1329,9 +1329,9 @@ export default function PurchaseAllocationPage() {
                                   const poner = (lista) => cambiarCompra(b._key, c._key, 'executive', lista.join(SEPARADOR_COMERCIALES));
                                   const libres = ejecutivos.filter((e) => !elegidos.includes(e));
                                   return (
-                                    <>
+                                    <div className="flex flex-wrap items-center gap-1">
                                       {elegidos.length > 0 && (
-                                        <div className="flex flex-wrap gap-1 mb-1">
+                                        <div className="flex flex-wrap gap-1">
                                           {elegidos.map((e) => (
                                             <span key={e} className={`inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs font-semibold whitespace-nowrap ${ejecutivos.includes(e) ? 'bg-primario-claro text-primario' : 'bg-gray-200 text-gray-600'}`}
                                               title={ejecutivos.includes(e) ? e : `${e} (no está en la lista activa)`}>
@@ -1342,24 +1342,24 @@ export default function PurchaseAllocationPage() {
                                         </div>
                                       )}
                                       {!c.liquidada && libres.length > 0 && (
-                                        <select value="" onChange={(ev) => ev.target.value && poner([...elegidos, ev.target.value])} aria-label="Agregar comercial" className={`${celda} text-xs`}>
+                                        <select value="" onChange={(ev) => ev.target.value && poner([...elegidos, ev.target.value])} aria-label="Agregar comercial" className={`${celdaCorta} flex-1 min-w-[100px] text-xs`}>
                                           <option value="">{elegidos.length ? '+ OTRO COMERCIAL' : 'SELECCIONAR...'}</option>
                                           {libres.map((e) => <option key={e} value={e}>{e}</option>)}
                                         </select>
                                       )}
-                                    </>
+                                    </div>
                                   );
                                 })()}
                               </td>
                               {/* 13/11/2026 (Peter): corte, semana de compra y entrega en una misma línea (no uno sobre otro) */}
-                              <td data-campo="corte" className={`${tdGrilla} min-w-[430px]`}>
+                              <td data-campo="corte" className={`${tdGrilla} min-w-[340px]`}>
                                 <div className="flex items-center gap-1">
-                                  <input type="date" data-copiar="cut_date" value={c.cut_date} onChange={cambiar('cut_date')} disabled={c.liquidada} aria-label={`Compra ${j + 1}: día de corte`} className={`${celdaCorta} w-36 shrink-0`} />
+                                  <input type="date" data-copiar="cut_date" value={c.cut_date} onChange={cambiar('cut_date')} disabled={c.liquidada} aria-label={`Compra ${j + 1}: día de corte`} className={`${celdaCorta} w-[118px] shrink-0`} />
                                   {semanasCompra.length > 1 && (
                                     <select data-copiar="purchase_week" value={c.purchase_week || String(pedido.week)} onChange={cambiar('purchase_week')} disabled={Boolean(c.bloqueo)}
                                       aria-label="Semana de compra"
                                       title={c.bloqueo ? `No se cambia: ${c.bloqueo}` : 'Semana de compra (se liquida y cuenta en el contrato en esa semana)'}
-                                      className={`${celdaCorta} w-32 shrink-0 text-xs ${semanaDeCompra(c) !== pedido.week ? 'bg-sky-100 font-semibold' : ''}`}>
+                                      className={`${celdaCorta} w-[104px] shrink-0 text-xs ${semanaDeCompra(c) !== pedido.week ? 'bg-sky-100 font-semibold' : ''}`}>
                                       {semanasCompra.map((w) => <option key={w.week} value={String(w.week)}>COMPRA WK{w.week}</option>)}
                                     </select>
                                   )}

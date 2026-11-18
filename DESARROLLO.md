@@ -273,6 +273,14 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 18/11/2026 — Compra de fruta: filas más bajas y fecha más angosta
+Pedido de Comercial: cuadros no tan altos ni tan pequeños.
+- Celdas con menos relleno.
+- La columna N° pone en una sola línea el número, ⋯ y las letras T/B/N.
+- Los comerciales elegidos y "+ otro comercial" van en la misma línea.
+- El código MAG ya no va debajo de la finca: se ve al pasar el mouse.
+- La fecha de corte baja de 144 a 118 px y la semana de 128 a 104 px. La columna Corte · Semana · Entrega baja de 430 a 340 px.
+
 ### 18/11/2026 — Compra de fruta: la grilla se ve como SAP
 Peter mostró la grilla de SAP como modelo. Aplica solo a la tabla de compras de Compra de fruta (excepción al estándar de inputs redondeados, aprobada para probar).
 - Celdas planas con línea gris fina, sin cuadros redondeados. La celda activa se pinta de amarillo.
