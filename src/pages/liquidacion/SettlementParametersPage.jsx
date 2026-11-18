@@ -14,6 +14,11 @@ import { REGIMENES } from '../../utils/retencion';
 
 const label = 'block text-sm font-semibold text-gray-700 mb-1.5';
 const input = 'w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-primario';
+// 18/11/2026 (Peter): tramos de retención como la grilla de Compra de fruta (tipo SAP): columna # gris, línea fina,
+// filas alternadas, la fila donde se trabaja en verde y la celda que se edita en amarillo
+const tdGrilla = 'px-0.5 py-0 border border-gray-200 align-middle focus-within:bg-yellow-100 focus-within:text-gray-900';
+const celda = 'w-full bg-transparent border-0 rounded-none px-1.5 py-0.5 text-sm text-inherit outline-none disabled:opacity-60 disabled:cursor-not-allowed';
+const tdNumero = 'bg-gray-200 border border-gray-300 px-1 py-0.5 text-center text-sm font-bold text-gray-700 whitespace-nowrap cursor-pointer outline-none';
 const mensajeError = (err, texto) => {
     const errores = err.response?.data?.errors;
     return errores ? Object.values(errores).flat().join(' ') : (err.response?.data?.message || texto);
@@ -165,35 +170,37 @@ function TablaRetencion({ onToast }) {
                     )}
                 </div>
                 <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                        <thead>
-                            <tr className="text-left text-gray-500 border-b">
-                                <th className="py-2 pr-2">Más de (cajas)</th>
-                                <th className="py-2 pr-2">Hasta (cajas)</th>
-                                <th className="py-2 pr-2">Tarifa (%)</th>
+                    <table className="w-full text-sm border-collapse">
+                        <thead className="bg-primario text-white">
+                            <tr className="text-left">
+                                <th className="text-center px-2 py-2 text-xs w-10">#</th>
+                                <th className="px-3 py-2 uppercase text-xs">Más de (cajas)</th>
+                                <th className="px-3 py-2 uppercase text-xs">Hasta (cajas)</th>
+                                <th className="px-3 py-2 uppercase text-xs">Tarifa (%)</th>
                                 {editando && <th />}
                             </tr>
                         </thead>
                         <tbody>
                             {tramos.map((t, i) => (
-                                <tr key={i} className="border-b last:border-0">
-                                    <td className="py-2 pr-2">
+                                <tr key={i} className={`fila-grilla group text-gray-800 ${i % 2 === 0 ? 'bg-white' : 'bg-violet-50'} focus-within:bg-green-600 focus-within:text-white`}>
+                                    <td tabIndex={-1} title="Clic para marcar la fila" className={tdNumero}><span className="hidden group-focus-within:inline text-primario mr-0.5" aria-hidden="true">▶</span>{i + 1}</td>
+                                    <td className="px-3 py-1.5 border border-gray-200">
                                         {editando && i > 0 ? <span className="text-gray-500">{t.from_boxes ? dinero(t.from_boxes, 0) : '—'}</span> : dinero(t.from_boxes || 0, 0)}
                                     </td>
-                                    <td className="py-2 pr-2">
+                                    <td className={editando ? tdGrilla : 'px-3 py-1.5 border border-gray-200'}>
                                         {editando ? (
                                             i === tramos.length - 1 ? <span className="text-gray-500">EN ADELANTE</span>
-                                                : <CampoNumero value={t.to_boxes} onChange={(e) => cambiar(i, 'to_boxes', e.target.value)} decimales={0} aria-label={`Hasta, tramo ${i + 1}`} className={input} />
+                                                : <CampoNumero value={t.to_boxes} onChange={(e) => cambiar(i, 'to_boxes', e.target.value)} decimales={0} aria-label={`Hasta, tramo ${i + 1}`} className={celda} />
                                         ) : (t.to_boxes === '' ? 'EN ADELANTE' : dinero(t.to_boxes, 0))}
                                     </td>
-                                    <td className="py-2 pr-2">
-                                        {editando ? <CampoNumero value={t.rate} onChange={(e) => cambiar(i, 'rate', e.target.value)} max={10} aria-label={`Tarifa, tramo ${i + 1}`} className={input} /> : `${dinero(t.rate, 2)} %`}
+                                    <td className={editando ? tdGrilla : 'px-3 py-1.5 border border-gray-200'}>
+                                        {editando ? <CampoNumero value={t.rate} onChange={(e) => cambiar(i, 'rate', e.target.value)} max={10} aria-label={`Tarifa, tramo ${i + 1}`} className={celda} /> : `${dinero(t.rate, 2)} %`}
                                     </td>
                                     {editando && (
-                                        <td className="py-2">
+                                        <td className={`${tdGrilla} text-center`}>
                                             {tramos.length > 1 && (
                                                 <button type="button" onClick={() => setTramos((ts) => ts.filter((_, j) => j !== i).map((x, j, arr) => (j === arr.length - 1 ? { ...x, to_boxes: '' } : x)))}
-                                                    title="Quitar tramo" aria-label="Quitar tramo" className="p-1.5 rounded-lg hover:bg-red-50 text-red-600">
+                                                    title="Quitar tramo" aria-label="Quitar tramo" className="p-1 rounded-lg hover:bg-red-50 text-red-600">
                                                     <Trash2 size={16} />
                                                 </button>
                                             )}

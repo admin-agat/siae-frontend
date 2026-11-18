@@ -387,7 +387,13 @@ export default function InventoryMovementFormPage() {
     // Cuántas columnas ocupa la tabla según el modo (para el colSpan del
     // renglón de motivo de discrepancia, que solo aplica al modo normal).
     // Transferencia ahora tiene 4 columnas: Insumo, Stock actual, Cantidad, acción.
-    const totalColumnas = esTransferencia ? 4 : esBodeguero ? 4 : 6;
+    // 18/11/2026 (Peter): +1 por la columna # de la grilla
+    const totalColumnas = esTransferencia ? 5 : esBodeguero ? 5 : 7;
+    // 18/11/2026 (Peter): líneas como la grilla de Compra de fruta (tipo SAP): celdas planas, línea gris fina,
+    // filas alternadas, la fila donde se trabaja en verde y la celda que se edita en amarillo
+    const tdGrilla = 'px-0.5 py-0 border border-gray-200 align-middle focus-within:bg-yellow-100 focus-within:text-gray-900';
+    const celda = 'w-full bg-transparent border-0 rounded-none px-1.5 py-0.5 text-sm text-inherit outline-none disabled:opacity-60 disabled:cursor-not-allowed';
+    const tdNumero = 'bg-gray-200 border border-gray-300 px-1 py-0.5 text-center text-sm font-bold text-gray-700 whitespace-nowrap cursor-pointer outline-none';
 
     // --- Guardar ---
 
@@ -768,45 +774,45 @@ export default function InventoryMovementFormPage() {
                         </button>
                     </div>
 
-                    <table className="w-full text-sm">
+                    <table className="w-full text-sm border-collapse">
     <thead className="bg-primario text-white">
         <tr>
-            <th className="text-left px-4 py-3">Insumo</th>
+            <th className="text-center px-2 py-2 text-xs w-10">#</th>
+            <th className="text-left px-2 py-2 text-xs">Insumo</th>
             {esTransferencia ? (
                 // Modo Transferencia: sin costos, es movimiento interno —
                 // se muestra el stock actual junto a la cantidad a mover.
                 <>
-                    <th className="text-right px-4 py-3 w-32">Stock actual</th>
-                    <th className="text-right px-4 py-3 w-36">Cantidad</th>
+                    <th className="text-right px-2 py-2 text-xs w-32">Stock actual</th>
+                    <th className="text-right px-2 py-2 text-xs w-36">Cantidad</th>
                 </>
             ) : esBodeguero ? (
                 <>
-                    <th className="text-right px-4 py-3 w-36">Cantidad comprada</th>
-                    <th className="text-right px-4 py-3 w-36">Cantidad ingresada</th>
+                    <th className="text-right px-2 py-2 text-xs w-36">Cantidad comprada</th>
+                    <th className="text-right px-2 py-2 text-xs w-36">Cantidad ingresada</th>
                 </>
             ) : (
                 <>
-                    <th className="text-right px-4 py-3 w-36">Cantidad real</th>
-                    <th className="text-right px-4 py-3 w-32">Costo unit.</th>
-                    <th className="text-right px-4 py-3 w-28">Descuento</th>
-                    <th className="text-right px-4 py-3 w-32">Total</th>
+                    <th className="text-right px-2 py-2 text-xs w-36">Cantidad real</th>
+                    <th className="text-right px-2 py-2 text-xs w-32">Costo unit.</th>
+                    <th className="text-right px-2 py-2 text-xs w-28">Descuento</th>
+                    <th className="text-right px-2 py-2 text-xs w-32">Total</th>
                 </>
             )}
-            <th className="px-4 py-3 w-12"></th>
+            <th className="px-2 py-2 w-10"></th>
         </tr>
     </thead>
     <tbody>
         {lineas.map((linea, index) => (
             <Fragment key={index}>
-            <tr className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                <td className="px-4 py-2">
+            <tr className={`fila-grilla group text-gray-800 ${index % 2 === 0 ? 'bg-white' : 'bg-violet-50'} focus-within:bg-green-600 focus-within:text-white`}>
+                <td tabIndex={-1} title="Clic para marcar la fila" className={tdNumero}><span className="hidden group-focus-within:inline text-primario mr-0.5" aria-hidden="true">▶</span>{index + 1}</td>
+                <td className={tdGrilla}>
                     <SelectBuscable
                         value={linea.supply_id}
                         onChange={(e) => actualizarLinea(index, 'supply_id', e.target.value)}
                         disabled={linea.bloqueada}
-                        className={`w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primario ${
-                            linea.bloqueada ? 'bg-gray-100 text-gray-600 cursor-not-allowed' : 'bg-white'
-                        }`}
+                        className={`${celda} ${linea.bloqueada ? 'cursor-not-allowed' : ''}`}
                     >
                         <option value="">Seleccionar...</option>
                         {insumos.map((i) => (
@@ -814,7 +820,7 @@ export default function InventoryMovementFormPage() {
                         ))}
                     </SelectBuscable>
                     {linea.bloqueada && !esBodeguero && (
-                        <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                        <p className="text-xs text-gray-400 px-1.5 pb-0.5 flex items-center gap-1">
                             <Lock size={10} />
                             De la OC — pendiente: {linea.pendiente}
                         </p>
@@ -825,25 +831,21 @@ export default function InventoryMovementFormPage() {
                     <>
                         {/* NUEVO: Stock actual — solo lectura, informativo,
                             se recalcula cada vez que cambia la bodega origen */}
-                        <td className="px-4 py-2 text-right text-gray-600">
+                        <td className="px-2 py-1 border border-gray-200 text-right text-gray-600">
                             {!linea.supply_id
                                 ? '—'
                                 : cargandoStock
                                 ? '...'
                                 : stockDisponibleDe(linea.supply_id)}
                         </td>
-                        <td className="px-4 py-2">
+                        <td className={tdGrilla}>
                             <CampoNumero decimales={2}
                                 value={linea.quantity}
                                 onChange={(e) => actualizarLinea(index, 'quantity', e.target.value)}
-                                className={`w-full border rounded-lg px-2 py-1.5 text-sm text-right outline-none focus:ring-2 ${
-                                    excedeStock(linea)
-                                        ? 'bg-red-50 border-red-400 focus:ring-red-400 text-red-700'
-                                        : 'bg-white border-gray-200 focus:ring-primario'
-                                }`}
+                                className={`${excedeStock(linea) ? celda.replace('bg-transparent', 'bg-red-50 text-red-700 shadow-[inset_0_0_0_2px_#f87171]') : celda} text-right`}
                             />
                             {excedeStock(linea) && (
-                                <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                                <p className="text-xs text-red-600 px-1.5 pb-0.5 flex items-center gap-1">
                                     <AlertTriangle size={11} />
                                     Supera el stock disponible ({stockDisponibleDe(linea.supply_id)})
                                 </p>
@@ -854,54 +856,54 @@ export default function InventoryMovementFormPage() {
                     <>
                         {/* Cantidad comprada: viene de la OC (quantity_ordered - ya recibido),
                             solo lectura — el bodeguero NO puede tocar este valor */}
-                        <td className="px-4 py-2">
+                        <td className={tdGrilla}>
                             <CampoNumero decimales={0}
                                 value={linea.pendiente ?? ''}
                                 readOnly
                                 disabled
-                                className="w-full bg-gray-200 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-right text-gray-600 outline-none cursor-not-allowed"
+                                className={`${celda} text-right`}
                             />
                         </td>
                         {/* Cantidad ingresada: lo único que el bodeguero puede editar,
                             es el mismo campo linea.quantity de siempre */}
-                        <td className="px-4 py-2">
+                        <td className={tdGrilla}>
                             <CampoNumero decimales={2}
                                 value={linea.quantity}
                                 onChange={(e) => actualizarLinea(index, 'quantity', e.target.value)}
-                                className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-right outline-none focus:ring-2 focus:ring-primario"
+                                className={`${celda} text-right`}
                             />
                         </td>
                     </>
                 ) : (
                     <>
-                        <td className="px-4 py-2">
+                        <td className={tdGrilla}>
                             <CampoNumero decimales={2}
                                 value={linea.quantity}
                                 onChange={(e) => actualizarLinea(index, 'quantity', e.target.value)}
-                                className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-right outline-none focus:ring-2 focus:ring-primario"
+                                className={`${celda} text-right`}
                             />
                         </td>
-                        <td className="px-4 py-2">
+                        <td className={tdGrilla}>
                             <CampoNumero decimales={4}
                                 value={linea.unit_cost}
                                 onChange={(e) => actualizarLinea(index, 'unit_cost', e.target.value)}
-                                className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-right outline-none focus:ring-2 focus:ring-primario"
+                                className={`${celda} text-right`}
                             />
                         </td>
-                        <td className="px-4 py-2">
+                        <td className={tdGrilla}>
                             <CampoNumero decimales={2}
                                 value={linea.discount}
                                 onChange={(e) => actualizarLinea(index, 'discount', e.target.value)}
-                                className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-right outline-none focus:ring-2 focus:ring-primario"
+                                className={`${celda} text-right`}
                             />
                         </td>
-                        <td className="px-4 py-2 text-right font-medium">
+                        <td className="px-2 py-1 border border-gray-200 text-right font-medium">
                             ${dinero(totalLinea(linea))}
                         </td>
                     </>
                 )}
 
-                <td className="px-4 py-2 text-center">
+                <td className="px-1 py-0 border border-gray-200 text-center">
                     {lineas.length > 1 && !linea.bloqueada && !esBodeguero && (
                         <button
                             type="button"
@@ -939,7 +941,7 @@ export default function InventoryMovementFormPage() {
     {!esBodeguero && !esTransferencia && (
         <tfoot>
             <tr className="bg-gray-50 border-t">
-                <td colSpan={4} className="px-4 py-3 text-right font-semibold text-gray-700">
+                <td colSpan={5} className="px-4 py-3 text-right font-semibold text-gray-700">
                     Total general
                 </td>
                 <td className="px-4 py-3 text-right font-bold text-primario">

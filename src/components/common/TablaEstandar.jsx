@@ -50,8 +50,9 @@ export default function TablaEstandar({
     porPagina = 10,
     getId = (fila) => fila.id,        // cómo identificar cada fila (key + resaltado)
     // 18/11/2026 (Peter): estilo de las grillas (Compra de fruta): filas bajas con línea fina, alternadas blanco/lila
-    // y la fila que se toca en verde con letra blanca. Opcional: por defecto la tabla se ve como siempre.
-    compacta = false,
+    // y la fila que se toca en verde con letra blanca.
+    // 18/11/2026 (Peter): ahora es el estilo por defecto en todo el sistema; compacta={false} vuelve al anterior.
+    compacta = true,
 }) {
     const [busqueda, setBusqueda] = useState('');
     const [pestana, setPestana] = useState('ACTIVOS');

@@ -71,6 +71,7 @@ export default function AuditLogPage() {
   const [filtros, setFiltros] = useState(filtrosVacios);
   const [aplicados, setAplicados] = useState(filtrosVacios);
   const [pagina, setPagina] = useState(1);
+  const [filaSeleccionada, setFilaSeleccionada] = useState(null);
   const [datos, setDatos] = useState({ data: [], total: 0, last_page: 1, users: [], tables: [] });
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
@@ -106,7 +107,9 @@ export default function AuditLogPage() {
 
   const input = 'w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-primario';
   const etiqueta = 'block text-xs font-semibold text-gray-600 uppercase mb-1';
-  const th = 'text-left px-3 py-3 uppercase text-xs whitespace-nowrap';
+  const th = 'text-left px-3 py-2 uppercase text-xs whitespace-nowrap';
+  // 18/11/2026 (Peter): bitácora compacta como las listas (columna #, línea fina, filas alternadas, fila elegida en verde)
+  const td = 'px-3 py-1.5 border border-gray-200';
 
   return (
     <div className="p-6">
@@ -162,9 +165,10 @@ export default function AuditLogPage() {
       {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3 mb-4">{error}</div>}
 
       <div className="bg-white rounded-xl shadow overflow-x-auto">
-        <table className="w-full text-sm min-w-[1100px]">
+        <table className="w-full text-sm min-w-[1100px] border-collapse">
           <thead className="bg-primario text-white">
             <tr>
+              <th className="text-center px-2 py-2 text-xs w-10">#</th>
               <th className={th}>Fecha y hora</th>
               <th className={th}>Usuario</th>
               <th className={th}>Acción</th>
@@ -176,18 +180,19 @@ export default function AuditLogPage() {
           </thead>
           <tbody>
             {cargando ? (
-              <tr><td colSpan={7} className="text-center py-8 text-gray-400">Cargando...</td></tr>
+              <tr><td colSpan={8} className="text-center py-8 text-gray-400">Cargando...</td></tr>
             ) : datos.data.length === 0 ? (
-              <tr><td colSpan={7} className="text-center py-8 text-gray-400">Sin registros para estos filtros</td></tr>
+              <tr><td colSpan={8} className="text-center py-8 text-gray-400">Sin registros para estos filtros</td></tr>
             ) : datos.data.map((r, i) => (
-              <tr key={r.id} className={`align-top ${i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}`}>
-                <td className="px-3 py-2 whitespace-nowrap font-mono text-xs">{fechaHora(r.created_at)}</td>
-                <td className="px-3 py-2 font-medium whitespace-nowrap">{r.user_name || '—'}</td>
-                <td className="px-3 py-2"><span className={`text-[11px] font-semibold px-2 py-1 rounded-full whitespace-nowrap ${ACCIONES[r.action] || 'bg-gray-100 text-gray-700'}`}>{r.action.replace('_', ' ')}</span></td>
-                <td className="px-3 py-2 whitespace-nowrap">{modulo(r.table_name)}</td>
-                <td className="px-3 py-2 text-gray-500">{r.record_id ? `#${r.record_id}` : '—'}</td>
-                <td className="px-3 py-2"><Detalle registro={r} /></td>
-                <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap" title={r.route || ''}>{r.ip || '—'}</td>
+              <tr key={r.id} onClick={() => setFilaSeleccionada(r.id)} className={`align-top cursor-pointer ${filaSeleccionada === r.id ? 'fila-elegida bg-green-600 text-white' : i % 2 === 0 ? 'bg-white hover:bg-yellow-50' : 'bg-violet-50 hover:bg-yellow-50'}`}>
+                <td className="bg-gray-200 border border-gray-300 px-1 py-1.5 text-center text-sm font-bold text-gray-700">{(pagina - 1) * 50 + i + 1}{/* 50 por página, como el backend */}</td>
+                <td className={`${td} whitespace-nowrap font-mono text-xs`}>{fechaHora(r.created_at)}</td>
+                <td className={`${td} font-medium whitespace-nowrap`}>{r.user_name || '—'}</td>
+                <td className={td}><span className={`text-[11px] font-semibold px-2 py-1 rounded-full whitespace-nowrap ${ACCIONES[r.action] || 'bg-gray-100 text-gray-700'}`}>{r.action.replace('_', ' ')}</span></td>
+                <td className={`${td} whitespace-nowrap`}>{modulo(r.table_name)}</td>
+                <td className={`${td} text-gray-500`}>{r.record_id ? `#${r.record_id}` : '—'}</td>
+                <td className={td}><Detalle registro={r} /></td>
+                <td className={`${td} text-xs text-gray-500 whitespace-nowrap`} title={r.route || ''}>{r.ip || '—'}</td>
               </tr>
             ))}
           </tbody>

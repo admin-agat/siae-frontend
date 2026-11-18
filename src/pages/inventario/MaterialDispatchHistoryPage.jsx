@@ -195,42 +195,45 @@ export default function MaterialDispatchHistoryPage() {
                     </p>
                 ) : (
                     <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="text-left border-b text-gray-600">
-                                    <th className="py-2 pr-3">N°</th>
-                                    <th className="py-2 pr-3">FECHA</th>
-                                    <th className="py-2 pr-3">SEM</th>
-                                    <th className="py-2 pr-3">BODEGA</th>
-                                    <th className="py-2 pr-3">PRODUCTOR</th>
-                                    <th className="py-2 pr-3">RETIRÓ</th>
-                                    <th className="py-2 pr-3">REGISTRÓ</th>
-                                    {verCostos && <th className="py-2 pr-3 text-right">VALOR</th>}
-                                    <th className="py-2 text-center">ACCIONES</th>
+                        <table className="w-full text-sm border-collapse">
+                            <thead className="bg-primario text-white">
+                                <tr className="text-left">
+                                    {/* 18/11/2026 (Peter): lista compacta como el Pedido semanal: # de fila (N° es el número del despacho) */}
+                                    <th className="text-center px-2 py-2 text-xs w-10">#</th>
+                                    <th className="px-3 py-2 text-xs">N°</th>
+                                    <th className="px-3 py-2 text-xs">FECHA</th>
+                                    <th className="px-3 py-2 text-xs">SEM</th>
+                                    <th className="px-3 py-2 text-xs">BODEGA</th>
+                                    <th className="px-3 py-2 text-xs">PRODUCTOR</th>
+                                    <th className="px-3 py-2 text-xs">RETIRÓ</th>
+                                    <th className="px-3 py-2 text-xs">REGISTRÓ</th>
+                                    {verCostos && <th className="px-3 py-2 text-xs text-right">VALOR</th>}
+                                    <th className="px-3 py-2 text-xs text-center">ACCIONES</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {despachos.map((d) => {
+                                {despachos.map((d, i) => {
                                     const liquidado = d.producer_quota?.status === 'LIQUIDADO';
                                     return (
                                         <tr
                                             key={d.id}
                                             onClick={() => setFilaSeleccionada(d.id)}
-                                            className={`border-b last:border-0 cursor-pointer ${filaSeleccionada === d.id ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+                                            className={`cursor-pointer ${filaSeleccionada === d.id ? 'fila-elegida bg-green-600 text-white' : (i % 2 === 0 ? 'bg-white hover:bg-yellow-50' : 'bg-violet-50 hover:bg-yellow-50')}`}
                                         >
-                                            <td className="py-2 pr-3 text-gray-500">{d.id}</td>
-                                            <td className="py-2 pr-3">{fechaCorta(d.date)}</td>
-                                            <td className="py-2 pr-3">{d.week ?? '—'}</td>
-                                            <td className="py-2 pr-3">{d.warehouse?.name ?? '—'}</td>
-                                            <td className="py-2 pr-3">{d.third_party?.name ?? '—'}</td>
-                                            <td className="py-2 pr-3">
+                                            <td className="bg-gray-200 border border-gray-300 px-1 py-1.5 text-center text-sm font-bold text-gray-700">{i + 1}</td>
+                                            <td className="px-3 py-1.5 border border-gray-200 text-gray-500">{d.id}</td>
+                                            <td className="px-3 py-1.5 border border-gray-200">{fechaCorta(d.date)}</td>
+                                            <td className="px-3 py-1.5 border border-gray-200">{d.week ?? '—'}</td>
+                                            <td className="px-3 py-1.5 border border-gray-200">{d.warehouse?.name ?? '—'}</td>
+                                            <td className="px-3 py-1.5 border border-gray-200">{d.third_party?.name ?? '—'}</td>
+                                            <td className="px-3 py-1.5 border border-gray-200">
                                                 <p>{d.received_by_name ?? '—'}</p>
                                                 <p className="text-xs text-gray-400">C.I. {d.received_by_document ?? '—'}</p>
                                             </td>
-                                            <td className="py-2 pr-3 text-gray-500">{d.created_by?.name ?? '—'}</td>
-                                            {verCostos && <td className="py-2 pr-3 text-right font-semibold">{dinero(d.valor_total)}</td>}
+                                            <td className="px-3 py-1.5 border border-gray-200 text-gray-500">{d.created_by?.name ?? '—'}</td>
+                                            {verCostos && <td className="px-3 py-1.5 border border-gray-200 text-right font-semibold">{dinero(d.valor_total)}</td>}
                                             {/* stopPropagation: los botones no disparan la selección de fila */}
-                                            <td className="py-2 text-center" onClick={(e) => e.stopPropagation()}>
+                                            <td className="px-3 py-1 border border-gray-200 text-center" onClick={(e) => e.stopPropagation()}>
                                                 <div className="flex justify-center gap-2">
                                                     <button
                                                         title="Ver / imprimir guía"

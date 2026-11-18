@@ -38,6 +38,8 @@ export default function PendingTransfersPage({ soloRecibir = false }) {
     const [errorCancelar, setErrorCancelar] = useState('');
 
     const [toast, setToast] = useState(null);
+    // 18/11/2026 (Peter): fila elegida (verde), como las listas compactas
+    const [filaSeleccionada, setFilaSeleccionada] = useState(null);
 
     useEffect(() => {
         cargarPendientes();
@@ -214,26 +216,28 @@ export default function PendingTransfersPage({ soloRecibir = false }) {
             )}
 
             <div className="bg-white rounded-xl shadow overflow-hidden">
-                <table className="w-full text-sm">
+                <table className="w-full text-sm border-collapse">
                     <thead className="bg-primario text-white">
                         <tr>
-                            <th className="text-left px-4 py-3">Origen → Destino</th>
-                            <th className="text-left px-4 py-3">Fecha</th>
-                            <th className="text-left px-4 py-3">Guía de remisión</th>
-                            <th className="text-left px-4 py-3">Insumos</th>
-                            <th className="text-center px-4 py-3 w-72">Acción</th>
+                            {/* 18/11/2026 (Peter): lista compacta como el Pedido semanal (columna #) */}
+                            <th className="text-center px-2 py-2 text-xs w-10">#</th>
+                            <th className="text-left px-3 py-2 text-xs">Origen → Destino</th>
+                            <th className="text-left px-3 py-2 text-xs">Fecha</th>
+                            <th className="text-left px-3 py-2 text-xs">Guía de remisión</th>
+                            <th className="text-left px-3 py-2 text-xs">Insumos</th>
+                            <th className="text-center px-3 py-2 text-xs w-72">Acción</th>
                         </tr>
                     </thead>
                     <tbody>
                         {cargando ? (
                             <tr>
-                                <td colSpan={5} className="text-center px-4 py-8 text-gray-400">
+                                <td colSpan={6} className="text-center px-4 py-8 text-gray-400">
                                     Cargando transferencias pendientes...
                                 </td>
                             </tr>
                         ) : transferencias.length === 0 ? (
                             <tr>
-                                <td colSpan={5} className="text-center px-4 py-8 text-gray-400">
+                                <td colSpan={6} className="text-center px-4 py-8 text-gray-400">
                                     No hay transferencias pendientes de confirmación
                                 </td>
                             </tr>
@@ -241,21 +245,23 @@ export default function PendingTransfersPage({ soloRecibir = false }) {
                             transferencias.map((t, index) => (
                                 <tr
                                     key={t.id}
-                                    className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}
+                                    onClick={() => setFilaSeleccionada(t.id)}
+                                    className={`cursor-pointer ${filaSeleccionada === t.id ? 'fila-elegida bg-green-600 text-white' : (index % 2 === 0 ? 'bg-white hover:bg-yellow-50' : 'bg-violet-50 hover:bg-yellow-50')}`}
                                 >
-                                    <td className="px-4 py-3 font-semibold text-gray-800">
+                                    <td className="bg-gray-200 border border-gray-300 px-1 py-1.5 text-center text-sm font-bold text-gray-700">{index + 1}</td>
+                                    <td className="px-3 py-1.5 border border-gray-200 font-semibold text-gray-800">
                                         <span className="flex items-center gap-1.5">
                                             {t.warehouse?.name}
                                             <ArrowRight size={13} className="text-gray-400" />
                                             {t.destination_warehouse?.name}
                                         </span>
                                     </td>
-                                    <td className="px-4 py-3">{formatearFecha(t.date)}</td>
-                                    <td className="px-4 py-3">{t.delivery_note || '—'}</td>
-                                    <td className="px-4 py-3 text-gray-600">
+                                    <td className="px-3 py-1.5 border border-gray-200">{formatearFecha(t.date)}</td>
+                                    <td className="px-3 py-1.5 border border-gray-200">{t.delivery_note || '—'}</td>
+                                    <td className="px-3 py-1.5 border border-gray-200 text-gray-600">
                                         {t.lines.map((l) => l.supply?.name).join(', ')}
                                     </td>
-                                    <td className="px-4 py-3">
+                                    <td className="px-3 py-1.5 border border-gray-200">
                                         <div className="flex items-center justify-center gap-2">
                                             <button
                                                 onClick={() => abrirModalVer(t)}
@@ -328,21 +334,24 @@ export default function PendingTransfersPage({ soloRecibir = false }) {
                             )}
                         </div>
 
-                        <table className="w-full text-sm mb-2">
+                        <table className="w-full text-sm mb-2 border-collapse">
                             <thead className="bg-gray-100 text-gray-600">
                                 <tr>
+                                    {/* 18/11/2026 (Peter): columna # y filas alternadas */}
+                                    <th className="text-center px-2 py-2 text-xs w-10">#</th>
                                     <th className="text-left px-3 py-2">Insumo</th>
                                     <th className="text-right px-3 py-2 w-32">Cantidad enviada</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {transferenciaAVer.lines.map((linea) => (
-                                    <tr key={linea.supply_id} className="border-b">
-                                        <td className="px-3 py-2">
+                                {transferenciaAVer.lines.map((linea, i) => (
+                                    <tr key={linea.supply_id} className={i % 2 === 0 ? 'bg-white' : 'bg-violet-50'}>
+                                        <td className="bg-gray-200 border border-gray-300 px-1 py-1.5 text-center text-sm font-bold text-gray-700">{i + 1}</td>
+                                        <td className="px-3 py-1.5 border border-gray-200">
                                             {linea.supply?.code ? `${linea.supply.code} — ` : ''}
                                             {linea.supply?.name}
                                         </td>
-                                        <td className="px-3 py-2 text-right font-medium">
+                                        <td className="px-3 py-1.5 border border-gray-200 text-right font-medium">
                                             {Number(linea.quantity).toLocaleString('es-EC')}
                                         </td>
                                     </tr>
@@ -421,9 +430,11 @@ export default function PendingTransfersPage({ soloRecibir = false }) {
                             {transferenciaAConfirmar.destination_warehouse?.name}
                         </p>
 
-                        <table className="w-full text-sm mb-2">
+                        <table className="w-full text-sm mb-2 border-collapse">
                             <thead className="bg-gray-100 text-gray-600">
                                 <tr>
+                                    {/* 18/11/2026 (Peter): columna # */}
+                                    <th className="text-center px-2 py-2 text-xs w-10">#</th>
                                     <th className="text-left px-3 py-2">Insumo</th>
                                     <th className="text-right px-3 py-2 w-28">Enviado</th>
                                     <th className="text-right px-3 py-2 w-32">Recibido</th>
@@ -432,12 +443,13 @@ export default function PendingTransfersPage({ soloRecibir = false }) {
                             <tbody>
                                 {lineasModal.map((linea, index) => (
                                     <Fragment key={linea.supply_id}>
-                                        <tr className="border-b">
-                                            <td className="px-3 py-2">{linea.supply_name}</td>
-                                            <td className="px-3 py-2 text-right text-gray-500">
+                                        <tr className={index % 2 === 0 ? 'bg-white' : 'bg-violet-50'}>
+                                            <td className="bg-gray-200 border border-gray-300 px-1 py-1.5 text-center text-sm font-bold text-gray-700">{index + 1}</td>
+                                            <td className="px-3 py-1.5 border border-gray-200">{linea.supply_name}</td>
+                                            <td className="px-3 py-1.5 border border-gray-200 text-right text-gray-500">
                                                 {linea.cantidad_enviada}
                                             </td>
-                                            <td className="px-3 py-2">
+                                            <td className="px-3 py-1 border border-gray-200">
                                                 <CampoNumero decimales={2}
                                                     value={linea.quantity}
                                                     onChange={(e) => actualizarLineaModal(index, 'quantity', e.target.value)}
@@ -447,7 +459,7 @@ export default function PendingTransfersPage({ soloRecibir = false }) {
                                         </tr>
                                         {necesitaMotivo(linea) && (
                                             <tr className="bg-amber-50 border-b border-amber-200">
-                                                <td colSpan={3} className="px-3 py-3">
+                                                <td colSpan={4} className="px-3 py-3">
                                                     <label className="flex items-center gap-1.5 text-xs font-semibold text-amber-700 mb-1.5">
                                                         <AlertTriangle size={13} />
                                                         Motivo de discrepancia * — llegaron {linea.quantity || 0} de {linea.cantidad_enviada} enviados

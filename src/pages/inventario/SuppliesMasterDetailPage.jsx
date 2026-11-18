@@ -389,33 +389,35 @@ export default function SuppliesMasterDetailPage() {
                     </div>
 
                     <div className="bg-white rounded-xl border border-primario/15 shadow-sm overflow-hidden">
-                        <table className="w-full text-sm">
+                        {/* 18/11/2026 (Peter): lista compacta como el Pedido semanal: columna #, filas bajas alternadas y fila elegida en verde */}
+                        <table className="w-full text-sm border-collapse">
                             <thead className="bg-primario text-white">
                                 <tr>
-                                    <th className="text-left px-4 py-3">Código</th>
-                                    <th className="text-left px-4 py-3">Insumo</th>
-                                    <th className="text-left px-4 py-3">Unidad</th>
-                                    <th className="text-left px-4 py-3">Costo promedio</th>
-                                    <th className="text-left px-4 py-3">Estado</th>
-                                    <th className="text-left px-4 py-3">Acciones</th>
+                                    <th className="text-center px-2 py-2 text-xs w-10">#</th>
+                                    <th className="text-left px-3 py-2 text-xs">Código</th>
+                                    <th className="text-left px-3 py-2 text-xs">Insumo</th>
+                                    <th className="text-left px-3 py-2 text-xs">Unidad</th>
+                                    <th className="text-left px-3 py-2 text-xs">Costo promedio</th>
+                                    <th className="text-left px-3 py-2 text-xs">Estado</th>
+                                    <th className="text-left px-3 py-2 text-xs">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {!categoriaSeleccionada ? (
                                     <tr>
-                                        <td colSpan="6" className="text-center py-8 text-gray-400">
+                                        <td colSpan="7" className="text-center py-8 text-gray-400">
                                             Elige una categoría de la izquierda
                                         </td>
                                     </tr>
                                 ) : loadingInsumos ? (
                                     <tr>
-                                        <td colSpan="6" className="text-center py-8 text-gray-400">
+                                        <td colSpan="7" className="text-center py-8 text-gray-400">
                                             Cargando insumos...
                                         </td>
                                     </tr>
                                 ) : insumosPagina.length === 0 ? (
                                     <tr>
-                                        <td colSpan="6" className="text-center py-8 text-gray-400">
+                                        <td colSpan="7" className="text-center py-8 text-gray-400">
                                             Esta categoría no tiene insumos {filtroEstadoInsumo === 'TODOS' ? '' : filtroEstadoInsumo.toLowerCase()} que coincidan
                                         </td>
                                     </tr>
@@ -424,24 +426,22 @@ export default function SuppliesMasterDetailPage() {
                                         <tr
                                             key={i.id}
                                             onClick={() => setFilaSeleccionada(i.id)}
-                                            className={`cursor-pointer transition ${
-                                                filaSeleccionada === i.id
-                                                    ? 'bg-blue-50'
-                                                    : idx % 2 === 0 ? 'bg-slate-50/60' : 'bg-white'
-                                            } hover:bg-blue-50/60`}
+                                            className={`cursor-pointer ${filaSeleccionada === i.id ? 'fila-elegida bg-green-600 text-white' : (idx % 2 === 0 ? 'bg-white hover:bg-yellow-50' : 'bg-violet-50 hover:bg-yellow-50')}`}
                                         >
-                                            <td className="px-4 py-3 text-gray-600">{i.code}</td>
-                                            <td className="px-4 py-3 font-medium">{i.name}</td>
-                                            <td className="px-4 py-3">{i.unit}</td>
-                                            <td className="px-4 py-3" title={i.last_purchase_cost != null ? `Última compra: $${Number(i.last_purchase_cost)}` : "Sin compras: costo de referencia"}>${Number(i.cost).toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</td>
-                                            <td className="px-4 py-3">
+                                            <td className="bg-gray-200 border border-gray-300 px-1 py-1.5 text-center text-sm font-bold text-gray-700">{(paginaInsumo - 1) * POR_PAGINA + idx + 1}</td>
+                                            <td className="px-3 py-1.5 border border-gray-200 text-gray-600">{i.code}</td>
+                                            <td className="px-3 py-1.5 border border-gray-200 font-medium">{i.name}</td>
+                                            <td className="px-3 py-1.5 border border-gray-200">{i.unit}</td>
+                                            <td className="px-3 py-1.5 border border-gray-200" title={i.last_purchase_cost != null ? `Última compra: $${Number(i.last_purchase_cost)}` : "Sin compras: costo de referencia"}>${Number(i.cost).toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</td>
+                                            <td className="px-3 py-1.5 border border-gray-200">
                                                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                                                     i.status ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'
                                                 }`}>
                                                     {i.status ? 'Activo' : 'Inactivo'}
                                                 </span>
                                             </td>
-                                            <td className="px-4 py-3 flex gap-2" onClick={(e) => e.stopPropagation()}>
+                                            <td className="px-3 py-1 border border-gray-200" onClick={(e) => e.stopPropagation()}>
+                                                <div className="flex gap-2">
                                                 {i.status ? (
                                                     <>
                                                         <button onClick={() => { setInsumoEdit(i); setShowInsumoModal(true); }} className="bg-green-600 hover:bg-green-700 text-white p-1 rounded-lg transition" title="Editar" aria-label="Editar">
@@ -466,6 +466,7 @@ export default function SuppliesMasterDetailPage() {
                                                         <RotateCcw size={16} />
                                                     </button>
                                                 )}
+                                                </div>
                                             </td>
                                         </tr>
                                     ))

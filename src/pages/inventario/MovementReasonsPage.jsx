@@ -145,25 +145,27 @@ export default function MovementReasonsPage() {
             </div>
 
             <div className="bg-white rounded-xl shadow overflow-hidden">
-                <table className="w-full text-sm">
+                {/* 18/11/2026 (Peter): lista compacta como el Pedido semanal: columna #, filas bajas alternadas y fila elegida en verde */}
+                <table className="w-full text-sm border-collapse">
                     <thead className="bg-primario text-white">
                         <tr>
-                            <th className="text-left px-4 py-3">Nombre</th>
-                            <th className="text-left px-4 py-3">Tipo</th>
-                            <th className="text-left px-4 py-3">Estado</th>
-                            <th className="text-left px-4 py-3">Acciones</th>
+                            <th className="text-center px-2 py-2 text-xs w-10">#</th>
+                            <th className="text-left px-3 py-2 text-xs">Nombre</th>
+                            <th className="text-left px-3 py-2 text-xs">Tipo</th>
+                            <th className="text-left px-3 py-2 text-xs">Estado</th>
+                            <th className="text-left px-3 py-2 text-xs">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         {loading ? (
                             <tr>
-                                <td colSpan="4" className="text-center py-8 text-gray-400">
+                                <td colSpan="5" className="text-center py-8 text-gray-400">
                                     Cargando motivos...
                                 </td>
                             </tr>
                         ) : reasonsPagina.length === 0 ? (
                             <tr>
-                                <td colSpan="4" className="text-center py-8 text-gray-400">
+                                <td colSpan="5" className="text-center py-8 text-gray-400">
                                     No hay motivos registrados
                                 </td>
                             </tr>
@@ -172,14 +174,12 @@ export default function MovementReasonsPage() {
                                 <tr
                                     key={r.id}
                                     onClick={() => setFilaSeleccionada(r.id)}
-                                    className={`cursor-pointer transition ${filaSeleccionada === r.id
-                                            ? 'bg-blue-50'
-                                            : i % 2 === 0 ? 'bg-gray-50' : 'bg-white'
-                                        } hover:bg-blue-50/60`}
+                                    className={`cursor-pointer ${filaSeleccionada === r.id ? 'fila-elegida bg-green-600 text-white' : (i % 2 === 0 ? 'bg-white hover:bg-yellow-50' : 'bg-violet-50 hover:bg-yellow-50')}`}
                                 >
-                                    <td className="px-4 py-3 font-medium">{r.name}</td>
-                                    <td className="px-4 py-3 text-gray-600">{r.type}</td>
-                                    <td className="px-4 py-3">
+                                    <td className="bg-gray-200 border border-gray-300 px-1 py-1.5 text-center text-sm font-bold text-gray-700">{inicio + i + 1}</td>
+                                    <td className="px-3 py-1.5 border border-gray-200 font-medium">{r.name}</td>
+                                    <td className="px-3 py-1.5 border border-gray-200 text-gray-600">{r.type}</td>
+                                    <td className="px-3 py-1.5 border border-gray-200">
                                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${r.status
                                                 ? 'bg-green-100 text-green-700'
                                                 : 'bg-gray-200 text-gray-600'
@@ -187,7 +187,8 @@ export default function MovementReasonsPage() {
                                             {r.status ? 'Activo' : 'Inactivo'}
                                         </span>
                                     </td>
-                                    <td className="px-4 py-3 flex gap-2" onClick={(e) => e.stopPropagation()}>
+                                    <td className="px-3 py-1 border border-gray-200" onClick={(e) => e.stopPropagation()}>
+                                        <div className="flex gap-2">
                                         {r.status ? (
                                             <>
                                                 <button onClick={() => handleEditar(r)} className="bg-green-600 hover:bg-green-700 text-white p-1 rounded-lg transition" title="Editar" aria-label="Editar">
@@ -204,6 +205,7 @@ export default function MovementReasonsPage() {
                                                 <RotateCcw size={16} />
                                             </button>
                                         )}
+                                    </div>
                                     </td>
                                 </tr>
                             ))

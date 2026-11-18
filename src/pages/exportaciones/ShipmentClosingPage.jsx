@@ -353,6 +353,13 @@ export default function ShipmentClosingPage() {
 
   const inputClass = 'w-full bg-gray-100 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-primario';
   const th = 'text-left px-2 py-2 uppercase text-xs whitespace-nowrap';
+  // 18/11/2026 (Peter): bookings como la grilla de Compra de fruta (tipo SAP): celdas planas, línea gris fina, filas
+  // alternadas, la fila donde se trabaja en verde y la celda que se edita en amarillo
+  const tdGrilla = 'px-0.5 py-0 border border-gray-200 align-middle focus-within:bg-yellow-100 focus-within:text-gray-900';
+  const celda = 'w-full bg-transparent border-0 rounded-none px-1.5 py-0.5 text-sm text-inherit outline-none disabled:opacity-60 disabled:cursor-not-allowed';
+  const tdNumero = 'bg-gray-200 border border-gray-300 px-1 py-0.5 text-center text-sm font-bold text-gray-700 whitespace-nowrap cursor-pointer outline-none';
+  // 18/11/2026 (Peter): reportes de solo lectura (DAE y tarjas) compactos: columna #, línea fina y filas alternadas
+  const tdLectura = 'px-3 py-1.5 border border-gray-200';
   const etiqueta = 'block text-xs font-semibold text-gray-600 uppercase mb-1';
   const tarjeta = (titulo, valor, extra = '') => (
     <div className="bg-white rounded-xl shadow px-4 py-3">
@@ -494,7 +501,7 @@ export default function ShipmentClosingPage() {
                 </div>
 
                 <div className="overflow-x-auto border rounded-lg">
-                  <table className="w-full text-sm min-w-[3000px]">
+                  <table className="w-full text-sm min-w-[3000px] border-collapse">
                     <thead className="bg-primario text-white">
                       <tr>
                         <th className={th}>#</th>
@@ -533,57 +540,57 @@ export default function ShipmentClosingPage() {
                         const avisos = avisosFila(k);
                         const marcas = marcasDe(k.customer_id);
                         const abierto = abiertos[k._key];
-                        const fondo = j % 2 === 0 ? 'bg-gray-50' : 'bg-white';
+                        const fondo = j % 2 === 0 ? 'bg-white' : 'bg-violet-50';
                         return [
-                          <tr key={k._key} className={fondo}>
-                            <td className="px-2 py-1.5 text-gray-400">{j + 1}</td>
-                            <td className="px-2 py-1.5 min-w-[200px]">
-                              <SelectBuscable value={k.customer_id} onChange={cambiar('customer_id')} className={inputClass}>
+                          <tr key={k._key} className={`fila-grilla group text-gray-800 ${fondo} focus-within:bg-green-600 focus-within:text-white`}>
+                            <td tabIndex={-1} title="Clic para marcar la fila" className={tdNumero}><span className="hidden group-focus-within:inline text-primario mr-0.5" aria-hidden="true">▶</span>{j + 1}</td>
+                            <td className={`${tdGrilla} min-w-[200px]`}>
+                              <SelectBuscable value={k.customer_id} onChange={cambiar('customer_id')} className={celda}>
                                 <option value="">SELECCIONAR...</option>
                                 {clientes.map((c) => <option key={c.id} value={String(c.id)}>{c.name}</option>)}
                               </SelectBuscable>
                               {avisos.map((a) => <p key={a} className="text-[10px] text-amber-700 font-semibold mt-0.5">⚠ {a}</p>)}
                             </td>
-                            <td className="px-2 py-1.5 min-w-[180px]">
-                              <SelectBuscable value={k.brand_id} onChange={cambiar('brand_id')} disabled={!k.customer_id} className={inputClass}>
+                            <td className={`${tdGrilla} min-w-[180px]`}>
+                              <SelectBuscable value={k.brand_id} onChange={cambiar('brand_id')} disabled={!k.customer_id} className={celda}>
                                 <option value="">{marcas.length ? '—' : 'SIN MARCAS'}</option>
                                 {marcas.map((m) => <option key={m.id} value={String(m.id)}>{m.name}</option>)}
                               </SelectBuscable>
                             </td>
-                            <td className="px-2 py-1.5 min-w-[140px]">
-                              <SelectBuscable value={k.negotiation_type} onChange={cambiar('negotiation_type')} className={inputClass}>
+                            <td className={`${tdGrilla} min-w-[140px]`}>
+                              <SelectBuscable value={k.negotiation_type} onChange={cambiar('negotiation_type')} className={celda}>
                                 <option value="CONTRATO">CONTRATO</option>
                                 <option value="SPOT">SPOT</option>
                               </SelectBuscable>
                             </td>
-                            <td className="px-2 py-1.5 min-w-[165px]">
-                              <SelectBuscable value={k.cargo_mode} onChange={cambiar('cargo_mode')} className={inputClass}>
+                            <td className={`${tdGrilla} min-w-[165px]`}>
+                              <SelectBuscable value={k.cargo_mode} onChange={cambiar('cargo_mode')} className={celda}>
                                 {MODALIDADES_CARGA.map((m) => <option key={m.valor} value={m.valor}>{m.etiqueta}</option>)}
                               </SelectBuscable>
                             </td>
-                            <td className="px-2 py-1.5 min-w-[110px]">
+                            <td className={`${tdGrilla} min-w-[110px]`}>
                               {esContenedor(k.cargo_mode)
-                                ? <CampoNumero decimales={0} value={k.containers_qty} onChange={cambiar('containers_qty')} placeholder="# CONT." title="Número de contenedores" className={`${inputClass} text-right`} />
-                                : <input value={k.holds} maxLength={40} onChange={mayus('holds')} placeholder="2ABCDE" title="Bodegas del barco" className={inputClass} />}
+                                ? <CampoNumero decimales={0} value={k.containers_qty} onChange={cambiar('containers_qty')} placeholder="# CONT." title="Número de contenedores" className={`${celda} text-right`} />
+                                : <input value={k.holds} maxLength={40} onChange={mayus('holds')} placeholder="2ABCDE" title="Bodegas del barco" className={celda} />}
                             </td>
-                            <td className="px-2 py-1.5 min-w-[170px]"><input value={k.booking_number} maxLength={30} onChange={mayus('booking_number')} placeholder="N° BOOKING" className={inputClass} /></td>
-                            <td className="px-2 py-1.5 min-w-[190px]"><input value={k.dae_number} maxLength={30} onChange={mayus('dae_number')} placeholder="N° DAE" className={inputClass} /></td>
-                            <td className="px-2 py-1.5 min-w-[130px]"><input value={k.bl_number} maxLength={30} onChange={mayus('bl_number')} className={inputClass} /></td>
-                            <td className="px-2 py-1.5"><BotonPagado pagado={k.proforma_paid} onClick={() => cambiarBooking(b.id, k._key, 'proforma_paid', !k.proforma_paid)} /></td>
-                            <td className="px-2 py-1.5"><BotonPagado pagado={k.turn_paid} onClick={() => cambiarBooking(b.id, k._key, 'turn_paid', !k.turn_paid)} /></td>
-                            <td className="px-2 py-1.5 min-w-[95px]"><CampoNumero decimales={0} value={k.quota_boxes} onChange={cambiar('quota_boxes')} className={`${inputClass} text-right`} /></td>
-                            <td className="px-2 py-1.5 min-w-[100px]"><CampoNumero decimales={0} value={k.shipped_boxes} onChange={cambiar('shipped_boxes')} className={`${inputClass} text-right font-semibold`} /></td>
-                            <td className={`px-2 py-1.5 text-right whitespace-nowrap font-semibold ${dif < 0 ? 'text-amber-700' : dif > 0 ? 'text-green-700' : 'text-gray-400'}`}>{dif > 0 ? '+' : ''}{formatoCajas(dif)}</td>
-                            <td className="px-2 py-1.5 min-w-[100px]"><CampoNumero decimales={0} value={k.port_entry_boxes} onChange={cambiar('port_entry_boxes')} placeholder="—" title="Si la DAE cubre varios bookings, escribe el ingreso en uno solo" className={`${inputClass} text-right`} /></td>
-                            <td className="px-2 py-1.5 min-w-[80px]"><CampoNumero decimales={2} value={k.net_weight_per_box} onChange={cambiar('net_weight_per_box')} placeholder="19.40" className={`${inputClass} text-right`} /></td>
-                            <td className="px-2 py-1.5 min-w-[80px]"><CampoNumero decimales={2} value={k.gross_weight_per_box} onChange={cambiar('gross_weight_per_box')} placeholder="20.80" className={`${inputClass} text-right`} /></td>
-                            <td className="px-2 py-1.5 text-right whitespace-nowrap">{formatoKilos(n(k.shipped_boxes) * n(k.net_weight_per_box))}</td>
-                            <td className="px-2 py-1.5 text-right whitespace-nowrap">{formatoKilos(n(k.shipped_boxes) * n(k.gross_weight_per_box))}</td>
-                            <td className="px-2 py-1.5 min-w-[80px]"><input value={k.aucp} maxLength={20} onChange={mayus('aucp')} className={inputClass} /></td>
-                            <td className="px-2 py-1.5 min-w-[80px]"><input value={k.order_ref} maxLength={20} onChange={mayus('order_ref')} className={inputClass} /></td>
-                            <td className="px-2 py-1.5 min-w-[150px]"><input value={k.dae_status} maxLength={40} onChange={mayus('dae_status')} placeholder="REGULARIZADA" className={inputClass} /></td>
-                            <td className="px-2 py-1.5 min-w-[130px]"><input value={k.arrival_note} maxLength={40} onChange={mayus('arrival_note')} placeholder="LLEGA SEM38" className={inputClass} /></td>
-                            <td className="px-2 py-1.5 whitespace-nowrap">
+                            <td className={`${tdGrilla} min-w-[170px]`}><input value={k.booking_number} maxLength={30} onChange={mayus('booking_number')} placeholder="N° BOOKING" className={celda} /></td>
+                            <td className={`${tdGrilla} min-w-[190px]`}><input value={k.dae_number} maxLength={30} onChange={mayus('dae_number')} placeholder="N° DAE" className={celda} /></td>
+                            <td className={`${tdGrilla} min-w-[130px]`}><input value={k.bl_number} maxLength={30} onChange={mayus('bl_number')} className={celda} /></td>
+                            <td className={`${tdGrilla} px-1`}><BotonPagado pagado={k.proforma_paid} onClick={() => cambiarBooking(b.id, k._key, 'proforma_paid', !k.proforma_paid)} /></td>
+                            <td className={`${tdGrilla} px-1`}><BotonPagado pagado={k.turn_paid} onClick={() => cambiarBooking(b.id, k._key, 'turn_paid', !k.turn_paid)} /></td>
+                            <td className={`${tdGrilla} min-w-[95px]`}><CampoNumero decimales={0} value={k.quota_boxes} onChange={cambiar('quota_boxes')} className={`${celda} text-right`} /></td>
+                            <td className={`${tdGrilla} min-w-[100px]`}><CampoNumero decimales={0} value={k.shipped_boxes} onChange={cambiar('shipped_boxes')} className={`${celda} text-right font-semibold`} /></td>
+                            <td className={`${tdGrilla} px-2 text-right whitespace-nowrap font-semibold ${dif < 0 ? 'text-amber-700' : dif > 0 ? 'text-green-700' : 'text-gray-400'}`}>{dif > 0 ? '+' : ''}{formatoCajas(dif)}</td>
+                            <td className={`${tdGrilla} min-w-[100px]`}><CampoNumero decimales={0} value={k.port_entry_boxes} onChange={cambiar('port_entry_boxes')} placeholder="—" title="Si la DAE cubre varios bookings, escribe el ingreso en uno solo" className={`${celda} text-right`} /></td>
+                            <td className={`${tdGrilla} min-w-[80px]`}><CampoNumero decimales={2} value={k.net_weight_per_box} onChange={cambiar('net_weight_per_box')} placeholder="19.40" className={`${celda} text-right`} /></td>
+                            <td className={`${tdGrilla} min-w-[80px]`}><CampoNumero decimales={2} value={k.gross_weight_per_box} onChange={cambiar('gross_weight_per_box')} placeholder="20.80" className={`${celda} text-right`} /></td>
+                            <td className={`${tdGrilla} px-2 text-right whitespace-nowrap`}>{formatoKilos(n(k.shipped_boxes) * n(k.net_weight_per_box))}</td>
+                            <td className={`${tdGrilla} px-2 text-right whitespace-nowrap`}>{formatoKilos(n(k.shipped_boxes) * n(k.gross_weight_per_box))}</td>
+                            <td className={`${tdGrilla} min-w-[80px]`}><input value={k.aucp} maxLength={20} onChange={mayus('aucp')} className={celda} /></td>
+                            <td className={`${tdGrilla} min-w-[80px]`}><input value={k.order_ref} maxLength={20} onChange={mayus('order_ref')} className={celda} /></td>
+                            <td className={`${tdGrilla} min-w-[150px]`}><input value={k.dae_status} maxLength={40} onChange={mayus('dae_status')} placeholder="REGULARIZADA" className={celda} /></td>
+                            <td className={`${tdGrilla} min-w-[130px]`}><input value={k.arrival_note} maxLength={40} onChange={mayus('arrival_note')} placeholder="LLEGA SEM38" className={celda} /></td>
+                            <td className={`${tdGrilla} px-1 py-0.5 whitespace-nowrap`}>
                               <button type="button" onClick={() => setAbiertos((p) => ({ ...p, [k._key]: !abierto }))} title="Consignee, notify, Forma A, muestras y notas" className={`p-1.5 rounded-lg shadow-sm mr-1 ${k.consignee_name ? 'bg-primario text-white hover:bg-primario-hover' : 'bg-amber-500 text-white hover:bg-amber-600'}`}>
                                 {abierto ? <ChevronDown size={16} /> : <Users size={16} />}
                               </button>
@@ -594,8 +601,8 @@ export default function ShipmentClosingPage() {
                           </tr>,
                           abierto && (
                             <tr key={`${k._key}-partes`} className={fondo}>
-                              <td></td>
-                              <td colSpan={23} className="px-2 pb-3">
+                              <td className="bg-gray-200 border border-gray-300"></td>
+                              <td colSpan={23} className="px-2 pt-2 pb-3 border border-gray-200">
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 max-w-[1500px]">
                                   <div>
                                     <label className={etiqueta}>Consignee</label>
@@ -660,43 +667,45 @@ export default function ShipmentClosingPage() {
           <h2 className="font-semibold text-gray-800 mb-1">Tarja del puerto por DAE</h2>
           <p className="text-xs text-gray-500 mb-3">INGRESO − EMBARCADO = lo que no subió al barco (caídas + rechazos). Una DAE puede cubrir varios bookings.</p>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm border-collapse">
               <thead className="text-xs text-gray-500 uppercase border-b">
                 <tr>
-                  <th className="text-left py-1">DAE</th>
-                  <th className="text-left py-1">Barco</th>
-                  <th className="text-right py-1">Bookings</th>
-                  <th className="text-right py-1">Ingreso (tarja)</th>
-                  <th className="text-right py-1">Embarcado</th>
-                  <th className="text-right py-1">No subió</th>
-                  <th className="text-right py-1">%</th>
+                  <th className="text-center px-2 py-1 w-10">#</th>
+                  <th className="text-left px-3 py-1">DAE</th>
+                  <th className="text-left px-3 py-1">Barco</th>
+                  <th className="text-right px-3 py-1">Bookings</th>
+                  <th className="text-right px-3 py-1">Ingreso (tarja)</th>
+                  <th className="text-right px-3 py-1">Embarcado</th>
+                  <th className="text-right px-3 py-1">No subió</th>
+                  <th className="text-right px-3 py-1">%</th>
                 </tr>
               </thead>
               <tbody>
-                {daes.map((d) => {
+                {daes.map((d, i) => {
                   const noSubio = d.ingreso - d.embarcado;
                   return (
-                    <tr key={d.dae} className="border-b last:border-0">
-                      <td className="py-1.5">{d.dae}</td>
-                      <td className="py-1.5">{d.barco}</td>
-                      <td className="py-1.5 text-right">{d.bookings}</td>
-                      <td className="py-1.5 text-right">{formatoCajas(d.ingreso)}</td>
-                      <td className="py-1.5 text-right">{formatoCajas(d.embarcado)}</td>
-                      <td className={`py-1.5 text-right font-semibold ${noSubio < 0 ? 'text-red-600' : 'text-amber-700'}`}>
+                    <tr key={d.dae} className={i % 2 === 0 ? 'bg-white' : 'bg-violet-50'}>
+                      <td className="bg-gray-200 border border-gray-300 px-1 py-1.5 text-center text-sm font-bold text-gray-700">{i + 1}</td>
+                      <td className={tdLectura}>{d.dae}</td>
+                      <td className={tdLectura}>{d.barco}</td>
+                      <td className={`${tdLectura} text-right`}>{d.bookings}</td>
+                      <td className={`${tdLectura} text-right`}>{formatoCajas(d.ingreso)}</td>
+                      <td className={`${tdLectura} text-right`}>{formatoCajas(d.embarcado)}</td>
+                      <td className={`${tdLectura} text-right font-semibold ${noSubio < 0 ? 'text-red-600' : 'text-amber-700'}`}>
                         {noSubio < 0 ? `⚠ ${formatoCajas(noSubio)} (EMBARCADO MAYOR AL INGRESO)` : formatoCajas(noSubio)}
                       </td>
-                      <td className="py-1.5 text-right">{d.ingreso ? `${((noSubio / d.ingreso) * 100).toFixed(1)} %` : '—'}</td>
+                      <td className={`${tdLectura} text-right`}>{d.ingreso ? `${((noSubio / d.ingreso) * 100).toFixed(1)} %` : '—'}</td>
                     </tr>
                   );
                 })}
               </tbody>
               <tfoot className="font-semibold border-t">
                 <tr>
-                  <td colSpan={3} className="py-1.5">TOTAL</td>
-                  <td className="py-1.5 text-right">{formatoCajas(totalIngreso)}</td>
-                  <td className="py-1.5 text-right">{formatoCajas(embarcadoConIngreso)}</td>
-                  <td className="py-1.5 text-right">{formatoCajas(totalIngreso - embarcadoConIngreso)}</td>
-                  <td className="py-1.5 text-right">{totalIngreso ? `${(((totalIngreso - embarcadoConIngreso) / totalIngreso) * 100).toFixed(1)} %` : '—'}</td>
+                  <td colSpan={4} className={tdLectura}>TOTAL</td>
+                  <td className={`${tdLectura} text-right`}>{formatoCajas(totalIngreso)}</td>
+                  <td className={`${tdLectura} text-right`}>{formatoCajas(embarcadoConIngreso)}</td>
+                  <td className={`${tdLectura} text-right`}>{formatoCajas(totalIngreso - embarcadoConIngreso)}</td>
+                  <td className={`${tdLectura} text-right`}>{totalIngreso ? `${(((totalIngreso - embarcadoConIngreso) / totalIngreso) * 100).toFixed(1)} %` : '—'}</td>
                 </tr>
               </tfoot>
             </table>
@@ -710,35 +719,37 @@ export default function ShipmentClosingPage() {
           <h2 className="font-semibold text-gray-800 mb-1">Cruce con las tarjas registradas</h2>
           <p className="text-xs text-gray-500 mb-3">Tarjas por camión registradas en Liquidación, por barco, cliente y marca, frente a lo embarcado en los bookings.</p>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm border-collapse">
               <thead className="text-xs text-gray-500 uppercase border-b">
                 <tr>
-                  <th className="text-left py-1">Barco</th>
-                  <th className="text-left py-1">Cliente · Marca</th>
-                  <th className="text-right py-1">Tarjas: embarcadas</th>
-                  <th className="text-right py-1">Caídas</th>
-                  <th className="text-right py-1">Rechazadas</th>
+                  <th className="text-center px-2 py-1 w-10">#</th>
+                  <th className="text-left px-3 py-1">Barco</th>
+                  <th className="text-left px-3 py-1">Cliente · Marca</th>
+                  <th className="text-right px-3 py-1">Tarjas: embarcadas</th>
+                  <th className="text-right px-3 py-1">Caídas</th>
+                  <th className="text-right px-3 py-1">Rechazadas</th>
                   {/* 17/11/2026: faltantes y recibidas (lo que se paga); el cruce sigue contra las embarcadas (total) */}
-                  <th className="text-right py-1">Faltantes</th>
-                  <th className="text-right py-1">Recibidas</th>
-                  <th className="text-right py-1">Embarcado (bookings)</th>
-                  <th className="text-right py-1">Diferencia</th>
+                  <th className="text-right px-3 py-1">Faltantes</th>
+                  <th className="text-right px-3 py-1">Recibidas</th>
+                  <th className="text-right px-3 py-1">Embarcado (bookings)</th>
+                  <th className="text-right px-3 py-1">Diferencia</th>
                 </tr>
               </thead>
               <tbody>
-                {cruceTarjas.map((t) => {
+                {cruceTarjas.map((t, i) => {
                   const dif = t.embarcado - n(t.embarcadas);
                   return (
-                    <tr key={`${t.shipment_id}-${t.customer_id}-${t.brand_id}`} className="border-b last:border-0">
-                      <td className="py-1.5">{t.barco}</td>
-                      <td className="py-1.5">{nombreCliente(t.customer_id)} · {nombreMarca(t.customer_id, t.brand_id) || '—'}</td>
-                      <td className="py-1.5 text-right">{formatoCajas(t.embarcadas)}</td>
-                      <td className="py-1.5 text-right">{formatoCajas(t.caidas)}</td>
-                      <td className="py-1.5 text-right">{formatoCajas(t.rechazadas)}</td>
-                      <td className="py-1.5 text-right">{formatoCajas(t.faltantes)}</td>
-                      <td className="py-1.5 text-right font-semibold">{formatoCajas(t.recibidas)}</td>
-                      <td className="py-1.5 text-right">{formatoCajas(t.embarcado)}</td>
-                      <td className={`py-1.5 text-right font-semibold ${dif === 0 ? 'text-green-700' : 'text-amber-700'}`}>{dif === 0 ? '✔' : `${dif > 0 ? '+' : ''}${formatoCajas(dif)}`}</td>
+                    <tr key={`${t.shipment_id}-${t.customer_id}-${t.brand_id}`} className={i % 2 === 0 ? 'bg-white' : 'bg-violet-50'}>
+                      <td className="bg-gray-200 border border-gray-300 px-1 py-1.5 text-center text-sm font-bold text-gray-700">{i + 1}</td>
+                      <td className={tdLectura}>{t.barco}</td>
+                      <td className={tdLectura}>{nombreCliente(t.customer_id)} · {nombreMarca(t.customer_id, t.brand_id) || '—'}</td>
+                      <td className={`${tdLectura} text-right`}>{formatoCajas(t.embarcadas)}</td>
+                      <td className={`${tdLectura} text-right`}>{formatoCajas(t.caidas)}</td>
+                      <td className={`${tdLectura} text-right`}>{formatoCajas(t.rechazadas)}</td>
+                      <td className={`${tdLectura} text-right`}>{formatoCajas(t.faltantes)}</td>
+                      <td className={`${tdLectura} text-right font-semibold`}>{formatoCajas(t.recibidas)}</td>
+                      <td className={`${tdLectura} text-right`}>{formatoCajas(t.embarcado)}</td>
+                      <td className={`${tdLectura} text-right font-semibold ${dif === 0 ? 'text-green-700' : 'text-amber-700'}`}>{dif === 0 ? '✔' : `${dif > 0 ? '+' : ''}${formatoCajas(dif)}`}</td>
                     </tr>
                   );
                 })}

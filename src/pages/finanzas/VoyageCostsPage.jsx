@@ -101,6 +101,12 @@ export default function VoyageCostsPage() {
 
   const input = 'w-full bg-gray-100 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-primario';
   const etiqueta = 'block text-xs font-semibold text-gray-600 uppercase mb-1';
+  // 18/11/2026 (Peter): gastos como la grilla de Compra de fruta (tipo SAP) y clientes como las listas compactas:
+  // celdas planas, línea gris fina, filas alternadas, la fila donde se trabaja en verde y la celda que se edita en amarillo
+  const tdGrilla = 'px-0.5 py-0 border border-gray-200 align-middle focus-within:bg-yellow-100 focus-within:text-gray-900';
+  const celda = 'w-full bg-transparent border-0 rounded-none px-1.5 py-0.5 text-sm text-inherit outline-none disabled:opacity-60 disabled:cursor-not-allowed';
+  const tdNumero = 'bg-gray-200 border border-gray-300 px-1 py-0.5 text-center text-sm font-bold text-gray-700 whitespace-nowrap cursor-pointer outline-none';
+  const tdLectura = 'px-3 py-1.5 border border-gray-200';
   const categorias = detalle?.categories || {};
   const conFlete = detalle ? detalle.customers.reduce((s, c) => s + c.contenedores_con_flete, 0) : 0;
   const totalGastos = form ? form.expenses.reduce((s, g) => s + (Number(g.amount) || 0), 0) : 0;
@@ -157,9 +163,10 @@ export default function VoyageCostsPage() {
 
           {/* Carga por cliente */}
           <div className="overflow-x-auto border rounded-lg">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm border-collapse">
               <thead className="bg-primario-claro text-primario">
                 <tr>
+                  <th className="text-center px-2 py-2 text-xs w-10">#</th>
                   <th className="text-left px-3 py-2 uppercase text-xs">Cliente</th>
                   <th className="text-right px-3 py-2 uppercase text-xs">Cajas</th>
                   <th className="text-right px-3 py-2 uppercase text-xs">Bajo cubierta</th>
@@ -170,16 +177,17 @@ export default function VoyageCostsPage() {
               </thead>
               <tbody>
                 {detalle.customers.length === 0 && (
-                  <tr><td colSpan={6} className="px-3 py-3 text-center text-gray-400">Este barco aún no tiene cajas en la Distribución en barcos ni en el Cierre de embarque.</td></tr>
+                  <tr><td colSpan={7} className="px-3 py-3 text-center text-gray-400">Este barco aún no tiene cajas en la Distribución en barcos ni en el Cierre de embarque.</td></tr>
                 )}
-                {detalle.customers.map((c) => (
-                  <tr key={c.customer_id} className="border-t">
-                    <td className="px-3 py-2 font-medium">{c.name}</td>
-                    <td className="px-3 py-2 text-right">{cajas(c.cajas)}</td>
-                    <td className="px-3 py-2 text-right">{cajas(c.cajas_bajo_cubierta)}</td>
-                    <td className="px-3 py-2 text-right">{cajas(c.contenedores)}</td>
-                    <td className="px-3 py-2 text-right font-semibold">{cajas(c.contenedores_con_flete)}</td>
-                    <td className="px-3 py-2 text-xs text-gray-500">{c.fuente === 'CIERRE' ? 'Cierre de embarque' : 'Distribución (sin cierre aún)'}</td>
+                {detalle.customers.map((c, i) => (
+                  <tr key={c.customer_id} className={i % 2 === 0 ? 'bg-white hover:bg-yellow-50' : 'bg-violet-50 hover:bg-yellow-50'}>
+                    <td className="bg-gray-200 border border-gray-300 px-1 py-1.5 text-center text-sm font-bold text-gray-700">{i + 1}</td>
+                    <td className={`${tdLectura} font-medium`}>{c.name}</td>
+                    <td className={`${tdLectura} text-right`}>{cajas(c.cajas)}</td>
+                    <td className={`${tdLectura} text-right`}>{cajas(c.cajas_bajo_cubierta)}</td>
+                    <td className={`${tdLectura} text-right`}>{cajas(c.contenedores)}</td>
+                    <td className={`${tdLectura} text-right font-semibold`}>{cajas(c.contenedores_con_flete)}</td>
+                    <td className={`${tdLectura} text-xs text-gray-500`}>{c.fuente === 'CIERRE' ? 'Cierre de embarque' : 'Distribución (sin cierre aún)'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -211,9 +219,10 @@ export default function VoyageCostsPage() {
               <span className="text-sm text-gray-600">Total <strong>$ {dinero(totalGastos)}</strong></span>
             </div>
             <div className="overflow-x-auto border rounded-lg">
-              <table className="w-full text-sm min-w-[1100px]">
+              <table className="w-full text-sm min-w-[1100px] border-collapse">
                 <thead className="bg-primario text-white">
                   <tr>
+                    <th className="text-center px-2 py-2 text-xs w-10">#</th>
                     <th className="text-left px-2 py-2 uppercase text-xs">Categoría</th>
                     <th className="text-left px-2 py-2 uppercase text-xs">De</th>
                     <th className="text-left px-2 py-2 uppercase text-xs">Descripción</th>
@@ -226,33 +235,34 @@ export default function VoyageCostsPage() {
                 </thead>
                 <tbody>
                   {form.expenses.length === 0 && (
-                    <tr><td colSpan={8} className="px-3 py-4 text-center text-gray-400">Sin gastos registrados. Usa "Agregar gasto".</td></tr>
+                    <tr><td colSpan={9} className="px-3 py-4 text-center text-gray-400">Sin gastos registrados. Usa "Agregar gasto".</td></tr>
                   )}
-                  {form.expenses.map((g) => (
-                    <tr key={g._key} className="border-t">
-                      <td className="px-2 py-1.5 min-w-[170px]">
-                        <SelectBuscable value={g.category} onChange={(e) => cambiarGasto(g._key, 'category', e.target.value)} className={input}>
+                  {form.expenses.map((g, i) => (
+                    <tr key={g._key} className={`fila-grilla group text-gray-800 ${i % 2 === 0 ? 'bg-white' : 'bg-violet-50'} focus-within:bg-green-600 focus-within:text-white`}>
+                      <td tabIndex={-1} title="Clic para marcar la fila" className={tdNumero}><span className="hidden group-focus-within:inline text-primario mr-0.5" aria-hidden="true">▶</span>{i + 1}</td>
+                      <td className={`${tdGrilla} min-w-[170px]`}>
+                        <SelectBuscable value={g.category} onChange={(e) => cambiarGasto(g._key, 'category', e.target.value)} className={celda}>
                           {Object.entries(categorias).map(([k, v]) => <option key={k} value={k}>{v.toUpperCase()}</option>)}
                         </SelectBuscable>
                       </td>
-                      <td className="px-2 py-1.5 min-w-[170px]">
-                        <SelectBuscable value={g.customer_id} onChange={(e) => cambiarGasto(g._key, 'customer_id', e.target.value)} className={input}>
+                      <td className={`${tdGrilla} min-w-[170px]`}>
+                        <SelectBuscable value={g.customer_id} onChange={(e) => cambiarGasto(g._key, 'customer_id', e.target.value)} className={celda}>
                           <option value="">TODO EL VIAJE</option>
                           {detalle.customers.map((c) => <option key={c.customer_id} value={String(c.customer_id)}>{c.name}</option>)}
                         </SelectBuscable>
                       </td>
-                      <td className="px-2 py-1.5 min-w-[170px]"><input value={g.description} onChange={(e) => cambiarGasto(g._key, 'description', e.target.value)} maxLength={150} placeholder={g.category === 'OTRO' ? 'OBLIGATORIO' : 'OPCIONAL'} className={input} /></td>
-                      <td className="px-2 py-1.5 min-w-[180px]">
-                        <SelectBuscable value={g.supplier_id} onChange={(e) => cambiarGasto(g._key, 'supplier_id', e.target.value)} className={input}>
+                      <td className={`${tdGrilla} min-w-[170px]`}><input value={g.description} onChange={(e) => cambiarGasto(g._key, 'description', e.target.value)} maxLength={150} placeholder={g.category === 'OTRO' ? 'OBLIGATORIO' : 'OPCIONAL'} className={celda} /></td>
+                      <td className={`${tdGrilla} min-w-[180px]`}>
+                        <SelectBuscable value={g.supplier_id} onChange={(e) => cambiarGasto(g._key, 'supplier_id', e.target.value)} className={celda}>
                           <option value="">—</option>
                           {proveedores.map((p) => <option key={p.id} value={String(p.id)}>{p.name}</option>)}
                         </SelectBuscable>
                       </td>
-                      <td className="px-2 py-1.5 min-w-[120px]"><input value={g.invoice_number} onChange={(e) => cambiarGasto(g._key, 'invoice_number', e.target.value)} maxLength={40} className={input} /></td>
-                      <td className="px-2 py-1.5 min-w-[140px]"><input type="date" value={g.invoice_date} onChange={(e) => cambiarGasto(g._key, 'invoice_date', e.target.value)} className={input} /></td>
-                      <td className="px-2 py-1.5 min-w-[110px]"><CampoNumero decimales={2} value={g.amount} onChange={(e) => cambiarGasto(g._key, 'amount', e.target.value)} className={`${input} text-right font-semibold`} /></td>
-                      <td className="px-2 py-1.5">
-                        <button type="button" onClick={() => quitarGasto(g._key)} title="Quitar gasto" className="text-white p-1.5 rounded-lg bg-red-600 hover:bg-red-700"><Trash2 size={16} /></button>
+                      <td className={`${tdGrilla} min-w-[120px]`}><input value={g.invoice_number} onChange={(e) => cambiarGasto(g._key, 'invoice_number', e.target.value)} maxLength={40} className={celda} /></td>
+                      <td className={`${tdGrilla} min-w-[140px]`}><input type="date" value={g.invoice_date} onChange={(e) => cambiarGasto(g._key, 'invoice_date', e.target.value)} className={celda} /></td>
+                      <td className={`${tdGrilla} min-w-[110px]`}><CampoNumero decimales={2} value={g.amount} onChange={(e) => cambiarGasto(g._key, 'amount', e.target.value)} className={`${celda} text-right font-semibold`} /></td>
+                      <td className={`${tdGrilla} px-1 text-center`}>
+                        <button type="button" onClick={() => quitarGasto(g._key)} title="Quitar gasto" className="text-white p-1 rounded-lg bg-red-600 hover:bg-red-700"><Trash2 size={16} /></button>
                       </td>
                     </tr>
                   ))}

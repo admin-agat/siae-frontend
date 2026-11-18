@@ -70,22 +70,29 @@ function TarjetaGrafico({ titulo, subtitulo, tabla, vacio, children, className =
   );
 }
 
+// 18/11/2026 (Peter): tablas con el estilo de las listas compactas: columna # gris, línea fina y filas alternadas
+const TD_NUMERO = 'bg-gray-200 border border-gray-300 px-1 py-1.5 text-center text-sm font-bold text-gray-700';
+const TD = 'px-3 py-1.5 border border-gray-200';
+const filaAlterna = (i) => (i % 2 === 0 ? 'bg-white hover:bg-yellow-50' : 'bg-violet-50 hover:bg-yellow-50');
+
 function TablaSimple({ columnas, filas, alto = '', pie }) {
   return (
     <div className={`overflow-auto ${alto}`}>
-      <table className="w-full text-sm">
+      <table className="w-full text-sm border-collapse">
         <thead className="sticky top-0 bg-white">
           <tr className="border-b">
+            <th className="text-center px-2 py-2 text-xs w-10" style={{ color: TINTA.secundaria }}>#</th>
             {columnas.map((c) => (
-              <th key={c.titulo} className={`py-1.5 px-2 text-xs uppercase font-semibold whitespace-nowrap ${c.derecha ? 'text-right' : 'text-left'}`} style={{ color: TINTA.secundaria }}>{c.titulo}</th>
+              <th key={c.titulo} className={`px-3 py-2 text-xs uppercase font-semibold whitespace-nowrap ${c.derecha ? 'text-right' : 'text-left'}`} style={{ color: TINTA.secundaria }}>{c.titulo}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {filas.map((f, i) => (
-            <tr key={i} className="border-b last:border-0">
+            <tr key={i} className={filaAlterna(i)}>
+              <td className={TD_NUMERO}>{i + 1}</td>
               {columnas.map((c) => (
-                <td key={c.titulo} className={`py-1.5 px-2 ${c.derecha ? 'text-right whitespace-nowrap' : ''}`}>{c.valor(f)}</td>
+                <td key={c.titulo} className={`${TD} ${c.derecha ? 'text-right whitespace-nowrap' : ''}`}>{c.valor(f)}</td>
               ))}
             </tr>
           ))}
@@ -93,8 +100,9 @@ function TablaSimple({ columnas, filas, alto = '', pie }) {
         {pie && (
           <tfoot className="sticky bottom-0 bg-gray-50 font-semibold">
             <tr className="border-t">
+              <td className="border border-gray-200" />
               {columnas.map((c) => (
-                <td key={c.titulo} className={`py-1.5 px-2 ${c.derecha ? 'text-right whitespace-nowrap' : ''}`}>{c.valor(pie)}</td>
+                <td key={c.titulo} className={`${TD} ${c.derecha ? 'text-right whitespace-nowrap' : ''}`}>{c.valor(pie)}</td>
               ))}
             </tr>
           </tfoot>
@@ -127,31 +135,32 @@ function Estado({ nivel, texto }) {
 }
 
 // Fila de barco con sus avisos desplegables
-function FilaBarco({ b }) {
+function FilaBarco({ b, i }) {
   const [abierta, setAbierta] = useState(false);
   return (
     <>
-      <tr className="border-b last:border-0">
-        <td className="py-1.5 px-2">
+      <tr className={filaAlterna(i)}>
+        <td className={TD_NUMERO}>{i + 1}</td>
+        <td className={TD}>
           {b.avisos.length > 0 && (
             <button type="button" onClick={() => setAbierta((v) => !v)} className="text-gray-400 hover:text-gray-600" title="Ver qué falta">
               {abierta ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
             </button>
           )}
         </td>
-        <td className="py-1.5 px-2 whitespace-nowrap">WK{b.week}</td>
-        <td className="py-1.5 px-2 font-medium">{b.name}</td>
-        <td className="py-1.5 px-2 text-right whitespace-nowrap">{fCajas(b.cajas)}</td>
-        <td className="py-1.5 px-2 text-right whitespace-nowrap">{fUsd(b.venta)}</td>
-        <td className="py-1.5 px-2 text-right whitespace-nowrap">{fUsd(b.costo)}</td>
-        <td className="py-1.5 px-2 text-right whitespace-nowrap font-semibold">{fUsd(b.ganancia)}</td>
-        <td className="py-1.5 px-2 text-right whitespace-nowrap">{fPct(b.margen)}</td>
-        <td className="py-1.5 px-2">{b.incompleto ? <Estado nivel="alerta" texto="PRELIMINAR" /> : <Estado nivel="bien" texto="COMPLETO" />}</td>
+        <td className={`${TD} whitespace-nowrap`}>WK{b.week}</td>
+        <td className={`${TD} font-medium`}>{b.name}</td>
+        <td className={`${TD} text-right whitespace-nowrap`}>{fCajas(b.cajas)}</td>
+        <td className={`${TD} text-right whitespace-nowrap`}>{fUsd(b.venta)}</td>
+        <td className={`${TD} text-right whitespace-nowrap`}>{fUsd(b.costo)}</td>
+        <td className={`${TD} text-right whitespace-nowrap font-semibold`}>{fUsd(b.ganancia)}</td>
+        <td className={`${TD} text-right whitespace-nowrap`}>{fPct(b.margen)}</td>
+        <td className={TD}>{b.incompleto ? <Estado nivel="alerta" texto="PRELIMINAR" /> : <Estado nivel="bien" texto="COMPLETO" />}</td>
       </tr>
       {abierta && (
         <tr className="bg-amber-50/50">
-          <td />
-          <td colSpan={8} className="py-2 px-2 text-xs" style={{ color: TINTA.secundaria }}>
+          <td colSpan={2} className="border border-gray-200" />
+          <td colSpan={8} className="py-2 px-3 text-xs border border-gray-200" style={{ color: TINTA.secundaria }}>
             <ul className="list-disc ml-4 space-y-0.5">{b.avisos.map((a) => <li key={a}>{a}</li>)}</ul>
           </td>
         </tr>
@@ -359,15 +368,16 @@ export default function FinanceBoardPage() {
               <p className="text-sm text-gray-400 py-8 text-center">Sin barcos en el rango.</p>
             ) : (
               <div className="overflow-auto max-h-[28rem]">
-                <table className="w-full text-sm">
+                <table className="w-full text-sm border-collapse">
                   <thead className="sticky top-0 bg-white">
                     <tr className="border-b">
+                      <th className="text-center px-2 py-2 text-xs w-10" style={{ color: TINTA.secundaria }}>#</th>
                       {['', 'Semana', 'Barco', 'Cajas', 'Venta', 'Costo', 'Ganancia', 'Margen', 'Datos'].map((h, i) => (
-                        <th key={h || i} className={`py-1.5 px-2 text-xs uppercase font-semibold whitespace-nowrap ${i >= 3 && i <= 7 ? 'text-right' : 'text-left'}`} style={{ color: TINTA.secundaria }}>{h}</th>
+                        <th key={h || i} className={`px-3 py-2 text-xs uppercase font-semibold whitespace-nowrap ${i >= 3 && i <= 7 ? 'text-right' : 'text-left'}`} style={{ color: TINTA.secundaria }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
-                  <tbody>{datos.barcos.map((b) => <FilaBarco key={b.id} b={b} />)}</tbody>
+                  <tbody>{datos.barcos.map((b, i) => <FilaBarco key={b.id} b={b} i={i} />)}</tbody>
                 </table>
               </div>
             )}

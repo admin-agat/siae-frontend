@@ -347,45 +347,47 @@ export default function BrandsPage() {
                     </div>
 
                     <div className="bg-white rounded-xl border border-primario/15 shadow-sm overflow-hidden">
-                        <table className="w-full text-sm">
+                        {/* 18/11/2026 (Peter): tabla compacta como las listas (columna #, filas alternadas, fila elegida en verde) */}
+                        <table className="w-full text-sm border-collapse">
                             <thead className="bg-primario text-white">
                                 <tr>
-                                    <th className="text-left px-4 py-3">Insumo</th>
-                                    <th className="text-left px-4 py-3">Categoría</th>
-                                    <th className="text-left px-4 py-3">Ratio x caja</th>
-                                    <th className="text-left px-4 py-3">Unidad</th>
-                                    <th className="text-left px-4 py-3">Estado</th>
-                                    <th className="text-left px-4 py-3">Acciones</th>
+                                    <th className="text-center px-2 py-2 text-xs w-10">#</th>
+                                    <th className="text-left px-3 py-2 text-xs uppercase whitespace-nowrap">Insumo</th>
+                                    <th className="text-left px-3 py-2 text-xs uppercase whitespace-nowrap">Categoría</th>
+                                    <th className="text-left px-3 py-2 text-xs uppercase whitespace-nowrap">Ratio x caja</th>
+                                    <th className="text-left px-3 py-2 text-xs uppercase whitespace-nowrap">Unidad</th>
+                                    <th className="text-left px-3 py-2 text-xs uppercase whitespace-nowrap">Estado</th>
+                                    <th className="text-left px-3 py-2 text-xs uppercase whitespace-nowrap">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {!marcaSeleccionada ? (
-                                    <tr><td colSpan="6" className="text-center py-8 text-gray-400">Elige una marca de la izquierda</td></tr>
+                                    <tr><td colSpan="7" className="text-center py-8 text-gray-400">Elige una marca de la izquierda</td></tr>
                                 ) : loadingRecetas ? (
-                                    <tr><td colSpan="6" className="text-center py-8 text-gray-400">Cargando recetas...</td></tr>
+                                    <tr><td colSpan="7" className="text-center py-8 text-gray-400">Cargando recetas...</td></tr>
                                 ) : recetasPagina.length === 0 ? (
-                                    <tr><td colSpan="6" className="text-center py-8 text-gray-400">Esta marca todavía no tiene recetas {filtroEstadoReceta === 'TODOS' ? '' : filtroEstadoReceta.toLowerCase()} que coincidan</td></tr>
+                                    <tr><td colSpan="7" className="text-center py-8 text-gray-400">Esta marca todavía no tiene recetas {filtroEstadoReceta === 'TODOS' ? '' : filtroEstadoReceta.toLowerCase()} que coincidan</td></tr>
                                 ) : (
                                     recetasPagina.map((r, idx) => (
                                         <tr
                                             key={r.id}
                                             onClick={() => setFilaSeleccionada(r.id)}
-                                            className={`cursor-pointer transition ${
-                                                filaSeleccionada === r.id ? 'bg-blue-50' : idx % 2 === 0 ? 'bg-slate-50/60' : 'bg-white'
-                                            } hover:bg-blue-50/60`}
+                                            className={`cursor-pointer ${filaSeleccionada === r.id ? 'fila-elegida bg-green-600 text-white' : idx % 2 === 0 ? 'bg-white hover:bg-yellow-50' : 'bg-violet-50 hover:bg-yellow-50'}`}
                                         >
-                                            <td className="px-4 py-3 font-medium">{r.supply?.name}</td>
-                                            <td className="px-4 py-3 text-gray-600">{r.supply?.category?.name || '—'}</td>
-                                            <td className="px-4 py-3">{Number(r.ratio_per_box).toFixed(6)}</td>
-                                            <td className="px-4 py-3">{r.unit}</td>
-                                            <td className="px-4 py-3">
+                                            <td className="bg-gray-200 border border-gray-300 px-1 py-1.5 text-center text-sm font-bold text-gray-700">{(paginaReceta - 1) * POR_PAGINA + idx + 1}</td>
+                                            <td className="px-3 py-1.5 border border-gray-200 font-medium">{r.supply?.name}</td>
+                                            <td className="px-3 py-1.5 border border-gray-200 text-gray-600">{r.supply?.category?.name || '—'}</td>
+                                            <td className="px-3 py-1.5 border border-gray-200">{Number(r.ratio_per_box).toFixed(6)}</td>
+                                            <td className="px-3 py-1.5 border border-gray-200">{r.unit}</td>
+                                            <td className="px-3 py-1.5 border border-gray-200">
                                                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                                                     r.status ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'
                                                 }`}>
                                                     {r.status ? 'Activo' : 'Inactivo'}
                                                 </span>
                                             </td>
-                                            <td className="px-4 py-3 flex gap-2" onClick={(e) => e.stopPropagation()}>
+                                            <td className="px-3 py-1.5 border border-gray-200" onClick={(e) => e.stopPropagation()}>
+                                            <div className="flex gap-2">
                                                 {r.status ? (
                                                     <>
                                                         <button onClick={() => { setRecetaEdit(r); setShowRecetaModal(true); }} className="bg-green-600 hover:bg-green-700 text-white p-1 rounded-lg transition" title="Editar" aria-label="Editar">
@@ -400,6 +402,7 @@ export default function BrandsPage() {
                                                         <RotateCcw size={16} />
                                                     </button>
                                                 )}
+                                            </div>
                                             </td>
                                         </tr>
                                     ))

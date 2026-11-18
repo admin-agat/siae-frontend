@@ -79,9 +79,11 @@ function TarjetaGrafico({ titulo, subtitulo, tabla, vacio, children, className =
 function TablaSimple({ columnas, filas, alto = '' }) {
   return (
     <div className={`overflow-auto ${alto}`}>
-      <table className="w-full text-sm">
+      {/* 18/11/2026 (Peter): resúmenes compactos como las listas: columna #, línea fina y filas alternadas (sin selección) */}
+      <table className="w-full text-sm border-collapse">
         <thead className="sticky top-0 bg-white">
           <tr className="border-b">
+            <th className="py-1.5 px-2 text-xs text-center font-semibold w-8" style={{ color: TINTA.secundaria }}>#</th>
             {columnas.map((c) => (
               <th key={c.titulo} className={`py-1.5 px-2 text-xs uppercase font-semibold whitespace-nowrap ${c.derecha ? 'text-right' : 'text-left'}`} style={{ color: TINTA.secundaria }}>{c.titulo}</th>
             ))}
@@ -89,9 +91,10 @@ function TablaSimple({ columnas, filas, alto = '' }) {
         </thead>
         <tbody>
           {filas.map((f, i) => (
-            <tr key={i} className="border-b last:border-0">
+            <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-violet-50'}>
+              <td className="bg-gray-200 border border-gray-300 px-1 py-1 text-center text-xs font-bold text-gray-700">{i + 1}</td>
               {columnas.map((c) => (
-                <td key={c.titulo} className={`py-1.5 px-2 ${c.derecha ? 'text-right whitespace-nowrap' : ''}`}>{c.valor(f)}</td>
+                <td key={c.titulo} className={`py-1 px-2 border border-gray-200 ${c.derecha ? 'text-right whitespace-nowrap' : ''}`}>{c.valor(f)}</td>
               ))}
             </tr>
           ))}

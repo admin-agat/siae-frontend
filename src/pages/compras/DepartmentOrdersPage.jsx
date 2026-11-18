@@ -87,7 +87,11 @@ function OrdenModal({ orden, proveedores, onClose, onGuardado }) {
 
     const label = 'block text-sm font-semibold text-gray-700 mb-1.5';
     const input = 'w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-primario';
-    const celda = 'w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primario';
+    // 18/11/2026 (Peter): líneas como la grilla de Compra de fruta (tipo SAP): celdas planas, línea gris fina, filas
+    // alternadas, la fila donde se trabaja en verde y la celda que se edita en amarillo
+    const tdGrilla = 'px-0.5 py-0 border border-gray-200 align-middle focus-within:bg-yellow-100 focus-within:text-gray-900';
+    const celda = 'w-full bg-transparent border-0 rounded-none px-1.5 py-0.5 text-sm text-inherit outline-none disabled:opacity-60 disabled:cursor-not-allowed';
+    const tdNumero = 'bg-gray-200 border border-gray-300 px-1 py-0.5 text-center text-sm font-bold text-gray-700 whitespace-nowrap cursor-pointer outline-none';
 
     return (
         <ModalShell title={esEdicion ? `Corregir ${orden.code}` : 'Nueva orden de compra'} onClose={onClose} onSubmit={handleSubmit}
@@ -116,37 +120,39 @@ function OrdenModal({ orden, proveedores, onClose, onGuardado }) {
             </div>
 
             <div className="border rounded-lg overflow-x-auto">
-                <table className="w-full text-sm min-w-[720px]">
+                <table className="w-full text-sm min-w-[760px] border-collapse">
                     <thead className="bg-primario text-white">
                         <tr>
-                            <th className="text-left px-2 py-2">DESCRIPCIÓN</th>
-                            <th className="text-right px-2 py-2 w-24">CANTIDAD</th>
-                            <th className="text-right px-2 py-2 w-28">PRECIO UNIT.</th>
-                            <th className="text-center px-2 py-2 w-20">% IVA</th>
-                            <th className="text-center px-2 py-2 w-20">% DESC</th>
-                            <th className="text-center px-2 py-2 w-20">% RET IR</th>
-                            <th className="text-right px-2 py-2 w-24">SUBTOTAL</th>
+                            <th className="text-center px-2 py-2 text-xs w-10">#</th>
+                            <th className="text-left px-2 py-2 text-xs">DESCRIPCIÓN</th>
+                            <th className="text-right px-2 py-2 text-xs w-24">CANTIDAD</th>
+                            <th className="text-right px-2 py-2 text-xs w-28">PRECIO UNIT.</th>
+                            <th className="text-center px-2 py-2 text-xs w-20">% IVA</th>
+                            <th className="text-center px-2 py-2 text-xs w-20">% DESC</th>
+                            <th className="text-center px-2 py-2 text-xs w-20">% RET IR</th>
+                            <th className="text-right px-2 py-2 text-xs w-24">SUBTOTAL</th>
                             <th className="w-10"></th>
                         </tr>
                     </thead>
                     <tbody>
                         {form.lines.map((l, i) => (
-                            <tr key={i} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                                <td className="px-2 py-1.5">
+                            <tr key={i} className={`fila-grilla group text-gray-800 ${i % 2 === 0 ? 'bg-white' : 'bg-violet-50'} focus-within:bg-green-600 focus-within:text-white`}>
+                                <td tabIndex={-1} title="Clic para marcar la fila" className={tdNumero}><span className="hidden group-focus-within:inline text-primario mr-0.5" aria-hidden="true">▶</span>{i + 1}</td>
+                                <td className={tdGrilla}>
                                     <input value={l.description} onChange={(e) => cambiarLinea(i, 'description', e.target.value.toUpperCase())} maxLength={255}
                                         placeholder="QUÉ SE COMPRA" aria-label={`Descripción de la línea ${i + 1}`} className={celda} />
                                 </td>
-                                <td className="px-2 py-1.5"><CampoNumero decimales={2} value={l.quantity_ordered} onChange={(e) => cambiarLinea(i, 'quantity_ordered', e.target.value)} aria-label="Cantidad" className={`${celda} text-right`} /></td>
-                                <td className="px-2 py-1.5"><CampoNumero decimales={4} value={l.unit_price} onChange={(e) => cambiarLinea(i, 'unit_price', e.target.value)} aria-label="Precio unitario" className={`${celda} text-right`} /></td>
-                                <td className="px-2 py-1.5">
+                                <td className={tdGrilla}><CampoNumero decimales={2} value={l.quantity_ordered} onChange={(e) => cambiarLinea(i, 'quantity_ordered', e.target.value)} aria-label="Cantidad" className={`${celda} text-right`} /></td>
+                                <td className={tdGrilla}><CampoNumero decimales={4} value={l.unit_price} onChange={(e) => cambiarLinea(i, 'unit_price', e.target.value)} aria-label="Precio unitario" className={`${celda} text-right`} /></td>
+                                <td className={tdGrilla}>
                                     <select value={l.tax_rate} onChange={(e) => cambiarLinea(i, 'tax_rate', Number(e.target.value))} aria-label="% IVA" className={celda}>
                                         <option value={15}>15</option><option value={5}>5</option><option value={0}>0</option>
                                     </select>
                                 </td>
-                                <td className="px-2 py-1.5"><CampoNumero decimales={2} max={100} value={l.discount_percent} onChange={(e) => cambiarLinea(i, 'discount_percent', e.target.value)} aria-label="% descuento" className={`${celda} text-center`} /></td>
-                                <td className="px-2 py-1.5"><CampoNumero decimales={2} max={100} value={l.retention_rate} onChange={(e) => cambiarLinea(i, 'retention_rate', e.target.value)} aria-label="% retención IR" className={`${celda} text-center`} /></td>
-                                <td className="px-2 py-1.5 text-right">{dinero(calcularLinea(l).subtotal)}</td>
-                                <td className="px-2 py-1.5 text-center">
+                                <td className={tdGrilla}><CampoNumero decimales={2} max={100} value={l.discount_percent} onChange={(e) => cambiarLinea(i, 'discount_percent', e.target.value)} aria-label="% descuento" className={`${celda} text-center`} /></td>
+                                <td className={tdGrilla}><CampoNumero decimales={2} max={100} value={l.retention_rate} onChange={(e) => cambiarLinea(i, 'retention_rate', e.target.value)} aria-label="% retención IR" className={`${celda} text-center`} /></td>
+                                <td className={`${tdGrilla} px-2 text-right`}>{dinero(calcularLinea(l).subtotal)}</td>
+                                <td className={`${tdGrilla} text-center`}>
                                     <button type="button" title="Quitar línea" aria-label="Quitar línea" disabled={form.lines.length === 1}
                                         onClick={() => setForm((f) => ({ ...f, lines: f.lines.filter((_, j) => j !== i) }))}
                                         className="text-red-500 hover:text-red-700 disabled:opacity-30">

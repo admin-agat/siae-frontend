@@ -203,6 +203,11 @@ export default function PurchaseOrderFormPage() {
 
     // --- Totales generales, agrupados por tasa de IVA (igual que el reporte de Contífico) ---
     const calculosLineas = lineas.map(calcularLinea);
+    // 18/11/2026 (Peter): líneas como la grilla de Compra de fruta (tipo SAP): celdas planas, línea gris fina,
+    // filas alternadas, la fila donde se trabaja en verde y la celda que se edita en amarillo
+    const tdGrilla = 'px-0.5 py-0 border border-gray-200 align-middle focus-within:bg-yellow-100 focus-within:text-gray-900';
+    const celda = 'w-full bg-transparent border-0 rounded-none px-1.5 py-0.5 text-sm text-inherit outline-none disabled:opacity-60 disabled:cursor-not-allowed';
+    const tdNumero = 'bg-gray-200 border border-gray-300 px-1 py-0.5 text-center text-sm font-bold text-gray-700 whitespace-nowrap cursor-pointer outline-none';
 
     const subtotal15 = lineas.reduce(
         (acc, l, i) => acc + (parseFloat(l.tax_rate) === 15 ? calculosLineas[i].subtotal : 0), 0
@@ -430,30 +435,32 @@ export default function PurchaseOrderFormPage() {
                     )}
 
                     <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
+                        <table className="w-full text-sm border-collapse">
                             <thead className="bg-primario text-white">
                                 <tr>
-                                    <th className="text-left px-3 py-3">Insumo</th>
-                                    <th className="text-right px-3 py-3 w-28">Cantidad</th>
-                                    <th className="text-right px-3 py-3 w-28">Precio unit.</th>
-                                    <th className="text-center px-3 py-3 w-24">% IVA</th>
-                                    <th className="text-center px-3 py-3 w-24">% Desc</th>
-                                    <th className="text-center px-3 py-3 w-24">% Ret IR</th>
-                                    <th className="text-right px-3 py-3 w-28">Subtotal</th>
-                                    <th className="px-3 py-3 w-10"></th>
+                                    <th className="text-center px-2 py-2 text-xs w-10">#</th>
+                                    <th className="text-left px-2 py-2 text-xs">Insumo</th>
+                                    <th className="text-right px-2 py-2 text-xs w-28">Cantidad</th>
+                                    <th className="text-right px-2 py-2 text-xs w-28">Precio unit.</th>
+                                    <th className="text-center px-2 py-2 text-xs w-24">% IVA</th>
+                                    <th className="text-center px-2 py-2 text-xs w-24">% Desc</th>
+                                    <th className="text-center px-2 py-2 text-xs w-24">% Ret IR</th>
+                                    <th className="text-right px-2 py-2 text-xs w-28">Subtotal</th>
+                                    <th className="px-2 py-2 w-10"></th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {lineas.map((linea, index) => {
                                     const calculo = calculosLineas[index];
                                     return (
-                                        <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                                            <td className="px-3 py-2">
+                                        <tr key={index} className={`fila-grilla group text-gray-800 ${index % 2 === 0 ? 'bg-white' : 'bg-violet-50'} focus-within:bg-green-600 focus-within:text-white`}>
+                                            <td tabIndex={-1} title="Clic para marcar la fila" className={tdNumero}><span className="hidden group-focus-within:inline text-primario mr-0.5" aria-hidden="true">▶</span>{index + 1}</td>
+                                            <td className={tdGrilla}>
                                                 <SelectBuscable
                                                     value={linea.supply_id}
                                                     onChange={(e) => actualizarLinea(index, 'supply_id', e.target.value)}
                                                     disabled={!thirdPartyId || cargandoInsumos}
-                                                    className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primario disabled:bg-gray-100"
+                                                    className={celda}
                                                 >
                                                     <option value="">
                                                         {cargandoInsumos ? 'Cargando...' : 'Seleccionar...'}
@@ -463,51 +470,51 @@ export default function PurchaseOrderFormPage() {
                                                     ))}
                                                 </SelectBuscable>
                                             </td>
-                                            <td className="px-3 py-2">
+                                            <td className={tdGrilla}>
                                                 <CampoNumero decimales={2}
                                                     value={linea.quantity_ordered}
                                                     onChange={(e) => actualizarLinea(index, 'quantity_ordered', e.target.value)}
-                                                    className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-right outline-none focus:ring-2 focus:ring-primario"
+                                                    className={`${celda} text-right`}
                                                 />
                                             </td>
-                                            <td className="px-3 py-2">
+                                            <td className={tdGrilla}>
                                                 <CampoNumero decimales={6}
                                                     value={linea.unit_price}
                                                     onChange={(e) => actualizarLinea(index, 'unit_price', e.target.value)}
-                                                    className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-right outline-none focus:ring-2 focus:ring-primario"
+                                                    className={`${celda} text-right`}
                                                 />
                                             </td>
-                                            <td className="px-3 py-2">
+                                            <td className={tdGrilla}>
                                                 <SelectBuscable
                                                     value={linea.tax_rate}
                                                     onChange={(e) => actualizarLinea(index, 'tax_rate', e.target.value)}
-                                                    className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center outline-none focus:ring-2 focus:ring-primario"
+                                                    className={`${celda} text-center`}
                                                 >
                                                     <option value={15}>15%</option>
                                                     <option value={5}>5%</option>
                                                     <option value={0}>0%</option>
                                                 </SelectBuscable>
                                             </td>
-                                            <td className="px-3 py-2">
+                                            <td className={tdGrilla}>
                                                 <CampoNumero decimales={2}
                                                     max="100"
                                                     value={linea.discount_percent}
                                                     onChange={(e) => actualizarLinea(index, 'discount_percent', e.target.value)}
-                                                    className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center outline-none focus:ring-2 focus:ring-primario"
+                                                    className={`${celda} text-center`}
                                                 />
                                             </td>
-                                            <td className="px-3 py-2">
+                                            <td className={tdGrilla}>
                                                 <CampoNumero decimales={2}
                                                     max="100"
                                                     value={linea.retention_rate}
                                                     onChange={(e) => actualizarLinea(index, 'retention_rate', e.target.value)}
-                                                    className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center outline-none focus:ring-2 focus:ring-primario"
+                                                    className={`${celda} text-center`}
                                                 />
                                             </td>
-                                            <td className="px-3 py-2 text-right font-medium whitespace-nowrap">
+                                            <td className="px-2 py-1 border border-gray-200 text-right font-medium whitespace-nowrap">
                                                 ${dinero(calculo.subtotal)}
                                             </td>
-                                            <td className="px-3 py-2 text-center">
+                                            <td className="px-1 py-0 border border-gray-200 text-center">
                                                 {lineas.length > 1 && (
                                                     <button
                                                         type="button"

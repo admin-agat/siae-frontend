@@ -92,6 +92,8 @@ export default function InventoryMovementsPage() {
     const [kardex, setKardex] = useState(null);
     const [cargandoKardex, setCargandoKardex] = useState(false);
     const [errorKardex, setErrorKardex] = useState('');
+    // 18/11/2026 (Peter): fila elegida del kárdex (verde, como las listas compactas)
+    const [filaKardex, setFilaKardex] = useState(null);
 
     useEffect(() => {
         Promise.all([getWarehouses(), getSupplies()])
@@ -176,7 +178,8 @@ export default function InventoryMovementsPage() {
     );
 
     const columnas = [
-        { titulo: '#', render: (m) => m.id, className: 'font-mono text-gray-500' },
+        // 18/11/2026 (Peter): la lista compacta ya trae la columna # (número de fila); esta es el número del movimiento
+        { titulo: 'N° mov.', render: (m) => m.id, className: 'font-mono text-gray-500' },
         { titulo: 'Fecha', render: (m) => fechaVer(m.date), className: 'whitespace-nowrap' },
         { titulo: 'Tipo', render: (m) => <TipoBadge tipo={m.type} /> },
         { titulo: 'Motivo', render: (m) => m.reason?.name, className: 'text-xs' },
@@ -281,7 +284,9 @@ export default function InventoryMovementsPage() {
                         </div>
                     </div>
 
+                    {/* 18/11/2026 (Peter): lista compacta como el Pedido semanal */}
                     <TablaEstandar
+                        compacta
                         datos={movimientos}
                         cargando={cargando}
                         columnas={columnas}
@@ -352,61 +357,64 @@ export default function InventoryMovementsPage() {
                                     </span>
                                 )}
                             </div>
-                            <table className="w-full text-sm">
+                            <table className="w-full text-sm border-collapse">
                                 <thead className="bg-primario text-white text-xs uppercase">
                                     <tr>
-                                        <th className="text-left px-4 py-2">Fecha</th>
-                                        <th className="text-left px-4 py-2">#</th>
-                                        <th className="text-left px-4 py-2">Tipo / motivo</th>
-                                        <th className="text-left px-4 py-2">Tercero / referencia</th>
-                                        <th className="text-right px-4 py-2">Entrada</th>
-                                        <th className="text-right px-4 py-2">Salida</th>
-                                        <th className="text-right px-4 py-2">Saldo</th>
+                                        {/* 18/11/2026 (Peter): N° de fila (el # siguiente es el número del movimiento) */}
+                                        <th className="text-center px-2 py-2 text-xs w-10">N°</th>
+                                        <th className="text-left px-3 py-2">Fecha</th>
+                                        <th className="text-left px-3 py-2">#</th>
+                                        <th className="text-left px-3 py-2">Tipo / motivo</th>
+                                        <th className="text-left px-3 py-2">Tercero / referencia</th>
+                                        <th className="text-right px-3 py-2">Entrada</th>
+                                        <th className="text-right px-3 py-2">Salida</th>
+                                        <th className="text-right px-3 py-2">Saldo</th>
                                         {verCostos && (
                                             <>
-                                                <th className="text-right px-4 py-2">Costo mov.</th>
-                                                <th className="text-right px-4 py-2" title="Costo promedio de la empresa después de este movimiento">Costo prom.</th>
-                                                <th className="text-right px-4 py-2">Valor saldo</th>
+                                                <th className="text-right px-3 py-2">Costo mov.</th>
+                                                <th className="text-right px-3 py-2" title="Costo promedio de la empresa después de este movimiento">Costo prom.</th>
+                                                <th className="text-right px-3 py-2">Valor saldo</th>
                                             </>
                                         )}
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr className="bg-gray-100 font-semibold">
-                                        <td className="px-4 py-2" colSpan={6}>SALDO INICIAL{kFiltros.date_from ? ` al ${kFiltros.date_from}` : ''}</td>
-                                        <td className="px-4 py-2 text-right">{num(kardex.saldo_inicial)}</td>
+                                        <td className="px-3 py-1.5 border border-gray-200" colSpan={7}>SALDO INICIAL{kFiltros.date_from ? ` al ${kFiltros.date_from}` : ''}</td>
+                                        <td className="px-3 py-1.5 border border-gray-200 text-right">{num(kardex.saldo_inicial)}</td>
                                         {verCostos && (
                                             <>
-                                                <td />
-                                                <td className="px-4 py-2 text-right">{dinero(kardex.costo_inicial, 4)}</td>
-                                                <td className="px-4 py-2 text-right">{dinero(kardex.valor_inicial)}</td>
+                                                <td className="border border-gray-200" />
+                                                <td className="px-3 py-1.5 border border-gray-200 text-right">{dinero(kardex.costo_inicial, 4)}</td>
+                                                <td className="px-3 py-1.5 border border-gray-200 text-right">{dinero(kardex.valor_inicial)}</td>
                                             </>
                                         )}
                                     </tr>
                                     {kardex.filas.length === 0 && (
-                                        <tr><td colSpan={10} className="px-4 py-6 text-center text-gray-400">Sin movimientos en ese período</td></tr>
+                                        <tr><td colSpan={11} className="px-4 py-6 text-center text-gray-400">Sin movimientos en ese período</td></tr>
                                     )}
                                     {kardex.filas.map((f, i) => (
-                                        <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                                            <td className="px-4 py-2 whitespace-nowrap">{fechaVer(f.date)}</td>
-                                            <td className="px-4 py-2">
+                                        <tr key={i} onClick={() => setFilaKardex(i)} className={`cursor-pointer ${filaKardex === i ? 'fila-elegida bg-green-600 text-white' : (i % 2 === 0 ? 'bg-white hover:bg-yellow-50' : 'bg-violet-50 hover:bg-yellow-50')}`}>
+                                            <td className="bg-gray-200 border border-gray-300 px-1 py-1.5 text-center text-sm font-bold text-gray-700">{i + 1}</td>
+                                            <td className="px-3 py-1.5 border border-gray-200 whitespace-nowrap">{fechaVer(f.date)}</td>
+                                            <td className="px-3 py-1.5 border border-gray-200">
                                                 <button type="button" onClick={() => navigate(`/inventory-movements/${f.movement_id}/recibo`, { state: { volver: '/movimientos' } })} className="font-mono text-primario hover:underline">
                                                     {f.movement_id}
                                                 </button>
                                             </td>
-                                            <td className="px-4 py-2 text-xs"><TipoBadge tipo={f.type} /> <span className="ml-1">{f.motivo}</span></td>
-                                            <td className="px-4 py-2 text-xs">
+                                            <td className="px-3 py-1.5 border border-gray-200 text-xs"><TipoBadge tipo={f.type} /> <span className="ml-1">{f.motivo}</span></td>
+                                            <td className="px-3 py-1.5 border border-gray-200 text-xs">
                                                 {f.tercero || '—'}
                                                 {(f.reference || f.reception_note) && <div className="text-gray-400">{[f.reference, f.reception_note].filter(Boolean).join(' · ')}</div>}
                                             </td>
-                                            <td className="px-4 py-2 text-right text-green-700">{f.entrada ? num(f.entrada) : ''}</td>
-                                            <td className="px-4 py-2 text-right text-red-700">{f.salida ? num(f.salida) : ''}</td>
-                                            <td className={`px-4 py-2 text-right font-semibold ${f.saldo < 0 ? 'text-red-600' : ''}`}>{num(f.saldo)}</td>
+                                            <td className="px-3 py-1.5 border border-gray-200 text-right text-green-700">{f.entrada ? num(f.entrada) : ''}</td>
+                                            <td className="px-3 py-1.5 border border-gray-200 text-right text-red-700">{f.salida ? num(f.salida) : ''}</td>
+                                            <td className={`px-3 py-1.5 border border-gray-200 text-right font-semibold ${f.saldo < 0 ? 'text-red-600' : ''}`}>{num(f.saldo)}</td>
                                             {verCostos && (
                                                 <>
-                                                    <td className="px-4 py-2 text-right text-gray-500">{dinero(f.unit_cost, 4)}</td>
-                                                    <td className="px-4 py-2 text-right">{dinero(f.costo_promedio, 4)}</td>
-                                                    <td className="px-4 py-2 text-right">{dinero(f.valor_saldo)}</td>
+                                                    <td className="px-3 py-1.5 border border-gray-200 text-right text-gray-500">{dinero(f.unit_cost, 4)}</td>
+                                                    <td className="px-3 py-1.5 border border-gray-200 text-right">{dinero(f.costo_promedio, 4)}</td>
+                                                    <td className="px-3 py-1.5 border border-gray-200 text-right">{dinero(f.valor_saldo)}</td>
                                                 </>
                                             )}
                                         </tr>
@@ -414,15 +422,15 @@ export default function InventoryMovementsPage() {
                                 </tbody>
                                 <tfoot>
                                     <tr className="bg-gray-100 font-bold border-t">
-                                        <td className="px-4 py-2" colSpan={4}>TOTALES / SALDO FINAL</td>
-                                        <td className="px-4 py-2 text-right text-green-700">{num(kardex.total_entradas)}</td>
-                                        <td className="px-4 py-2 text-right text-red-700">{num(kardex.total_salidas)}</td>
-                                        <td className="px-4 py-2 text-right text-primario">{num(kardex.saldo_final)}</td>
+                                        <td className="px-3 py-1.5 border border-gray-200" colSpan={5}>TOTALES / SALDO FINAL</td>
+                                        <td className="px-3 py-1.5 border border-gray-200 text-right text-green-700">{num(kardex.total_entradas)}</td>
+                                        <td className="px-3 py-1.5 border border-gray-200 text-right text-red-700">{num(kardex.total_salidas)}</td>
+                                        <td className="px-3 py-1.5 border border-gray-200 text-right text-primario">{num(kardex.saldo_final)}</td>
                                         {verCostos && (
                                             <>
-                                                <td />
-                                                <td />
-                                                <td className="px-4 py-2 text-right text-primario">{dinero(kardex.valor_final)}</td>
+                                                <td className="border border-gray-200" />
+                                                <td className="border border-gray-200" />
+                                                <td className="px-3 py-1.5 border border-gray-200 text-right text-primario">{dinero(kardex.valor_final)}</td>
                                             </>
                                         )}
                                     </tr>
@@ -584,9 +592,11 @@ function EditarMovimientoModal({ id, insumos, onClose, onGuardado }) {
                     </div>
 
                     <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
+                        <table className="w-full text-sm border-collapse">
                             <thead className="bg-primario text-white text-xs uppercase">
                                 <tr>
+                                    {/* 18/11/2026 (Peter): columna # y filas alternadas como las grillas */}
+                                    <th className="text-center px-2 py-2 text-xs w-10">#</th>
                                     <th className="text-left px-3 py-2">Insumo</th>
                                     <th className="text-right px-3 py-2 w-28">Cantidad</th>
                                     <th className="text-right px-3 py-2 w-28">Costo unit.</th>
@@ -597,15 +607,16 @@ function EditarMovimientoModal({ id, insumos, onClose, onGuardado }) {
                             </thead>
                             <tbody>
                                 {lineas.map((l, i) => (
-                                    <tr key={i} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                                        <td className="px-3 py-1.5">
+                                    <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-violet-50'}>
+                                        <td className="bg-gray-200 border border-gray-300 px-1 py-1.5 text-center text-sm font-bold text-gray-700">{i + 1}</td>
+                                        <td className="px-3 py-1.5 border border-gray-200">
                                             <SelectBuscable value={l.supply_id} onChange={(e) => cambiarLinea(i, 'supply_id', e.target.value)} disabled={conOC} className="w-full bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm outline-none">
                                                 <option value="">SELECCIONAR...</option>
                                                 {insumos.map((s) => <option key={s.id} value={s.id}>{s.code} — {s.name}</option>)}
                                             </SelectBuscable>
                                         </td>
                                         {['quantity', 'unit_cost', 'discount'].map((campo) => (
-                                            <td key={campo} className="px-3 py-1.5">
+                                            <td key={campo} className="px-3 py-1.5 border border-gray-200">
                                                 <CampoNumero decimales={campo === 'unit_cost' ? 4 : 2}
                                                     value={l[campo]}
                                                     onChange={(e) => cambiarLinea(i, campo, e.target.value)}
@@ -613,8 +624,8 @@ function EditarMovimientoModal({ id, insumos, onClose, onGuardado }) {
                                                 />
                                             </td>
                                         ))}
-                                        <td className="px-3 py-1.5 text-right font-medium">${num(totalLinea(l))}</td>
-                                        <td className="px-2 text-center">
+                                        <td className="px-3 py-1.5 border border-gray-200 text-right font-medium">${num(totalLinea(l))}</td>
+                                        <td className="px-2 text-center border border-gray-200">
                                             {!conOC && lineas.length > 1 && (
                                                 <button type="button" onClick={() => setLineas(lineas.filter((_, j) => j !== i))} className="text-red-500 hover:text-red-700">
                                                     <Trash2 size={15} />
@@ -626,6 +637,7 @@ function EditarMovimientoModal({ id, insumos, onClose, onGuardado }) {
                             </tbody>
                             <tfoot>
                                 <tr className="border-t">
+                                    <td />
                                     <td className="px-3 py-2">
                                         {!conOC && (
                                             <button type="button" onClick={() => setLineas([...lineas, { supply_id: '', quantity: '', unit_cost: '', discount: '0', reception_note: '' }])} className="flex items-center gap-1 text-sm font-semibold text-primario hover:text-primario-hover">

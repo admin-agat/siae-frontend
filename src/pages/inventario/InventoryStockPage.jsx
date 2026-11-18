@@ -16,6 +16,8 @@ export default function InventoryStockPage() {
     // Guarda qué bodegas están expandidas: { "BODEGA SAN JUAN": true, ... }
     // Empieza vacío (todo colapsado) para que la vista general sea compacta.
     const [bodegasAbiertas, setBodegasAbiertas] = useState({});
+    // 18/11/2026 (Peter): fila elegida en verde, como en las demás listas (clave bodega|insumo)
+    const [filaSeleccionada, setFilaSeleccionada] = useState(null);
 
     useEffect(() => {
         cargarStock();
@@ -117,12 +119,13 @@ export default function InventoryStockPage() {
                                 </button>
 
                                 {abierta && (
-                                    <table className="w-full text-sm">
+                                    <table className="w-full text-sm border-collapse">
                                         <thead className="bg-primario text-white">
                                             <tr>
-                                                <th className="text-left px-4 py-3">Insumo</th>
-                                                <th className="text-right px-4 py-3">Existencia</th>
-                                                <th className="text-right px-4 py-3">En Tránsito</th>
+                                                <th className="text-center px-2 py-2 text-xs w-10">#</th>
+                                                <th className="text-left px-3 py-2 text-xs">Insumo</th>
+                                                <th className="text-right px-3 py-2 text-xs">Existencia</th>
+                                                <th className="text-right px-3 py-2 text-xs">En Tránsito</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -130,12 +133,14 @@ export default function InventoryStockPage() {
                                                 const enTransito = Number(f.en_transito) || 0;
 
                                                 return (
-                                                    <tr key={f.supply_id} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                                                        <td className="px-4 py-3 font-medium">{f.supply_name}</td>
-                                                        <td className="px-4 py-3 text-right">
+                                                    <tr key={f.supply_id} onClick={() => setFilaSeleccionada(`${bodega}|${f.supply_id}`)}
+                                                        className={`cursor-pointer ${filaSeleccionada === `${bodega}|${f.supply_id}` ? 'fila-elegida bg-green-600 text-white' : (i % 2 === 0 ? 'bg-white hover:bg-yellow-50' : 'bg-violet-50 hover:bg-yellow-50')}`}>
+                                                        <td className="bg-gray-200 border border-gray-300 px-1 py-1.5 text-center text-sm font-bold text-gray-700">{i + 1}</td>
+                                                        <td className="px-3 py-1.5 border border-gray-200 font-medium">{f.supply_name}</td>
+                                                        <td className="px-3 py-1.5 border border-gray-200 text-right">
                                                             {Number(f.existencia).toLocaleString('es-EC')}
                                                         </td>
-                                                        <td className="px-4 py-3 text-right">
+                                                        <td className="px-3 py-1.5 border border-gray-200 text-right">
                                                             {enTransito > 0 ? (
                                                                 <span className="inline-flex items-center gap-1 text-amber-600 font-medium">
                                                                     <Truck size={14} />

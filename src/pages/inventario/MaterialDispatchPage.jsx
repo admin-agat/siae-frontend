@@ -360,6 +360,13 @@ export default function MaterialDispatchPage() {
         }
     };
 
+    // 18/11/2026 (Peter): materiales como la grilla de Compra de fruta (tipo SAP): celdas planas, línea gris fina,
+    // filas alternadas, la fila donde se trabaja en verde y la celda que se edita en amarillo
+    const tdGrilla = 'px-0.5 py-0 border border-gray-200 align-middle focus-within:bg-yellow-100 focus-within:text-gray-900';
+    const celda = 'w-full bg-transparent border-0 rounded-none px-1.5 py-0.5 text-sm text-inherit outline-none disabled:opacity-60 disabled:cursor-not-allowed';
+    const tdNumero = 'bg-gray-200 border border-gray-300 px-1 py-0.5 text-center text-sm font-bold text-gray-700 whitespace-nowrap cursor-pointer outline-none';
+    const tdLectura = 'px-2 py-1 border border-gray-200';
+
     return (
         <div className="p-6 space-y-6">
             <div>
@@ -562,52 +569,52 @@ export default function MaterialDispatchPage() {
                     </div>
 
                     <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="text-left border-b text-gray-600">
-                                    <th className="py-2 pr-2">CÓDIGO</th>
-                                    <th className="py-2 pr-2">INSUMO</th>
-                                    <th className="py-2 pr-2">UNIDAD</th>
-                                    {hayRetiroPrevio && <th className="py-2 pr-2 text-right">FÓRMULA</th>}
-                                    {hayRetiroPrevio && <th className="py-2 pr-2 text-right">YA RETIRADO</th>}
-                                    <th className="py-2 pr-2 text-right">RECOMENDADO</th>
-                                    <th className="py-2 pr-2 text-right">STOCK</th>
-                                    <th className="py-2 pr-2 text-right">A RETIRAR</th>
-                                    {verCostos && <th className="py-2 text-right">VALOR</th>}
+                        <table className="w-full text-sm border-collapse">
+                            <thead className="bg-primario text-white">
+                                <tr className="text-left">
+                                    <th className="text-center px-2 py-2 text-xs w-10">#</th>
+                                    <th className="px-2 py-2 text-xs">CÓDIGO</th>
+                                    <th className="px-2 py-2 text-xs">INSUMO</th>
+                                    <th className="px-2 py-2 text-xs">UNIDAD</th>
+                                    {hayRetiroPrevio && <th className="px-2 py-2 text-xs text-right">FÓRMULA</th>}
+                                    {hayRetiroPrevio && <th className="px-2 py-2 text-xs text-right">YA RETIRADO</th>}
+                                    <th className="px-2 py-2 text-xs text-right">RECOMENDADO</th>
+                                    <th className="px-2 py-2 text-xs text-right">STOCK</th>
+                                    <th className="px-2 py-2 text-xs text-right">A RETIRAR</th>
+                                    {verCostos && <th className="px-2 py-2 text-xs text-right">VALOR</th>}
                                 </tr>
                             </thead>
                             <tbody>
-                                {filas.map((f) => (
-                                    <tr key={f.supply_id} className={`border-b last:border-0 ${f.sinStock ? 'bg-red-50' : ''}`}>
-                                        <td className="py-2 pr-2 text-gray-500">{f.code}</td>
-                                        <td className="py-2 pr-2">{f.name}</td>
-                                        <td className="py-2 pr-2 text-gray-500">{f.unit}</td>
+                                {filas.map((f, i) => (
+                                    <tr key={f.supply_id} className={`fila-grilla group text-gray-800 ${f.sinStock ? 'bg-red-50' : i % 2 === 0 ? 'bg-white' : 'bg-violet-50'} focus-within:bg-green-600 focus-within:text-white`}>
+                                        <td tabIndex={-1} title="Clic para marcar la fila" className={tdNumero}><span className="hidden group-focus-within:inline text-primario mr-0.5" aria-hidden="true">▶</span>{i + 1}</td>
+                                        <td className={`${tdLectura} text-gray-500`}>{f.code}</td>
+                                        <td className={`${tdLectura}`}>{f.name}</td>
+                                        <td className={`${tdLectura} text-gray-500`}>{f.unit}</td>
                                         {hayRetiroPrevio && (
-                                            <td className="py-2 pr-2 text-right text-gray-500">{f.valor_formula}</td>
+                                            <td className={`${tdLectura} text-right text-gray-500`}>{f.valor_formula}</td>
                                         )}
                                         {hayRetiroPrevio && (
-                                            <td className="py-2 pr-2 text-right text-gray-500">{f.ya_despachado || '—'}</td>
+                                            <td className={`${tdLectura} text-right text-gray-500`}>{f.ya_despachado || '—'}</td>
                                         )}
-                                        <td className="py-2 pr-2 text-right font-semibold">{f.valor_recomendado}</td>
-                                        <td className={`py-2 pr-2 text-right ${f.sinStock ? 'text-red-600 font-bold' : 'text-gray-500'}`}>
+                                        <td className={`${tdLectura} text-right font-semibold`}>{f.valor_recomendado}</td>
+                                        <td className={`${tdLectura} text-right ${f.sinStock ? 'text-red-600 font-bold' : 'text-gray-500'}`}>
                                             {f.stock_disponible}
                                         </td>
-                                        <td className="py-2 pr-2 text-right">
+                                        <td className={`${tdGrilla} w-28`}>
                                             {/* Rojo = sin stock · Ámbar = ajustado a mano · Gris = igual al recomendado */}
                                             <input
                                                 inputMode="decimal"
                                                 value={f.valor_a_retirar}
                                                 onChange={(e) => handleCambiarRetirar(f.supply_id, e.target.value)}
-                                                className={`w-24 rounded-xl px-2 py-1 text-right outline-none focus:ring-2 ${
-                                                    f.sinStock
-                                                        ? 'bg-red-100 text-red-700 focus:ring-red-400'
-                                                        : f.ajustado
-                                                            ? 'bg-amber-100 text-amber-800 font-semibold focus:ring-amber-400'
-                                                            : 'bg-gray-100 focus:ring-blue-500'
-                                                }`}
+                                                className={`${f.sinStock
+                                                    ? celda.replace('bg-transparent', 'bg-red-100 text-red-700')
+                                                    : f.ajustado
+                                                        ? celda.replace('bg-transparent', 'bg-amber-100 text-amber-800 font-semibold')
+                                                        : celda} text-right`}
                                             />
                                         </td>
-                                        {verCostos && <td className="py-2 text-right">{dinero(f.valor)}</td>}
+                                        {verCostos && <td className={`${tdLectura} text-right`}>{dinero(f.valor)}</td>}
                                     </tr>
                                 ))}
                             </tbody>

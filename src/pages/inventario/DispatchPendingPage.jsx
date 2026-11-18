@@ -156,7 +156,9 @@ export default function DispatchPendingPage() {
                 </div>
             </div>
 
+            {/* 18/11/2026 (Peter): lista compacta como el Pedido semanal (con columna #) */}
             <TablaEstandar
+                compacta
                 datos={visibles}
                 cargando={cargando}
                 nombreRegistros="compras"

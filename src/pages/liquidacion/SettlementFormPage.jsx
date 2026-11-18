@@ -135,6 +135,12 @@ export default function SettlementFormPage() {
   const { quota } = datos;
   const thClass = 'px-3 py-2 uppercase text-xs';
   const inputClass = 'bg-gray-100 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-primario';
+  // 18/11/2026 (Peter): fruta y materiales como las listas compactas (# gris, línea fina, filas alternadas) y los
+  // anticipos como la grilla de Compra de fruta (tipo SAP): la fila donde se trabaja en verde, la celda en amarillo
+  const tdLectura = 'px-3 py-1.5 border border-gray-200';
+  const tdGrilla = 'px-0.5 py-0 border border-gray-200 align-middle focus-within:bg-yellow-100 focus-within:text-gray-900';
+  const celda = 'bg-transparent border-0 rounded-none px-1.5 py-0.5 text-sm text-inherit outline-none disabled:opacity-60 disabled:cursor-not-allowed';
+  const tdNumero = 'bg-gray-200 border border-gray-300 px-1 py-0.5 text-center text-sm font-bold text-gray-700 whitespace-nowrap cursor-pointer outline-none';
 
   return (
     <div className="p-6">
@@ -170,9 +176,10 @@ export default function SettlementFormPage() {
       {/* 1. Fruta */}
       <div className="bg-white rounded-xl shadow overflow-x-auto mb-4">
         <h2 className="px-4 py-3 font-semibold text-gray-800 border-b">1. Fruta (según tarjas: se pagan las recibidas)</h2>
-        <table className="w-full text-sm min-w-[950px]">
+        <table className="w-full text-sm border-collapse min-w-[950px]">
           <thead className="bg-primario text-white">
             <tr>
+              <th className="text-center px-2 py-2 text-xs w-10">#</th>
               <th className={`${thClass} text-left`}>Marca (Cliente)</th>
               <th className={`${thClass} text-left`}>LQ · Pago</th>
               <th className={`${thClass} text-right`}>Comprado</th>
@@ -189,34 +196,35 @@ export default function SettlementFormPage() {
           </thead>
           <tbody>
             {datos.lines.map((l, i) => (
-              <tr key={l.producer_quota_line_id} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                <td className="px-3 py-2 font-medium">{l.brand} <span className="text-gray-500 font-normal">({l.customer})</span>{(l.producer || l.farm_name) && <span className="block text-xs text-gray-500 font-normal">{[l.producer, l.farm_name].filter(Boolean).join(' · ')}</span>}{l.transport_deduction > 0 && <span className="block text-xs text-red-600 font-normal">Transporte − $ {formatoDinero(l.transport_deduction)}</span>}{l.transport_recognized > 0 && <span className="block text-xs text-green-700 font-normal">Transporte reconocido + $ {formatoDinero(l.transport_recognized)} ({formatoCajas(l.boxes_paid)} × $ {l.transport_recognized_rate})</span>}{l.bonus_amount > 0 && <span className="block text-xs text-green-700 font-normal">Bono {(l.bonus_reason || '').replace('_', ' ')}{l.bonus_detail ? ` (${l.bonus_detail})` : ''} + $ {formatoDinero(l.bonus_amount)} ({formatoCajas(l.boxes_paid)} × $ {l.bonus_rate})</span>}</td>
-                <td className="px-3 py-2 text-xs"><span className="font-semibold">{grupoDe[l.producer_quota_line_id] || l.negotiation_type}</span> · {ESQUEMA[l.payment_scheme]}</td>
-                <td className="px-3 py-2 text-right">{formatoCajas(l.boxes_purchased)}</td>
-                <td className="px-3 py-2 text-right">{formatoCajas(l.boxes_shipped)}</td>
-                <td className="px-3 py-2 text-right">{formatoCajas(l.boxes_fallen)}</td>
-                <td className="px-3 py-2 text-right text-red-600">{formatoCajas(l.boxes_rejected)}</td>
-                <td className="px-3 py-2 text-right">{formatoCajas(l.boxes_missing)}</td>
-                <td className="px-3 py-2 text-right font-semibold">{formatoCajas(l.boxes_paid)}</td>
-                <td className="px-3 py-2 text-right">{l.official_price === null ? <span className="text-xs font-semibold text-red-600">FALTA</span> : `$ ${formatoDinero(l.official_price)}`}</td>
-                <td className="px-3 py-2 text-right">$ {formatoDinero(l.real_price)}</td>
-                <td className="px-3 py-2 text-right font-semibold">$ {formatoDinero(l.amount)}</td>
-                <td className="px-3 py-2 text-right">$ {formatoDinero(l.credit_note_amount)}</td>
+              <tr key={l.producer_quota_line_id} className={i % 2 === 0 ? 'bg-white hover:bg-yellow-50' : 'bg-violet-50 hover:bg-yellow-50'}>
+                <td className="bg-gray-200 border border-gray-300 px-1 py-1.5 text-center text-sm font-bold text-gray-700">{i + 1}</td>
+                <td className={`${tdLectura} font-medium`}>{l.brand} <span className="text-gray-500 font-normal">({l.customer})</span>{(l.producer || l.farm_name) && <span className="block text-xs text-gray-500 font-normal">{[l.producer, l.farm_name].filter(Boolean).join(' · ')}</span>}{l.transport_deduction > 0 && <span className="block text-xs text-red-600 font-normal">Transporte − $ {formatoDinero(l.transport_deduction)}</span>}{l.transport_recognized > 0 && <span className="block text-xs text-green-700 font-normal">Transporte reconocido + $ {formatoDinero(l.transport_recognized)} ({formatoCajas(l.boxes_paid)} × $ {l.transport_recognized_rate})</span>}{l.bonus_amount > 0 && <span className="block text-xs text-green-700 font-normal">Bono {(l.bonus_reason || '').replace('_', ' ')}{l.bonus_detail ? ` (${l.bonus_detail})` : ''} + $ {formatoDinero(l.bonus_amount)} ({formatoCajas(l.boxes_paid)} × $ {l.bonus_rate})</span>}</td>
+                <td className={`${tdLectura} text-xs`}><span className="font-semibold">{grupoDe[l.producer_quota_line_id] || l.negotiation_type}</span> · {ESQUEMA[l.payment_scheme]}</td>
+                <td className={`${tdLectura} text-right`}>{formatoCajas(l.boxes_purchased)}</td>
+                <td className={`${tdLectura} text-right`}>{formatoCajas(l.boxes_shipped)}</td>
+                <td className={`${tdLectura} text-right`}>{formatoCajas(l.boxes_fallen)}</td>
+                <td className={`${tdLectura} text-right text-red-600`}>{formatoCajas(l.boxes_rejected)}</td>
+                <td className={`${tdLectura} text-right`}>{formatoCajas(l.boxes_missing)}</td>
+                <td className={`${tdLectura} text-right font-semibold`}>{formatoCajas(l.boxes_paid)}</td>
+                <td className={`${tdLectura} text-right`}>{l.official_price === null ? <span className="text-xs font-semibold text-red-600">FALTA</span> : `$ ${formatoDinero(l.official_price)}`}</td>
+                <td className={`${tdLectura} text-right`}>$ {formatoDinero(l.real_price)}</td>
+                <td className={`${tdLectura} text-right font-semibold`}>$ {formatoDinero(l.amount)}</td>
+                <td className={`${tdLectura} text-right`}>$ {formatoDinero(l.credit_note_amount)}</td>
               </tr>
             ))}
           </tbody>
           <tfoot className="bg-gray-50 border-t-2 font-bold">
             <tr>
-              <td colSpan={3} className="px-3 py-2">TOTAL FRUTA</td>
-              <td className="px-3 py-2 text-right">{formatoCajas(datos.boxes_shipped)}</td>
-              <td className="px-3 py-2 text-right">{formatoCajas(datos.boxes_fallen)}</td>
-              <td className="px-3 py-2 text-right text-red-600">{formatoCajas(datos.boxes_rejected)}</td>
-              <td className="px-3 py-2 text-right">{formatoCajas(datos.boxes_missing)}</td>
-              <td className="px-3 py-2 text-right">{formatoCajas(datos.boxes_paid)}</td>
-              <td></td>
-              <td></td>
-              <td className="px-3 py-2 text-right text-green-700">$ {formatoDinero(datos.fruit_amount)}</td>
-              <td className="px-3 py-2 text-right">$ {formatoDinero(datos.credit_note_amount)}</td>
+              <td colSpan={4} className={tdLectura}>TOTAL FRUTA</td>
+              <td className={`${tdLectura} text-right`}>{formatoCajas(datos.boxes_shipped)}</td>
+              <td className={`${tdLectura} text-right`}>{formatoCajas(datos.boxes_fallen)}</td>
+              <td className={`${tdLectura} text-right text-red-600`}>{formatoCajas(datos.boxes_rejected)}</td>
+              <td className={`${tdLectura} text-right`}>{formatoCajas(datos.boxes_missing)}</td>
+              <td className={`${tdLectura} text-right`}>{formatoCajas(datos.boxes_paid)}</td>
+              <td className="border border-gray-200"></td>
+              <td className="border border-gray-200"></td>
+              <td className={`${tdLectura} text-right text-green-700`}>$ {formatoDinero(datos.fruit_amount)}</td>
+              <td className={`${tdLectura} text-right`}>$ {formatoDinero(datos.credit_note_amount)}</td>
             </tr>
           </tfoot>
         </table>
@@ -228,9 +236,10 @@ export default function SettlementFormPage() {
         {datos.materials.length === 0 ? (
           <p className="px-4 py-4 text-sm text-gray-400">No retiró materiales que se cobren al productor.</p>
         ) : (
-          <table className="w-full text-sm min-w-[750px]">
+          <table className="w-full text-sm border-collapse min-w-[750px]">
             <thead className="bg-primario text-white">
               <tr>
+              <th className="text-center px-2 py-2 text-xs w-10">#</th>
                 <th className={`${thClass} text-left`}>Material</th>
                 <th className={`${thClass} text-right`}>Retirado</th>
                 <th className={`${thClass} text-right`}>Devuelto</th>
@@ -241,20 +250,21 @@ export default function SettlementFormPage() {
             </thead>
             <tbody>
               {datos.materials.map((m, i) => (
-                <tr key={m.supply_id} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                  <td className="px-3 py-2">{m.name} <span className="text-xs text-gray-400">{m.unit}</span></td>
-                  <td className="px-3 py-2 text-right">{formatoCantidad(m.dispatched_qty)}</td>
-                  <td className="px-3 py-2 text-right text-green-700">{m.returned_qty > 0 ? formatoCantidad(m.returned_qty) : '—'}</td>
-                  <td className="px-3 py-2 text-right font-semibold">{formatoCantidad(m.charged_qty)}</td>
-                  <td className="px-3 py-2 text-right">$ {Number(m.unit_cost).toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</td>
-                  <td className="px-3 py-2 text-right font-semibold">$ {formatoDinero(m.amount)}</td>
+                <tr key={m.supply_id} className={i % 2 === 0 ? 'bg-white hover:bg-yellow-50' : 'bg-violet-50 hover:bg-yellow-50'}>
+                  <td className="bg-gray-200 border border-gray-300 px-1 py-1.5 text-center text-sm font-bold text-gray-700">{i + 1}</td>
+                  <td className={tdLectura}>{m.name} <span className="text-xs text-gray-400">{m.unit}</span></td>
+                  <td className={`${tdLectura} text-right`}>{formatoCantidad(m.dispatched_qty)}</td>
+                  <td className={`${tdLectura} text-right text-green-700`}>{m.returned_qty > 0 ? formatoCantidad(m.returned_qty) : '—'}</td>
+                  <td className={`${tdLectura} text-right font-semibold`}>{formatoCantidad(m.charged_qty)}</td>
+                  <td className={`${tdLectura} text-right`}>$ {Number(m.unit_cost).toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</td>
+                  <td className={`${tdLectura} text-right font-semibold`}>$ {formatoDinero(m.amount)}</td>
                 </tr>
               ))}
             </tbody>
             <tfoot className="bg-gray-50 border-t-2 font-bold">
               <tr>
-                <td colSpan={5} className="px-3 py-2">TOTAL MATERIALES</td>
-                <td className="px-3 py-2 text-right text-red-600">− $ {formatoDinero(datos.materials_amount)}</td>
+                <td colSpan={6} className={tdLectura}>TOTAL MATERIALES</td>
+                <td className={`${tdLectura} text-right text-red-600`}>− $ {formatoDinero(datos.materials_amount)}</td>
               </tr>
             </tfoot>
           </table>
@@ -267,9 +277,10 @@ export default function SettlementFormPage() {
         {datos.advances.length === 0 ? (
           <p className="px-4 py-4 text-sm text-gray-400">El productor no tiene anticipos ni préstamos pendientes.</p>
         ) : (
-          <table className="w-full text-sm min-w-[750px]">
+          <table className="w-full text-sm border-collapse min-w-[750px]">
             <thead className="bg-primario text-white">
               <tr>
+                <th className="text-center px-2 py-2 text-xs w-10">#</th>
                 <th className={`${thClass} text-left w-24`}>Descontar</th>
                 <th className={`${thClass} text-left`}>Fecha</th>
                 <th className={`${thClass} text-left`}>Tipo · Concepto</th>
@@ -282,16 +293,17 @@ export default function SettlementFormPage() {
                 const marcado = aplicar[a.id] !== undefined;
                 const excede = Number(aplicar[a.id] || 0) > a.saldo;
                 return (
-                  <tr key={a.id} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                    <td className="px-3 py-2"><input type="checkbox" checked={marcado} onChange={(e) => marcarAnticipo(a, e.target.checked)} className="w-4 h-4 accent-primario" /></td>
-                    <td className="px-3 py-2">{formatoFecha(a.date)}</td>
-                    <td className="px-3 py-2">{a.type === 'PRESTAMO' ? 'PRÉSTAMO' : 'ANTICIPO'}{a.concept ? ` · ${a.concept}` : ''}</td>
-                    <td className="px-3 py-2 text-right">$ {formatoDinero(a.saldo)}</td>
-                    <td className="px-3 py-2 text-right">
+                  <tr key={a.id} className={`fila-grilla group text-gray-800 ${i % 2 === 0 ? 'bg-white' : 'bg-violet-50'} focus-within:bg-green-600 focus-within:text-white`}>
+                    <td tabIndex={-1} title="Clic para marcar la fila" className={tdNumero}><span className="hidden group-focus-within:inline text-primario mr-0.5" aria-hidden="true">▶</span>{i + 1}</td>
+                    <td className={`${tdGrilla} px-3`}><input type="checkbox" checked={marcado} onChange={(e) => marcarAnticipo(a, e.target.checked)} className="w-4 h-4 accent-primario" /></td>
+                    <td className={tdLectura}>{formatoFecha(a.date)}</td>
+                    <td className={tdLectura}>{a.type === 'PRESTAMO' ? 'PRÉSTAMO' : 'ANTICIPO'}{a.concept ? ` · ${a.concept}` : ''}</td>
+                    <td className={`${tdLectura} text-right`}>$ {formatoDinero(a.saldo)}</td>
+                    <td className={`${tdGrilla} text-right`}>
                       <CampoNumero decimales={2}
                         value={aplicar[a.id] ?? ''} disabled={!marcado}
                         onChange={(e) => setAplicar((prev) => ({ ...prev, [a.id]: e.target.value }))}
-                        className={`${inputClass} w-32 text-right disabled:opacity-40 ${excede ? 'ring-2 ring-red-500' : ''}`}
+                        className={`${celda} w-32 text-right disabled:opacity-40 ${excede ? 'shadow-[inset_0_0_0_2px_#ef4444]' : ''}`}
                       />
                       {excede && <span className="block text-[10px] text-red-600">Mayor que el saldo</span>}
                     </td>

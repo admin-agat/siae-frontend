@@ -273,6 +273,19 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 18/11/2026 — Estilo de grillas en todo el sistema (Inventario y el resto de módulos)
+- La `TablaEstandar` es **compacta por defecto** en todo el sistema: columna #, filas bajas alternadas blanco/lila y fila elegida en verde con letra blanca. Con `compacta={false}` vuelve al estilo anterior.
+- **Tablas propias de solo lectura:** columna # gris, celdas con línea fina, filas alternadas y, donde hay selección, la fila elegida en verde. Las pantallas son:
+  - Inventario: Bodegas, Motivos, Insumos, Stock general, kárdex, Historial de despachos, Transferencias, Órdenes de compra;
+  - Exportaciones: Marcas, Navieras, Cierre de embarque (tarja por DAE y cruce);
+  - Finanzas: Tablero, Ganancia por viaje;
+  - Liquidación: fruta y materiales de la nueva liquidación;
+  - Configuración: Bitácora;
+  - Inicio: Dashboard.
+- **Grillas editables, tipo SAP como Compra de fruta:** Nuevo movimiento, líneas de la OC, Despacho de materiales, bookings del Cierre de embarque, Gastos del viaje, anticipos de la nueva liquidación, tramos de retención y líneas de Pedidos por departamento.
+- **Sin cambios:** los documentos de impresión, que son el Detalle de liquidación, el comprobante de movimiento y el detalle de la OC.
+- Es solo visual: no cambian cálculos, textos ni permisos.
+
 ### 18/11/2026 — Fila elegida con todo el texto en blanco en las listas compactas
 - En la fila elegida (verde) de las listas compactas, todo el texto pasa a blanco, también los números de color (verde de EN BARCOS, naranja de POR COMPRAR). Los badges y botones con fondo propio conservan su color.
 

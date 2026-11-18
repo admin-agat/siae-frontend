@@ -55,6 +55,8 @@ export default function PurchaseOrdersPage() {
     // Toast local (mismo patrón del resto del sistema: sin librería,
     // estado propio con auto-hide).
     const [toast, setToast] = useState(null);
+    // 18/11/2026 (Peter): fila elegida (verde), como las listas compactas
+    const [filaSeleccionada, setFilaSeleccionada] = useState(null);
 
     useEffect(() => {
         cargarOrdenes();
@@ -211,28 +213,30 @@ export default function PurchaseOrdersPage() {
             </div>
 
             <div className="bg-white rounded-xl shadow overflow-hidden">
-                <table className="w-full text-sm">
+                <table className="w-full text-sm border-collapse">
                     <thead className="bg-primario text-white">
                         <tr>
-                            <th className="text-left px-4 py-3">Código</th>
-                            <th className="text-left px-4 py-3">Proveedor</th>
-                            <th className="text-left px-4 py-3">Bodega destino</th>
-                            <th className="text-left px-4 py-3">Fecha</th>
-                            <th className="text-center px-4 py-3 w-20">Semana</th>
-                            <th className="text-center px-4 py-3 w-32">Estado</th>
-                            <th className="text-center px-4 py-3 w-24">Acciones</th>
+                            {/* 18/11/2026 (Peter): lista compacta como el Pedido semanal (columna #, sigue la página) */}
+                            <th className="text-center px-2 py-2 text-xs w-10">#</th>
+                            <th className="text-left px-3 py-2 text-xs">Código</th>
+                            <th className="text-left px-3 py-2 text-xs">Proveedor</th>
+                            <th className="text-left px-3 py-2 text-xs">Bodega destino</th>
+                            <th className="text-left px-3 py-2 text-xs">Fecha</th>
+                            <th className="text-center px-3 py-2 text-xs w-20">Semana</th>
+                            <th className="text-center px-3 py-2 text-xs w-32">Estado</th>
+                            <th className="text-center px-3 py-2 text-xs w-24">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         {cargando ? (
                             <tr>
-                                <td colSpan={7} className="text-center px-4 py-8 text-gray-400">
+                                <td colSpan={8} className="text-center px-4 py-8 text-gray-400">
                                     Cargando órdenes de compra...
                                 </td>
                             </tr>
                         ) : ordenesPagina.length === 0 ? (
                             <tr>
-                                <td colSpan={7} className="text-center px-4 py-8 text-gray-400">
+                                <td colSpan={8} className="text-center px-4 py-8 text-gray-400">
                                     No hay órdenes de compra que coincidan con el filtro
                                 </td>
                             </tr>
@@ -240,14 +244,16 @@ export default function PurchaseOrdersPage() {
                             ordenesPagina.map((orden, index) => (
                                 <tr
                                     key={orden.id}
-                                    className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}
+                                    onClick={() => setFilaSeleccionada(orden.id)}
+                                    className={`cursor-pointer ${filaSeleccionada === orden.id ? 'fila-elegida bg-green-600 text-white' : (index % 2 === 0 ? 'bg-white hover:bg-yellow-50' : 'bg-violet-50 hover:bg-yellow-50')}`}
                                 >
-                                    <td className="px-4 py-3 font-semibold text-gray-800">{orden.code}</td>
-                                    <td className="px-4 py-3">{orden.third_party?.name || '—'}</td>
-                                    <td className="px-4 py-3">{orden.warehouse?.name || '—'}</td>
-                                    <td className="px-4 py-3">{formatearFecha(orden.date)}</td>
-                                    <td className="px-4 py-3 text-center">{orden.week ?? '—'}</td>
-                                    <td className="px-4 py-3 text-center">
+                                    <td className="bg-gray-200 border border-gray-300 px-1 py-1.5 text-center text-sm font-bold text-gray-700">{(pagina - 1) * PAGE_SIZE + index + 1}</td>
+                                    <td className="px-3 py-1.5 border border-gray-200 font-semibold text-gray-800">{orden.code}</td>
+                                    <td className="px-3 py-1.5 border border-gray-200">{orden.third_party?.name || '—'}</td>
+                                    <td className="px-3 py-1.5 border border-gray-200">{orden.warehouse?.name || '—'}</td>
+                                    <td className="px-3 py-1.5 border border-gray-200">{formatearFecha(orden.date)}</td>
+                                    <td className="px-3 py-1.5 border border-gray-200 text-center">{orden.week ?? '—'}</td>
+                                    <td className="px-3 py-1.5 border border-gray-200 text-center">
                                         <span
                                             className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${
                                                 ESTADO_ESTILOS[orden.status] || 'bg-gray-100 text-gray-700'
@@ -256,7 +262,7 @@ export default function PurchaseOrdersPage() {
                                             {orden.status}
                                         </span>
                                     </td>
-                                    <td className="px-4 py-3 text-center">
+                                    <td className="px-3 py-1.5 border border-gray-200 text-center">
                                         <div className="flex items-center justify-center gap-3">
                                             <button
                                                 onClick={() => navigate(`/ordenes-compra/${orden.id}`)}

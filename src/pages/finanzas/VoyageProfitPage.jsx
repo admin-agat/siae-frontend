@@ -42,22 +42,24 @@ export default function VoyageProfitPage() {
 
   const input = 'w-full bg-gray-100 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-primario';
   const th = 'px-3 py-2 uppercase text-xs whitespace-nowrap';
+  // 18/11/2026 (Peter): tabla como las listas compactas: columna # gris, línea gris fina y filas alternadas
+  const tdLectura = 'px-3 py-1.5 border border-gray-200';
   const color = (n) => (n < 0 ? 'text-red-600' : 'text-green-700');
   const t = datos?.total;
 
   const fila = (x, negrita = false) => (
     <>
-      <td className={`px-3 py-2 text-right ${negrita ? 'font-semibold' : ''}`}>{cajas(x.cajas)}</td>
-      <td className="px-3 py-2 text-right">$ {dinero(x.venta)}</td>
-      <td className="px-3 py-2 text-right">$ {dinero(x.fruta)}</td>
-      <td className="px-3 py-2 text-right" title={`Despachado $ ${dinero(x.materiales)} − cobrado al productor $ ${dinero(x.materiales_recuperados)}`}>$ {dinero(matNetos(x))}</td>
-      <td className="px-3 py-2 text-right" title={`Contenedor $ ${dinero(x.flete_contenedor)} + bajo cubierta $ ${dinero(x.flete_bajo_cubierta)}`}>$ {dinero(fletes(x))}</td>
-      <td className="px-3 py-2 text-right" title={x.gastos_detalle ? Object.entries(x.gastos_detalle).map(([k, v]) => `${datos.categories[k] || k}: $ ${dinero(v)}`).join('\n') : ''}>$ {dinero(x.gastos)}</td>
+      <td className={`${tdLectura} text-right ${negrita ? 'font-semibold' : ''}`}>{cajas(x.cajas)}</td>
+      <td className={`${tdLectura} text-right`}>$ {dinero(x.venta)}</td>
+      <td className={`${tdLectura} text-right`}>$ {dinero(x.fruta)}</td>
+      <td className={`${tdLectura} text-right`} title={`Despachado $ ${dinero(x.materiales)} − cobrado al productor $ ${dinero(x.materiales_recuperados)}`}>$ {dinero(matNetos(x))}</td>
+      <td className={`${tdLectura} text-right`} title={`Contenedor $ ${dinero(x.flete_contenedor)} + bajo cubierta $ ${dinero(x.flete_bajo_cubierta)}`}>$ {dinero(fletes(x))}</td>
+      <td className={`${tdLectura} text-right`} title={x.gastos_detalle ? Object.entries(x.gastos_detalle).map(([k, v]) => `${datos.categories[k] || k}: $ ${dinero(v)}`).join('\n') : ''}>$ {dinero(x.gastos)}</td>
       {/* 11/11/2026: neto = descontado al productor − reconocido al productor */}
-      <td className={`px-3 py-2 text-right ${(x.transporte_recuperado - (x.transporte_reconocido || 0)) < 0 ? 'text-red-600' : ''}`}
+      <td className={`${tdLectura} text-right ${(x.transporte_recuperado - (x.transporte_reconocido || 0)) < 0 ? 'text-red-600' : ''}`}
         title={`Descontado al productor $ ${dinero(x.transporte_recuperado)} − reconocido al productor $ ${dinero(x.transporte_reconocido || 0)}`}>$ {dinero(x.transporte_recuperado - (x.transporte_reconocido || 0))}</td>
-      <td className={`px-3 py-2 text-right font-bold ${color(x.ganancia)}`}>$ {dinero(x.ganancia)}</td>
-      <td className={`px-3 py-2 text-right ${color(x.ganancia)}`}>{pct(x.margen)}</td>
+      <td className={`${tdLectura} text-right font-bold ${color(x.ganancia)}`}>$ {dinero(x.ganancia)}</td>
+      <td className={`${tdLectura} text-right ${color(x.ganancia)}`}>{pct(x.margen)}</td>
     </>
   );
 
@@ -112,9 +114,10 @@ export default function VoyageProfitPage() {
               </div>
             )}
             <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[1050px]">
+              <table className="w-full text-sm min-w-[1050px] border-collapse">
                 <thead className="text-gray-500 border-b">
                   <tr>
+                    <th className="text-center px-2 py-2 text-xs w-10">#</th>
                     <th className={`${th} text-left`}>Cliente</th>
                     <th className={`${th} text-right`}>Cajas</th>
                     <th className={`${th} text-right`}>Venta</th>
@@ -128,9 +131,10 @@ export default function VoyageProfitPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {v.customers.map((c) => (
-                    <tr key={c.customer_id} className="border-b">
-                      <td className="px-3 py-2 font-medium">
+                  {v.customers.map((c, i) => (
+                    <tr key={c.customer_id} className={i % 2 === 0 ? 'bg-white hover:bg-yellow-50' : 'bg-violet-50 hover:bg-yellow-50'}>
+                      <td className="bg-gray-200 border border-gray-300 px-1 py-1.5 text-center text-sm font-bold text-gray-700">{i + 1}</td>
+                      <td className={`${tdLectura} font-medium`}>
                         {c.name}
                         <span className="block text-[11px] font-normal text-gray-500">
                           {c.precio_promedio === null ? 'Sin precio de venta' : `Precio prom. $ ${dinero(c.precio_promedio)}`} · {c.fuente === 'CIERRE' ? 'según cierre' : c.fuente === 'DISTRIBUCION' ? 'según distribución' : 'sin carga'}
@@ -140,7 +144,8 @@ export default function VoyageProfitPage() {
                     </tr>
                   ))}
                   <tr className="bg-gray-50 font-semibold">
-                    <td className="px-3 py-2">TOTAL DEL VIAJE</td>
+                    <td className="border border-gray-200" />
+                    <td className={tdLectura}>TOTAL DEL VIAJE</td>
                     {fila(v.total, true)}
                   </tr>
                 </tbody>
