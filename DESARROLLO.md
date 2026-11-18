@@ -273,6 +273,10 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 18/11/2026 — Lista de Compra de fruta compacta
+- La lista de semanas de Compra de fruta usa la `TablaEstandar` compacta, como el Pedido semanal: filas bajas y alternadas, columna **#** y fila elegida en verde.
+- La tabla de vendedores que faltan por completar contrato (en el aviso amarillo) también lleva columna **#** y filas alternadas.
+
 ### 18/11/2026 — Columna # en las listas compactas y en el resumen de tarjas
 - La `TablaEstandar` compacta pone al inicio una columna **#** gris con el número de fila. Sigue la paginación: la página 2 empieza en 11. La usan las listas de Pedido semanal, Distribución en barcos y Tarjas.
 - El resumen por compra de Tarjas también lleva su columna **#**.

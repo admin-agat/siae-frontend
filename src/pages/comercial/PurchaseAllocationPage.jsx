@@ -1049,6 +1049,8 @@ export default function PurchaseAllocationPage() {
                 <table className="w-full text-xs">
                   <thead className="sticky top-0 bg-gray-50 text-gray-600">
                     <tr>
+                      {/* 18/11/2026 (Peter): columna # también en la lista de vendedores que faltan */}
+                      <th className="text-center px-2 py-1.5 w-8">#</th>
                       <th className="text-left px-3 py-1.5">Vendedor</th>
                       <th className="text-right px-3 py-1.5">Cupo semanal</th>
                       <th className="text-right px-3 py-1.5">Comprado</th>
@@ -1056,8 +1058,9 @@ export default function PurchaseAllocationPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {s.faltan.map((v) => (
-                      <tr key={v.id} className="border-t border-gray-100">
+                    {s.faltan.map((v, k) => (
+                      <tr key={v.id} className={k % 2 === 0 ? 'bg-white' : 'bg-violet-50'}>
+                        <td className="bg-gray-200 border border-gray-300 px-1 py-1 text-center font-bold text-gray-700">{k + 1}</td>
                         <td className="px-3 py-1.5">{v.nombre}</td>
                         <td className="px-3 py-1.5 text-right">{formatoCajas(v.cupo)}</td>
                         <td className="px-3 py-1.5 text-right">{formatoCajas(v.comprado)}</td>

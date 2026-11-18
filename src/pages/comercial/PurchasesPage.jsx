@@ -72,7 +72,9 @@ export default function PurchasesPage() {
         subtitulo="Comercial reparte el total de cajas de la semana entre productores y comercializadoras"
       />
 
+      {/* 18/11/2026 (Peter): lista compacta como el Pedido semanal (con columna #) */}
       <TablaEstandar
+        compacta
         columnas={columnas}
         datos={pedidos}
         cargando={cargando}
