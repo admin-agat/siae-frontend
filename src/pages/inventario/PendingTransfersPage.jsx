@@ -263,9 +263,10 @@ export default function PendingTransfersPage({ soloRecibir = false }) {
                                     </td>
                                     <td className="px-3 py-1.5 border border-gray-200">
                                         <div className="flex items-center justify-center gap-2">
+                                            {/* 18/11/2026 (Peter): botones de acciones con el estándar de color (Ver en azul primario) */}
                                             <button
                                                 onClick={() => abrirModalVer(t)}
-                                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-primario text-white rounded-lg hover:bg-primario-hover"
                                             >
                                                 <Eye size={14} />
                                                 Ver

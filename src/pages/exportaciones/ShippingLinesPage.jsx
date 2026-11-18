@@ -244,28 +244,29 @@ export default function ShippingLinesPage() {
                                         }`}>
                                             {n.status ? 'Activo' : 'Inactivo'}
                                         </span>
+                                        {/* 18/11/2026 (Peter): botones de acciones con el estándar de color */}
                                         <button
                                             onClick={(e) => { e.stopPropagation(); setNavieraEdit(n); setShowNavieraModal(true); }}
                                             title="Editar"
                                             aria-label="Editar"
-                                            className="bg-green-600 hover:bg-green-700 text-white p-1 rounded-lg transition">
-                                            <Pencil size={14} />
+                                            className="bg-green-600 hover:bg-green-700 text-white p-1.5 rounded-lg shadow-sm transition">
+                                            <Pencil size={16} />
                                         </button>
                                         {n.status ? (
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); pedirConfirmacion('naviera', n, 'desactivar'); }}
                                                 title="Desactivar"
                                                 aria-label="Desactivar"
-                                                className="bg-red-600 hover:bg-red-700 text-white p-1 rounded-lg transition">
-                                                <Ban size={14} />
+                                                className="bg-red-600 hover:bg-red-700 text-white p-1.5 rounded-lg shadow-sm transition">
+                                                <Ban size={16} />
                                             </button>
                                         ) : (
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); pedirConfirmacion('naviera', n, 'reactivar'); }}
-                                                className="text-green-600 hover:text-green-800"
+                                                className="bg-primario hover:bg-primario-hover text-white p-1.5 rounded-lg shadow-sm transition"
                                                 title="Reactivar naviera"
                                             >
-                                                <RotateCcw size={14} />
+                                                <RotateCcw size={16} />
                                             </button>
                                         )}
                                     </div>
@@ -396,24 +397,25 @@ export default function ShippingLinesPage() {
                                                 </span>
                                             </td>
                                             <td className="px-3 py-1.5 border border-gray-200" onClick={(e) => e.stopPropagation()}>
+                                            {/* 18/11/2026 (Peter): botones de acciones con el estándar de color */}
                                             <div className="flex gap-2">
                                                 {v.status ? (
                                                     <>
-                                                        <button onClick={() => { setBarcoEdit(v); setShowBarcoModal(true); }} className="bg-green-600 hover:bg-green-700 text-white p-1 rounded-lg transition" title="Editar" aria-label="Editar">
-                                                            <Pencil size={14} />
+                                                        <button onClick={() => { setBarcoEdit(v); setShowBarcoModal(true); }} className="bg-green-600 hover:bg-green-700 text-white p-1.5 rounded-lg shadow-sm transition" title="Editar" aria-label="Editar">
+                                                            <Pencil size={16} />
                                                         </button>
                                                         <button
                                                             onClick={() => pedirConfirmacion('barco', v, 'desactivar')}
                                                             title="Desactivar"
                                                             aria-label="Desactivar"
-                                                            className="bg-red-600 hover:bg-red-700 text-white p-1 rounded-lg transition">
-                                                            <Ban size={14} />
+                                                            className="bg-red-600 hover:bg-red-700 text-white p-1.5 rounded-lg shadow-sm transition">
+                                                            <Ban size={16} />
                                                         </button>
                                                     </>
                                                 ) : (
                                                     <button
                                                         onClick={() => pedirConfirmacion('barco', v, 'reactivar')}
-                                                        className="text-green-600 hover:text-green-800"
+                                                        className="bg-primario hover:bg-primario-hover text-white p-1.5 rounded-lg shadow-sm transition"
                                                         title="Reactivar barco"
                                                     >
                                                         <RotateCcw size={16} />

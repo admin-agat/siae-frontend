@@ -263,10 +263,11 @@ export default function PurchaseOrdersPage() {
                                         </span>
                                     </td>
                                     <td className="px-3 py-1.5 border border-gray-200 text-center">
-                                        <div className="flex items-center justify-center gap-3">
+                                        {/* 18/11/2026 (Peter): botones de acciones con el estándar de color */}
+                                        <div className="flex items-center justify-center gap-2">
                                             <button
                                                 onClick={() => navigate(`/ordenes-compra/${orden.id}`)}
-                                                className="text-gray-500 hover:text-primario"
+                                                className="bg-primario hover:bg-primario-hover text-white p-1.5 rounded-lg shadow-sm transition"
                                                 title="Ver detalle"
                                             >
                                                 <Eye size={16} />
@@ -274,7 +275,7 @@ export default function PurchaseOrdersPage() {
                                             {ESTADOS_CANCELABLES.includes(orden.status) && (
                                                 <button
                                                     onClick={() => abrirModalCancelar(orden)}
-                                                    className="text-gray-500 hover:text-red-600"
+                                                    className="bg-red-600 hover:bg-red-700 text-white p-1.5 rounded-lg shadow-sm transition"
                                                     title={esCierre(orden) ? 'Cerrar orden' : 'Cancelar orden'}
                                                 >
                                                     {/* PARCIAL usa un candado (Lock) para diferenciarlo

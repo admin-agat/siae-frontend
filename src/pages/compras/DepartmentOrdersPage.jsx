@@ -219,7 +219,8 @@ export default function DepartmentOrdersPage() {
     const cuenta = (clave) => ordenes.filter(FILTROS.find((f) => f.clave === clave).pasa);
     const suma = (lista) => `$ ${dinero(lista.reduce((s, o) => s + Number(o.total || 0), 0))}`;
     const visibles = ordenes.filter(FILTROS.find((f) => f.clave === filtro).pasa);
-    const boton = 'p-1.5 rounded-lg hover:bg-gray-100';
+    // 18/11/2026 (Peter): botones de acciones con el estándar de color (sólidos, ícono blanco)
+    const boton = 'text-white p-1.5 rounded-lg shadow-sm transition disabled:opacity-50';
 
     return (
         <div className="p-6 space-y-6">
@@ -279,9 +280,9 @@ export default function DepartmentOrdersPage() {
                         titulo: 'Acciones',
                         render: (o) => (
                             <div className="flex gap-1">
-                                <button type="button" title="Ver" aria-label="Ver" onClick={() => setVer(o)} className={`${boton} text-gray-600`}><Eye size={16} /></button>
-                                {editable(o) && <button type="button" title="Corregir" aria-label="Corregir" onClick={() => setModal({ orden: o })} className={`${boton} text-primario`}><Pencil size={16} /></button>}
-                                {cancelable(o) && <button type="button" title="Cancelar orden" aria-label="Cancelar orden" onClick={() => setCancelar({ orden: o, motivo: '' })} className={`${boton} text-red-600`}><XCircle size={16} /></button>}
+                                <button type="button" title="Ver" aria-label="Ver" onClick={() => setVer(o)} className={`${boton} bg-primario hover:bg-primario-hover`}><Eye size={16} /></button>
+                                {editable(o) && <button type="button" title="Corregir" aria-label="Corregir" onClick={() => setModal({ orden: o })} className={`${boton} bg-green-600 hover:bg-green-700`}><Pencil size={16} /></button>}
+                                {cancelable(o) && <button type="button" title="Cancelar orden" aria-label="Cancelar orden" onClick={() => setCancelar({ orden: o, motivo: '' })} className={`${boton} bg-red-600 hover:bg-red-700`}><XCircle size={16} /></button>}
                             </div>
                         ),
                     },

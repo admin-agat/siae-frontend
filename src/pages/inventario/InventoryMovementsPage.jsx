@@ -8,7 +8,7 @@
 // El BODEGUERO solo ve su bodega (lo fuerza el backend; aquí el selector queda bloqueado).
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, Plus, Trash2, Search } from 'lucide-react';
+import { Lock, Plus, Trash2, Search, BookOpen } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { puede, bodegasPermitidas } from '../../routes/menu';
 import {
@@ -213,9 +213,10 @@ export default function InventoryMovementsPage() {
                     {m.status && corrige && m.bloqueo_edicion && (
                         <span title={m.bloqueo_edicion} className="text-gray-400"><Lock size={15} /></span>
                     )}
+                    {/* 18/11/2026 (Peter): botones de acciones con el estándar de color (Kárdex gris sólido) */}
                     {m.status && (
-                        <button type="button" onClick={() => verKardexDe(m)} className="text-xs font-semibold text-primario hover:underline">
-                            Kárdex
+                        <button type="button" onClick={() => verKardexDe(m)} title="Kárdex" aria-label="Kárdex" className="bg-gray-600 hover:bg-gray-700 text-white p-1.5 rounded-lg shadow-sm transition">
+                            <BookOpen size={16} />
                         </button>
                     )}
                 </div>

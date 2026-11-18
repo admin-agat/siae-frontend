@@ -255,28 +255,29 @@ export default function BrandsPage() {
                                         }`}>
                                             {m.status ? 'Activo' : 'Inactivo'}
                                         </span>
+                                        {/* 18/11/2026 (Peter): botones de acciones con el estándar de color */}
                                         <button
                                             onClick={(e) => { e.stopPropagation(); setMarcaEdit(m); setShowMarcaModal(true); }}
                                             title="Editar"
                                             aria-label="Editar"
-                                            className="bg-green-600 hover:bg-green-700 text-white p-1 rounded-lg transition">
-                                            <Pencil size={14} />
+                                            className="bg-green-600 hover:bg-green-700 text-white p-1.5 rounded-lg shadow-sm transition">
+                                            <Pencil size={16} />
                                         </button>
                                         {m.status ? (
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); pedirConfirmacion('marca', m, 'desactivar'); }}
                                                 title="Desactivar"
                                                 aria-label="Desactivar"
-                                                className="bg-red-600 hover:bg-red-700 text-white p-1 rounded-lg transition">
-                                                <Ban size={14} />
+                                                className="bg-red-600 hover:bg-red-700 text-white p-1.5 rounded-lg shadow-sm transition">
+                                                <Ban size={16} />
                                             </button>
                                         ) : (
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); pedirConfirmacion('marca', m, 'reactivar'); }}
-                                                className="text-green-600 hover:text-green-800"
+                                                className="bg-primario hover:bg-primario-hover text-white p-1.5 rounded-lg shadow-sm transition"
                                                 title="Reactivar marca"
                                             >
-                                                <RotateCcw size={14} />
+                                                <RotateCcw size={16} />
                                             </button>
                                         )}
                                     </div>
@@ -387,18 +388,19 @@ export default function BrandsPage() {
                                                 </span>
                                             </td>
                                             <td className="px-3 py-1.5 border border-gray-200" onClick={(e) => e.stopPropagation()}>
+                                            {/* 18/11/2026 (Peter): botones de acciones con el estándar de color */}
                                             <div className="flex gap-2">
                                                 {r.status ? (
                                                     <>
-                                                        <button onClick={() => { setRecetaEdit(r); setShowRecetaModal(true); }} className="bg-green-600 hover:bg-green-700 text-white p-1 rounded-lg transition" title="Editar" aria-label="Editar">
-                                                            <Pencil size={14} />
+                                                        <button onClick={() => { setRecetaEdit(r); setShowRecetaModal(true); }} className="bg-green-600 hover:bg-green-700 text-white p-1.5 rounded-lg shadow-sm transition" title="Editar" aria-label="Editar">
+                                                            <Pencil size={16} />
                                                         </button>
-                                                        <button onClick={() => pedirConfirmacion('receta', r, 'desactivar')} className="bg-red-600 hover:bg-red-700 text-white p-1 rounded-lg transition" title="Desactivar" aria-label="Desactivar">
-                                                            <Ban size={14} />
+                                                        <button onClick={() => pedirConfirmacion('receta', r, 'desactivar')} className="bg-red-600 hover:bg-red-700 text-white p-1.5 rounded-lg shadow-sm transition" title="Desactivar" aria-label="Desactivar">
+                                                            <Ban size={16} />
                                                         </button>
                                                     </>
                                                 ) : (
-                                                    <button onClick={() => pedirConfirmacion('receta', r, 'reactivar')} className="text-green-600 hover:text-green-800" title="Reactivar receta">
+                                                    <button onClick={() => pedirConfirmacion('receta', r, 'reactivar')} className="bg-primario hover:bg-primario-hover text-white p-1.5 rounded-lg shadow-sm transition" title="Reactivar receta">
                                                         <RotateCcw size={16} />
                                                     </button>
                                                 )}

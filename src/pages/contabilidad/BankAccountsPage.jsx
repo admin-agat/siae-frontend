@@ -199,11 +199,12 @@ export default function BankAccountsPage() {
                         { titulo: 'Banco', render: (t) => t.bank_account?.bank?.name || <span className="text-red-600 text-xs font-semibold">SIN CUENTA</span> },
                         { titulo: 'Cuenta', render: (t) => (t.bank_account ? <span className="whitespace-nowrap">{t.bank_account.account_type === 'CORRIENTE' ? 'CTE' : 'AHO'} {t.bank_account.account_number}</span> : '—') },
                         { titulo: 'Titular', render: (t) => (t.bank_account ? <div><p>{t.bank_account.holder_name}</p><p className="text-xs text-gray-500">{TIPOS_ID[t.bank_account.holder_id_type]} {t.bank_account.holder_id}</p></div> : '—') },
+                        // 18/11/2026 (Peter): botones de acciones con el estándar de color
                         {
                             titulo: 'Acciones',
                             render: (t) => (
                                 <button type="button" onClick={() => setModalCuenta(t)} title={t.bank_account ? 'Editar cuenta' : 'Agregar cuenta'} aria-label={t.bank_account ? 'Editar cuenta' : 'Agregar cuenta'}
-                                    className="p-1.5 rounded-lg hover:bg-gray-100 text-primario">
+                                    className="text-white p-1.5 rounded-lg shadow-sm transition bg-green-600 hover:bg-green-700">
                                     {t.bank_account ? <Pencil size={16} /> : <Plus size={16} />}
                                 </button>
                             ),
@@ -227,7 +228,7 @@ export default function BankAccountsPage() {
                             {
                                 titulo: 'Acciones',
                                 render: (b) => (
-                                    <button type="button" onClick={() => setModalBanco({ banco: b })} title="Editar" aria-label="Editar" className="p-1.5 rounded-lg hover:bg-gray-100 text-primario">
+                                    <button type="button" onClick={() => setModalBanco({ banco: b })} title="Editar" aria-label="Editar" className="text-white p-1.5 rounded-lg shadow-sm transition bg-green-600 hover:bg-green-700">
                                         <Pencil size={16} />
                                     </button>
                                 ),

@@ -230,8 +230,9 @@ function ComercialesModal({ onClose, onCambio }) {
           {lista.map((x) => (
             <li key={x.id} className={`flex items-center justify-between px-3 py-2 text-sm ${x.status ? '' : 'bg-gray-50 text-gray-400'}`}>
               <span className="font-medium">{x.name}{!x.status && ' · DESACTIVADO'}</span>
+              {/* 18/11/2026 (Peter): botones de acciones con el estándar de color */}
               <button type="button" onClick={() => cambiarEstado(x)} title={x.status ? 'Desactivar' : 'Reactivar'} aria-label={x.status ? `Desactivar ${x.name}` : `Reactivar ${x.name}`}
-                className={`p-1.5 rounded-lg ${x.status ? 'hover:bg-red-50 text-red-600' : 'hover:bg-green-50 text-green-700'}`}>
+                className={`text-white p-1.5 rounded-lg shadow-sm transition ${x.status ? 'bg-red-600 hover:bg-red-700' : 'bg-primario hover:bg-primario-hover'}`}>
                 {x.status ? <Ban size={16} /> : <RotateCcw size={16} />}
               </button>
             </li>

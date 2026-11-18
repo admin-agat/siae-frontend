@@ -185,7 +185,8 @@ export default function AccountingOrdersPage() {
     const alternar = (id) => setElegidas((e) => (e.includes(id) ? e.filter((x) => x !== id) : [...e, id]));
     const todasMarcadas = pagables.length > 0 && pagables.every((o) => elegidas.includes(o.id));
 
-    const boton = 'p-1.5 rounded-lg hover:bg-gray-100';
+    // 18/11/2026 (Peter): botones de acciones con el estándar de color (sólidos, ícono blanco)
+    const boton = 'text-white p-1.5 rounded-lg shadow-sm transition disabled:opacity-50';
     const badge = (o) => {
         const e = estadoOC(o);
         return <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${e.clase}`}>{e.texto}</span>;
@@ -239,9 +240,9 @@ export default function AccountingOrdersPage() {
                         titulo: 'Acciones',
                         render: (o) => (
                             <div className="flex gap-1">
-                                <button type="button" title="Ver" aria-label="Ver" onClick={() => setVer(o)} className={`${boton} text-gray-600`}><Eye size={16} /></button>
-                                <button type="button" title="Aprobar" aria-label="Aprobar" disabled={procesando} onClick={() => aprobar(o)} className={`${boton} text-green-700`}><Check size={16} /></button>
-                                <button type="button" title="Rechazar" aria-label="Rechazar" onClick={() => setRechazar(o)} className={`${boton} text-red-600`}><X size={16} /></button>
+                                <button type="button" title="Ver" aria-label="Ver" onClick={() => setVer(o)} className={`${boton} bg-primario hover:bg-primario-hover`}><Eye size={16} /></button>
+                                <button type="button" title="Aprobar" aria-label="Aprobar" disabled={procesando} onClick={() => aprobar(o)} className={`${boton} bg-green-600 hover:bg-green-700`}><Check size={16} /></button>
+                                <button type="button" title="Rechazar" aria-label="Rechazar" onClick={() => setRechazar(o)} className={`${boton} bg-red-600 hover:bg-red-700`}><X size={16} /></button>
                             </div>
                         ),
                     }]}
@@ -284,7 +285,7 @@ export default function AccountingOrdersPage() {
                                     ? <span className="text-xs text-red-700">{o.problemas_pago.join(' ')}</span>
                                     : <span className="text-xs text-gray-600 whitespace-nowrap">{o.cuenta_resumen}</span>),
                             },
-                            { titulo: '', render: (o) => <button type="button" title="Ver" aria-label="Ver" onClick={() => setVer(o)} className={`${boton} text-gray-600`}><Eye size={16} /></button> },
+                            { titulo: '', render: (o) => <button type="button" title="Ver" aria-label="Ver" onClick={() => setVer(o)} className={`${boton} bg-primario hover:bg-primario-hover`}><Eye size={16} /></button> },
                         ]}
                     />
                 </div>
@@ -313,11 +314,11 @@ export default function AccountingOrdersPage() {
                             titulo: 'Acciones',
                             render: (l) => (
                                 <div className="flex gap-1">
-                                    <button type="button" title="Descargar TXT" aria-label="Descargar TXT" onClick={() => bajar(l)} className={`${boton} text-primario`}><Download size={16} /></button>
+                                    <button type="button" title="Descargar TXT" aria-label="Descargar TXT" onClick={() => bajar(l)} className={`${boton} bg-gray-600 hover:bg-gray-700`}><Download size={16} /></button>
                                     {l.status === 'GENERADO' && (
                                         <>
-                                            <button type="button" title="Marcar pagado" aria-label="Marcar pagado" onClick={() => setAccionLote({ lote: l, accion: 'pagado' })} className={`${boton} text-green-700`}><CheckCircle2 size={16} /></button>
-                                            <button type="button" title="Anular lote" aria-label="Anular lote" onClick={() => setAccionLote({ lote: l, accion: 'anular' })} className={`${boton} text-red-600`}><Ban size={16} /></button>
+                                            <button type="button" title="Marcar pagado" aria-label="Marcar pagado" onClick={() => setAccionLote({ lote: l, accion: 'pagado' })} className={`${boton} bg-green-600 hover:bg-green-700`}><CheckCircle2 size={16} /></button>
+                                            <button type="button" title="Anular lote" aria-label="Anular lote" onClick={() => setAccionLote({ lote: l, accion: 'anular' })} className={`${boton} bg-red-600 hover:bg-red-700`}><Ban size={16} /></button>
                                         </>
                                     )}
                                 </div>
@@ -331,7 +332,7 @@ export default function AccountingOrdersPage() {
                 <TablaEstandar key="todas" datos={ordenes} cargando={cargando} nombreRegistros="órdenes" mostrarPestanas={false} porPagina={15} {...busqueda}
                     columnas={[...colBase,
                         { titulo: 'Estado', render: badge },
-                        { titulo: '', render: (o) => <button type="button" title="Ver" aria-label="Ver" onClick={() => setVer(o)} className={`${boton} text-gray-600`}><Eye size={16} /></button> },
+                        { titulo: '', render: (o) => <button type="button" title="Ver" aria-label="Ver" onClick={() => setVer(o)} className={`${boton} bg-primario hover:bg-primario-hover`}><Eye size={16} /></button> },
                     ]}
                 />
             )}

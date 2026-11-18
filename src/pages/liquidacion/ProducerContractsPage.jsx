@@ -319,7 +319,8 @@ export default function ProducerContractsPage({ modo = 'retencion' }) {
                     {
                         titulo: 'Acciones',
                         render: (t) => (
-                            <button type="button" onClick={() => setModal(t)} title={esLegal ? 'Editar contratos' : 'Editar retención'} aria-label={esLegal ? 'Editar contratos' : 'Editar retención'} className="p-1.5 rounded-lg hover:bg-gray-100 text-primario">
+                            // 18/11/2026 (Peter): botones de acciones con el estándar de color
+                            <button type="button" onClick={() => setModal(t)} title={esLegal ? 'Editar contratos' : 'Editar retención'} aria-label={esLegal ? 'Editar contratos' : 'Editar retención'} className="text-white p-1.5 rounded-lg shadow-sm transition bg-green-600 hover:bg-green-700">
                                 <Pencil size={16} />
                             </button>
                         ),

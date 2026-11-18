@@ -163,8 +163,9 @@ function TablaRetencion({ onToast }) {
                         <h2 className="font-bold text-gray-800">Tabla de tramos</h2>
                         <p className="text-xs text-gray-500">Impuesto a la renta único del banano (Art. 27 LRTI). Si cambia la ley, se actualiza solo esta tabla.</p>
                     </div>
+                    {/* 18/11/2026 (Peter): botones de acciones con el estándar de color */}
                     {!editando && (
-                        <button type="button" onClick={() => setEditando(true)} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold text-primario hover:bg-primario-claro">
+                        <button type="button" onClick={() => setEditando(true)} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold text-white bg-green-600 hover:bg-green-700 shadow-sm transition">
                             <Pencil size={16} /> Editar
                         </button>
                     )}
@@ -313,10 +314,11 @@ export default function SettlementParametersPage() {
                         { titulo: 'BPA', render: (f) => porcentaje(f.bpa_rate) },
                         { titulo: 'Pto. Bolívar', render: (f) => `$ ${dinero(f.pto_bolivar_bonus)} / caja` },
                         { titulo: 'Observación', render: (f) => f.notes || '—' },
+                        // 18/11/2026 (Peter): botones de acciones con el estándar de color
                         {
                             titulo: 'Acciones',
                             render: (f) => (
-                                <button type="button" onClick={() => setModal({ fila: f })} title="Editar" aria-label="Editar" className="p-1.5 rounded-lg hover:bg-gray-100 text-primario">
+                                <button type="button" onClick={() => setModal({ fila: f })} title="Editar" aria-label="Editar" className="text-white p-1.5 rounded-lg shadow-sm transition bg-green-600 hover:bg-green-700">
                                     <Pencil size={16} />
                                 </button>
                             ),

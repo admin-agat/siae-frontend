@@ -189,18 +189,19 @@ export default function WarehousesPage() {
                                         </span>
                                     </td>
                                                                        <td className="px-3 py-1 border border-gray-200" onClick={(e) => e.stopPropagation()}>
+                                        {/* 18/11/2026 (Peter): botones de acciones con el estándar de color (p-1.5, Reactivar azul primario sólido) */}
                                         <div className="flex gap-2">
                                         {b.status ? (
                                             <>
-                                                <button onClick={() => handleEditar(b)} className="bg-green-600 hover:bg-green-700 text-white p-1 rounded-lg transition" title="Editar" aria-label="Editar">
+                                                <button onClick={() => handleEditar(b)} className="bg-green-600 hover:bg-green-700 text-white p-1.5 rounded-lg shadow-sm transition" title="Editar" aria-label="Editar">
                                                     <Pencil size={16} />
                                                 </button>
-                                                <button onClick={() => pedirConfirmacion(b, 'desactivar')} className="bg-red-600 hover:bg-red-700 text-white p-1 rounded-lg transition" title="Desactivar" aria-label="Desactivar">
+                                                <button onClick={() => pedirConfirmacion(b, 'desactivar')} className="bg-red-600 hover:bg-red-700 text-white p-1.5 rounded-lg shadow-sm transition" title="Desactivar" aria-label="Desactivar">
                                                     <Ban size={16} />
                                                 </button>
                                             </>
                                         ) : (
-                                            <button onClick={() => pedirConfirmacion(b, 'reactivar')} className="bg-blue-600 hover:bg-blue-700 text-white p-1 rounded-lg transition" title="Reactivar">
+                                            <button onClick={() => pedirConfirmacion(b, 'reactivar')} className="bg-primario hover:bg-primario-hover text-white p-1.5 rounded-lg shadow-sm transition" title="Reactivar">
                                                 <RotateCcw size={16} />
                                             </button>
                                         )}

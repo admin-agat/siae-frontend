@@ -344,8 +344,9 @@ export default function TallySheetPage() {
                   <td className={`${tdGrilla} px-2 text-right font-semibold ${recibidas(t) < 0 ? 'text-red-600' : 'text-green-700'}`}>{formatoCajas(recibidas(t))}</td>
                   <td className={`${tdGrilla} px-1`}>
                     <div className="flex gap-1.5">
+                      {/* 18/11/2026 (Peter): botones de acciones con el estándar de color */}
                       {t.id && (
-                        <button type="button" onClick={() => setHistorial({ tarjaId: t.id })} title="Historial de esta tarja" className="text-primario p-1.5 rounded-lg border border-primario/40 hover:bg-primario-claro transition">
+                        <button type="button" onClick={() => setHistorial({ tarjaId: t.id })} title="Historial de esta tarja" className="text-white p-1.5 rounded-lg shadow-sm transition bg-gray-600 hover:bg-gray-700">
                           <History size={16} />
                         </button>
                       )}

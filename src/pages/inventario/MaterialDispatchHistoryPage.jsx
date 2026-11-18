@@ -234,11 +234,12 @@ export default function MaterialDispatchHistoryPage() {
                                             {verCostos && <td className="px-3 py-1.5 border border-gray-200 text-right font-semibold">{dinero(d.valor_total)}</td>}
                                             {/* stopPropagation: los botones no disparan la selección de fila */}
                                             <td className="px-3 py-1 border border-gray-200 text-center" onClick={(e) => e.stopPropagation()}>
+                                                {/* 18/11/2026 (Peter): botones de acciones con el estándar de color */}
                                                 <div className="flex justify-center gap-2">
                                                     <button
                                                         title="Ver / imprimir guía"
                                                         onClick={() => navigate(`/inventory-movements/${d.id}/recibo`)}
-                                                        className="p-1.5 rounded-lg border border-gray-200 text-blue-600 hover:bg-blue-50"
+                                                        className="bg-primario hover:bg-primario-hover text-white p-1.5 rounded-lg shadow-sm transition"
                                                     >
                                                         <FileText size={16} />
                                                     </button>
@@ -248,7 +249,7 @@ export default function MaterialDispatchHistoryPage() {
                                                             title={liquidado ? 'Cupo liquidado: no se puede anular' : 'Anular despacho'}
                                                             onClick={() => setConfirmarAnular(d)}
                                                             disabled={liquidado}
-                                                            className="p-1.5 rounded-lg border border-gray-200 text-red-600 hover:bg-red-50 disabled:opacity-30 disabled:cursor-not-allowed"
+                                                            className="bg-red-600 hover:bg-red-700 text-white p-1.5 rounded-lg shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
                                                         >
                                                             <Ban size={16} />
                                                         </button>

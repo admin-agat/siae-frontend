@@ -280,28 +280,29 @@ export default function SuppliesMasterDetailPage() {
                                         }`}>
                                             {c.status ? 'Activo' : 'Inactivo'}
                                         </span>
+                                        {/* 18/11/2026 (Peter): botones de acciones con el estándar de color (p-1.5, Reactivar azul primario sólido) */}
                                         <button
                                             onClick={(e) => { e.stopPropagation(); setCategoriaEdit(c); setShowCategoriaModal(true); }}
                                             title="Editar"
                                             aria-label="Editar"
-                                            className="bg-green-600 hover:bg-green-700 text-white p-1 rounded-lg transition">
-    <Pencil size={14} />
+                                            className="bg-green-600 hover:bg-green-700 text-white p-1.5 rounded-lg shadow-sm transition">
+                                            <Pencil size={16} />
                                         </button>
                                         {c.status ? (
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); pedirConfirmacion('categoria', c, 'desactivar'); }}
                                                title="Desactivar"
                                                aria-label="Desactivar"
-                                               className="bg-red-600 hover:bg-red-700 text-white p-1 rounded-lg transition">
-    <Ban size={14} />
+                                               className="bg-red-600 hover:bg-red-700 text-white p-1.5 rounded-lg shadow-sm transition">
+                                            <Ban size={16} />
                                             </button>
                                         ) : (
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); pedirConfirmacion('categoria', c, 'reactivar'); }}
-                                                className="text-green-600 hover:text-green-800"
+                                                className="bg-primario hover:bg-primario-hover text-white p-1.5 rounded-lg shadow-sm transition"
                                                 title="Reactivar categoría"
                                             >
-                                                <RotateCcw size={14} />
+                                                <RotateCcw size={16} />
                                             </button>
                                         )}
                                     </div>
@@ -441,26 +442,27 @@ export default function SuppliesMasterDetailPage() {
                                                 </span>
                                             </td>
                                             <td className="px-3 py-1 border border-gray-200" onClick={(e) => e.stopPropagation()}>
+                                                {/* 18/11/2026 (Peter): botones de acciones con el estándar de color (p-1.5, Reactivar azul primario sólido) */}
                                                 <div className="flex gap-2">
                                                 {i.status ? (
                                                     <>
-                                                        <button onClick={() => { setInsumoEdit(i); setShowInsumoModal(true); }} className="bg-green-600 hover:bg-green-700 text-white p-1 rounded-lg transition" title="Editar" aria-label="Editar">
-    <Pencil size={14} />
+                                                        <button onClick={() => { setInsumoEdit(i); setShowInsumoModal(true); }} className="bg-green-600 hover:bg-green-700 text-white p-1.5 rounded-lg shadow-sm transition" title="Editar" aria-label="Editar">
+                                            <Pencil size={16} />
 
                                                         </button>
                                                         <button
                                                             onClick={() => pedirConfirmacion('insumo', i, 'desactivar')}
                                                             title="Desactivar"
                                                             aria-label="Desactivar"
-                                                            className="bg-red-600 hover:bg-red-700 text-white p-1 rounded-lg transition">
-    <Ban size={14} />
+                                                            className="bg-red-600 hover:bg-red-700 text-white p-1.5 rounded-lg shadow-sm transition">
+                                            <Ban size={16} />
 
                                                         </button>
                                                     </>
                                                 ) : (
                                                     <button
                                                         onClick={() => pedirConfirmacion('insumo', i, 'reactivar')}
-                                                        className="text-green-600 hover:text-green-800"
+                                                        className="bg-primario hover:bg-primario-hover text-white p-1.5 rounded-lg shadow-sm transition"
                                                         title="Reactivar insumo"
                                                     >
                                                         <RotateCcw size={16} />

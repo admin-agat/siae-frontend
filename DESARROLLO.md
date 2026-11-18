@@ -273,6 +273,11 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 18/11/2026 — Botones de acciones con el estándar de color
+- Revisión del tester en todo el sistema: los íconos sueltos (sin fondo) de las columnas de acciones pasan a botones sólidos como `AccionesFila`: Ver azul, Editar/Corregir/Aprobar/Marcar pagado verde, Desactivar/Anular/Cancelar/Rechazar rojo, Descargar/Historial/Kárdex gris y Reactivar azul.
+- Pantallas: Productores y contratos, Parámetros de liquidación, Tarjas (historial), Contabilidad (órdenes y lotes de pago), Cuentas bancarias, Pedidos por departamento, Bodegas, Motivos, Insumos y categorías, Órdenes de compra, Historial de despachos, Transferencias pendientes (Ver), Movimientos (Kárdex), Marcas y recetas, Navieras y barcos, y la lista de comerciales de Compra de fruta.
+- Los botones con texto (Comprar, Distribuir, Cierre, Tarjas, Despachar, Ver liquidación) se quedan con su texto. No se agregaron botones nuevos. Solo visual.
+
 ### 18/11/2026 — Celda que se edita en verde claro
 - En todas las grillas tipo SAP (Compra de fruta, Pedido semanal, Distribución en barcos, Cierre, Tarjas, Inventario, OC, Gastos del viaje, Liquidación, Dividir compra), la celda donde se escribe ya no es amarilla sino verde claro (`bg-green-100`). Pedido de Peter. Solo visual.
 
