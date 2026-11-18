@@ -273,6 +273,11 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 18/11/2026 — Estilo de grillas en tablas secundarias
+- Columna #, celdas con línea fina, filas alternadas blanco/lila y línea elegida en verde en: detalle de una orden de compra (Pedidos por departamento y Contabilidad) y detalle por insumo de "Materiales del pedido" (Pedido semanal y Por despachar).
+- Transferencias pendientes: los modales Ver y Confirmar llevan el encabezado azul de las demás tablas.
+- Es solo visual: no cambian cálculos ni permisos.
+
 ### 18/11/2026 — Estilo de grillas en todo el sistema (Inventario y el resto de módulos)
 - La `TablaEstandar` es **compacta por defecto** en todo el sistema: columna #, filas bajas alternadas blanco/lila y fila elegida en verde con letra blanca. Con `compacta={false}` vuelve al estilo anterior.
 - **Tablas propias de solo lectura:** columna # gris, celdas con línea fina, filas alternadas y, donde hay selección, la fila elegida en verde. Las pantallas son:

@@ -1,6 +1,7 @@
 // Detalle de una orden de compra (solo lectura) — 05/11/2026.
 // Lo usan Órdenes de compra del departamento y Aprobación y pago de OC (Contabilidad).
 // Las líneas pueden ser de texto libre (departamento) o de insumo (bodega).
+import { useState } from 'react';
 import { dinero } from '../utils/formato';
 import { estadoOC, fechaVer, totalesOC } from '../utils/ordenCompra';
 
@@ -8,6 +9,8 @@ export default function OrdenCompraDetalle({ orden }) {
     const estado = estadoOC(orden);
     const lineas = orden.lines || [];
     const t = totalesOC(lineas);
+    // 18/11/2026 (Peter): línea elegida en verde, como en las listas compactas
+    const [filaSeleccionada, setFilaSeleccionada] = useState(null);
     const dato = (titulo, valor) => (
         <div>
             <p className="text-xs font-semibold text-gray-500">{titulo}</p>
@@ -45,28 +48,31 @@ export default function OrdenCompraDetalle({ orden }) {
             )}
 
             <div className="overflow-x-auto border rounded-lg">
-                <table className="w-full text-sm">
+                <table className="w-full text-sm border-collapse">
                     <thead className="bg-primario text-white">
                         <tr>
-                            <th className="text-left px-3 py-2">DESCRIPCIÓN</th>
-                            <th className="text-right px-3 py-2">CANT.</th>
-                            <th className="text-right px-3 py-2">PRECIO</th>
-                            <th className="text-center px-3 py-2">% IVA</th>
-                            <th className="text-center px-3 py-2">% DESC</th>
-                            <th className="text-center px-3 py-2">% RET IR</th>
-                            <th className="text-right px-3 py-2">SUBTOTAL</th>
+                            {/* 18/11/2026 (Peter): columna # y estilo de lista compacta */}
+                            <th className="text-center px-2 py-2 text-xs w-10">#</th>
+                            <th className="text-left px-3 py-2 text-xs">DESCRIPCIÓN</th>
+                            <th className="text-right px-3 py-2 text-xs">CANT.</th>
+                            <th className="text-right px-3 py-2 text-xs">PRECIO</th>
+                            <th className="text-center px-3 py-2 text-xs">% IVA</th>
+                            <th className="text-center px-3 py-2 text-xs">% DESC</th>
+                            <th className="text-center px-3 py-2 text-xs">% RET IR</th>
+                            <th className="text-right px-3 py-2 text-xs">SUBTOTAL</th>
                         </tr>
                     </thead>
                     <tbody>
                         {lineas.map((l, i) => (
-                            <tr key={l.id ?? i} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                                <td className="px-3 py-2">{l.description || l.supply?.name}</td>
-                                <td className="px-3 py-2 text-right">{Number(l.quantity_ordered).toLocaleString('es-EC')}</td>
-                                <td className="px-3 py-2 text-right">{dinero(l.unit_price)}</td>
-                                <td className="px-3 py-2 text-center">{Number(l.tax_rate)}</td>
-                                <td className="px-3 py-2 text-center">{Number(l.discount_percent || 0)}</td>
-                                <td className="px-3 py-2 text-center">{Number(l.retention_rate || 0)}</td>
-                                <td className="px-3 py-2 text-right">{dinero(l.subtotal)}</td>
+                            <tr key={l.id ?? i} onClick={() => setFilaSeleccionada(i)} className={`cursor-pointer ${filaSeleccionada === i ? 'fila-elegida bg-green-600 text-white' : (i % 2 === 0 ? 'bg-white hover:bg-yellow-50' : 'bg-violet-50 hover:bg-yellow-50')}`}>
+                                <td className="bg-gray-200 border border-gray-300 px-1 py-1.5 text-center text-sm font-bold text-gray-700">{i + 1}</td>
+                                <td className="px-3 py-1.5 border border-gray-200">{l.description || l.supply?.name}</td>
+                                <td className="px-3 py-1.5 border border-gray-200 text-right">{Number(l.quantity_ordered).toLocaleString('es-EC')}</td>
+                                <td className="px-3 py-1.5 border border-gray-200 text-right">{dinero(l.unit_price)}</td>
+                                <td className="px-3 py-1.5 border border-gray-200 text-center">{Number(l.tax_rate)}</td>
+                                <td className="px-3 py-1.5 border border-gray-200 text-center">{Number(l.discount_percent || 0)}</td>
+                                <td className="px-3 py-1.5 border border-gray-200 text-center">{Number(l.retention_rate || 0)}</td>
+                                <td className="px-3 py-1.5 border border-gray-200 text-right">{dinero(l.subtotal)}</td>
                             </tr>
                         ))}
                     </tbody>

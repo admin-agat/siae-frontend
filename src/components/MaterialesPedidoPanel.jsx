@@ -14,6 +14,8 @@ const fCajas = (n) => Number(n || 0).toLocaleString('es-EC');
 
 export default function MaterialesPedidoPanel({ datos, cargando, error, titulo = 'Materiales del pedido' }) {
   const [abierto, setAbierto] = useState(false);
+  // 18/11/2026 (Peter): insumo elegido en verde, como en las listas compactas
+  const [filaSeleccionada, setFilaSeleccionada] = useState(null);
 
   if (error) {
     return <div className="rounded-xl border border-red-200 bg-red-50 text-red-700 text-sm px-4 py-3 mb-4">{error}</div>;
@@ -88,9 +90,11 @@ export default function MaterialesPedidoPanel({ datos, cargando, error, titulo =
 
       {abierto && (
         <div className="mt-2 overflow-auto max-h-80 bg-white rounded-lg border border-gray-200">
-          <table className="w-full text-xs">
-            <thead className="sticky top-0 bg-gray-50 text-gray-600 uppercase">
+          <table className="w-full text-xs border-collapse">
+            <thead className="sticky top-0 bg-primario text-white uppercase">
               <tr>
+                {/* 18/11/2026 (Peter): columna # y estilo de lista compacta */}
+                <th className="text-center px-2 py-1.5 w-10">#</th>
                 <th className="text-left px-2 py-1.5">Insumo</th>
                 <th className="text-right px-2 py-1.5">Necesario</th>
                 <th className="text-right px-2 py-1.5">Ya retirado</th>
@@ -101,17 +105,18 @@ export default function MaterialesPedidoPanel({ datos, cargando, error, titulo =
               </tr>
             </thead>
             <tbody>
-              {insumos.map((x) => (
-                <tr key={x.supply_id} className="border-t">
-                  <td className="px-2 py-1.5">{x.name} <span className="text-gray-400">{x.unit}</span></td>
-                  <td className="px-2 py-1.5 text-right">{fNum(x.necesario, x.unit)}</td>
-                  <td className="px-2 py-1.5 text-right text-gray-500">{fNum(x.ya_retirado, x.unit)}</td>
-                  {verBodegas && x.por_bodega.map((b) => <td key={b.warehouse_id} className="px-2 py-1.5 text-right text-gray-500">{fNum(b.stock, x.unit)}</td>)}
-                  <td className="px-2 py-1.5 text-right">{fNum(datos.solo_mi_bodega ? x.stock_mi_bodega : x.stock, x.unit)}</td>
-                  <td className={`px-2 py-1.5 text-right font-semibold ${x.faltante > 0 ? 'text-red-700' : 'text-green-700'}`}>
+              {insumos.map((x, i) => (
+                <tr key={x.supply_id} onClick={() => setFilaSeleccionada(x.supply_id)} className={`cursor-pointer ${filaSeleccionada === x.supply_id ? 'fila-elegida bg-green-600 text-white' : (i % 2 === 0 ? 'bg-white hover:bg-yellow-50' : 'bg-violet-50 hover:bg-yellow-50')}`}>
+                  <td className="bg-gray-200 border border-gray-300 px-1 py-1 text-center text-xs font-bold text-gray-700">{i + 1}</td>
+                  <td className="px-2 py-1 border border-gray-200">{x.name} <span className="text-gray-400">{x.unit}</span></td>
+                  <td className="px-2 py-1 border border-gray-200 text-right">{fNum(x.necesario, x.unit)}</td>
+                  <td className="px-2 py-1 border border-gray-200 text-right text-gray-500">{fNum(x.ya_retirado, x.unit)}</td>
+                  {verBodegas && x.por_bodega.map((b) => <td key={b.warehouse_id} className="px-2 py-1 border border-gray-200 text-right text-gray-500">{fNum(b.stock, x.unit)}</td>)}
+                  <td className="px-2 py-1 border border-gray-200 text-right">{fNum(datos.solo_mi_bodega ? x.stock_mi_bodega : x.stock, x.unit)}</td>
+                  <td className={`px-2 py-1 border border-gray-200 text-right font-semibold ${x.faltante > 0 ? 'text-red-700' : 'text-green-700'}`}>
                     {x.faltante > 0 ? fNum(x.faltante, x.unit) : 'OK'}
                   </td>
-                  {datos.ve_costo && <td className="px-2 py-1.5 text-right">$ {dinero(x.costo)}</td>}
+                  {datos.ve_costo && <td className="px-2 py-1 border border-gray-200 text-right">$ {dinero(x.costo)}</td>}
                 </tr>
               ))}
             </tbody>

@@ -335,7 +335,7 @@ export default function PendingTransfersPage({ soloRecibir = false }) {
                         </div>
 
                         <table className="w-full text-sm mb-2 border-collapse">
-                            <thead className="bg-gray-100 text-gray-600">
+                            <thead className="bg-primario text-white text-xs">
                                 <tr>
                                     {/* 18/11/2026 (Peter): columna # y filas alternadas */}
                                     <th className="text-center px-2 py-2 text-xs w-10">#</th>
@@ -431,7 +431,7 @@ export default function PendingTransfersPage({ soloRecibir = false }) {
                         </p>
 
                         <table className="w-full text-sm mb-2 border-collapse">
-                            <thead className="bg-gray-100 text-gray-600">
+                            <thead className="bg-primario text-white text-xs">
                                 <tr>
                                     {/* 18/11/2026 (Peter): columna # */}
                                     <th className="text-center px-2 py-2 text-xs w-10">#</th>
