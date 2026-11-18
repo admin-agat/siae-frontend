@@ -273,6 +273,9 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 18/11/2026 — Compra de fruta: avance de compra y de contratos en la misma línea
+Las dos barras amarillas (comprado del pedido y contratos de la semana) van lado a lado en pantallas anchas (desde 1280 px). En pantallas más angostas siguen una debajo de la otra.
+
 ### 18/11/2026 — Compra de fruta: filas más bajas y fecha más angosta
 Pedido de Comercial: cuadros no tan altos ni tan pequeños.
 - Celdas con menos relleno.

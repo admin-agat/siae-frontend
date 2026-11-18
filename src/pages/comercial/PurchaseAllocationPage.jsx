@@ -964,8 +964,10 @@ export default function PurchaseAllocationPage() {
         )}
       </div>
 
+      {/* 18/11/2026 (Peter): avance de la compra y de los contratos en la misma línea */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4 items-start">
       {/* Avance */}
-      <div className={`rounded-xl border px-4 py-3 mb-4 ${hayExceso ? 'bg-amber-50 border-amber-300' : avance >= 100 ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
+      <div className={`rounded-xl border px-4 py-3 ${hayExceso ? 'bg-amber-50 border-amber-300' : avance >= 100 ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
         <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
           <span className="text-gray-700">
             Comprado <strong>{formatoCajas(totalComprado)}</strong> de <strong>{formatoCajas(totalPedido)}</strong> cajas · Total real <strong>$ {formatoDinero(totalReal)}</strong>
@@ -987,7 +989,7 @@ export default function PurchaseAllocationPage() {
         const abierto = verContratos[s.week];
         const completo = s.faltan.length === 0;
         return (
-          <div key={s.week} className={`rounded-xl border px-4 py-3 mb-4 ${completo ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
+          <div key={s.week} className={`rounded-xl border px-4 py-3 ${completo ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
             <button type="button" onClick={() => setVerContratos((v) => ({ ...v, [s.week]: !v[s.week] }))} aria-expanded={Boolean(abierto)}
               className="w-full flex flex-wrap items-center justify-between gap-2 text-sm text-left">
               <span className="text-gray-700 flex items-center gap-1">
@@ -1028,6 +1030,7 @@ export default function PurchaseAllocationPage() {
           </div>
         );
       })}
+      </div>
 
       {/* Resumen por cliente */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
