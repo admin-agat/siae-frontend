@@ -370,13 +370,14 @@ export default function OrderDistributionPage() {
                 return (
                   <tr key={l.id} className={`fila-grilla group text-gray-800 ${i % 2 === 0 ? 'bg-white' : 'bg-violet-50'} focus-within:bg-green-600 focus-within:text-white`}>
                     <td tabIndex={-1} title="Clic para marcar la fila" className={tdNumero}><span className="hidden group-focus-within:inline text-primario mr-0.5" aria-hidden="true">▶</span>{i + 1}</td>
-                    <td className={`${tdGrilla} px-2 font-medium`}>{l.customer?.third_party?.name}</td>
-                    <td className={`${tdGrilla} px-2 text-xs`}>
+                    {/* 18/11/2026 (Peter): cliente, modalidad (con contenedores × cajas), puerto y tipo en una sola línea */}
+                    <td className={`${tdGrilla} px-2 font-medium whitespace-nowrap`}>{l.customer?.third_party?.name}</td>
+                    <td className={`${tdGrilla} px-2 text-xs whitespace-nowrap`}>
                       {TIPOS_CARGA[l.cargo_type] || l.cargo_type}
-                      {l.boxes_per_container && <span className="block text-gray-500">{l.containers_qty} × {formatoCajas(l.boxes_per_container)}</span>}
+                      {l.boxes_per_container && <span className="text-gray-500"> · {l.containers_qty} × {formatoCajas(l.boxes_per_container)}</span>}
                     </td>
-                    <td className={`${tdGrilla} px-2 text-xs`}>{l.departure_port?.name}</td>
-                    <td className={`${tdGrilla} px-2 text-xs`}>{l.incoterm} · {l.negotiation_type}</td>
+                    <td className={`${tdGrilla} px-2 text-xs whitespace-nowrap`}>{l.departure_port?.name}</td>
+                    <td className={`${tdGrilla} px-2 text-xs whitespace-nowrap`}>{l.incoterm} · {l.negotiation_type}</td>
                     <td className={`${tdGrilla} px-2 text-right font-semibold`}>{formatoCajas(l.boxes)}</td>
                     {barcos.map((b) => {
                       const valor = b.asign[l.id] ?? '';

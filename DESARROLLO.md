@@ -273,6 +273,9 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 18/11/2026 — Distribución en barcos: cliente, modalidad y tipo en una línea
+En la hoja de reparto, Cliente, Modalidad, Puerto y Tipo ya no se parten en dos o tres líneas: la columna toma el ancho del texto. Contenedores × cajas va en la misma línea que la modalidad (CONTENEDOR AL GRANEL · 3 × 1.200). Las filas quedan más bajas.
+
 ### 18/11/2026 — Distribución en barcos con el estilo de las grillas
 - **Barcos de la semana y hoja de reparto**, con el mismo estilo de Compra de fruta y Pedido semanal:
   - celdas planas con línea gris fina y filas alternadas blanco / lila;
