@@ -273,6 +273,10 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 18/11/2026 — Tarjas: nombres de columnas (solo esa vista)
+- Pedido de Peter, solo en la pantalla de Tarjas de la semana: COMPRADO → **ESTIMADO**; el total del camión se llama **RECIBIDAS** y lo que se paga (recibidas − caídas − rechazadas − faltantes) se llama **EMBARCADAS**. También el subtítulo, el pie, los mensajes de error y el historial de la tarja (`TallySheetController`).
+- Solo textos: mismos datos (`boxes_shipped` sigue siendo el total) y mismo cálculo. Liquidar, Detalle, Notas de crédito, Cierre y la lista de Tarjas siguen diciendo "recibidas" = lo que se paga.
+
 ### 18/11/2026 — Cuenta bancaria PENDIENTE / VERIFICADA
 Pedido de Peter (la validación de Contabilidad, P10, que había quedado para después).
 - Toda cuenta nueva o cambiada (banco, tipo, número o titular) queda **PENDIENTE**. Cambiar solo el correo no la cambia. **Contabilidad** (o ADMIN) la revisa completa en Cuentas bancarias y la marca **VERIFICADA** con el botón azul (escudo); queda quién y cuándo, y la bitácora lo registra.

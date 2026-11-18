@@ -8,6 +8,9 @@
 // Ej.: 300 embarcadas − 5 caídas − 40 rechazadas − 5 faltantes → se pagan 250 recibidas.
 // (Antes "recibidas" era el total y se pagaban embarcadas + caídas.)
 // Arriba, el resumen por compra (comprado vs embarcado vs recibido).
+// 18/11/2026 (Peter): en ESTA vista se muestran con otros nombres (solo etiquetas, mismos datos y cálculo):
+//   COMPRADO → ESTIMADO; el total del camión (boxes_shipped) → RECIBIDAS; lo que se paga → EMBARCADAS.
+//   Liquidación y las demás pantallas siguen con "recibidas" = lo que se paga.
 // Las tarjas de un productor ya liquidado quedan bloqueadas.
 // 17/11/2026 (fase 1a): las tarjas guardadas ya no se borran: se quitan con motivo (icono Ban) y todo queda en el
 // historial (icono History, por tarja y por compra). Al guardar se mandan solo las nuevas o cambiadas, con su
@@ -171,8 +174,8 @@ export default function TallySheetPage() {
     tarjas.forEach((t, i) => {
       if (!t.producer_quota_line_id) faltan.push(`TARJA ${i + 1}: ELIGE EL PRODUCTOR Y LA MARCA.`);
       if (!t.date) faltan.push(`TARJA ${i + 1}: FALTA LA FECHA.`);
-      if (n(t.boxes_shipped) === 0) faltan.push(`TARJA ${i + 1}: ESCRIBE LAS CAJAS EMBARCADAS.`);
-      else if (descontadas(t) > n(t.boxes_shipped)) faltan.push(`TARJA ${i + 1}: LAS CAÍDAS, RECHAZADAS Y FALTANTES NO PUEDEN SUMAR MÁS QUE LAS EMBARCADAS.`);
+      if (n(t.boxes_shipped) === 0) faltan.push(`TARJA ${i + 1}: ESCRIBE LAS CAJAS RECIBIDAS.`);
+      else if (descontadas(t) > n(t.boxes_shipped)) faltan.push(`TARJA ${i + 1}: LAS CAÍDAS, RECHAZADAS Y FALTANTES NO PUEDEN SUMAR MÁS QUE LAS RECIBIDAS.`);
     });
     if (faltan.length) {
       setErrores(faltan);
@@ -239,7 +242,7 @@ export default function TallySheetPage() {
         </button>
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Tarjas — Semana {pedido.week} / {pedido.year}</h1>
-          <p className="text-sm text-gray-500">Registra lo que llegó a puerto por camión. Embarcadas es el total; se pagan las recibidas (embarcadas − caídas − rechazadas − faltantes).</p>
+          <p className="text-sm text-gray-500">Registra lo que llegó a puerto por camión. Recibidas es el total; se pagan las embarcadas (recibidas − caídas − rechazadas − faltantes).</p>
         </div>
       </div>
 
@@ -251,12 +254,12 @@ export default function TallySheetPage() {
               {/* 18/11/2026 (Peter): columna # */}
               <th className="text-center px-2 py-2 uppercase text-xs w-10">#</th>
               <th className="text-left px-3 py-2 uppercase text-xs whitespace-nowrap">Productor — Marca (Cliente)</th>
-              <th className="text-right px-3 py-2 uppercase text-xs whitespace-nowrap">Comprado</th>
-              <th className="text-right px-3 py-2 uppercase text-xs whitespace-nowrap">Embarcadas</th>
+              <th className="text-right px-3 py-2 uppercase text-xs whitespace-nowrap">Estimado</th>
+              <th className="text-right px-3 py-2 uppercase text-xs whitespace-nowrap">Recibidas</th>
               <th className="text-right px-3 py-2 uppercase text-xs whitespace-nowrap">Caídas</th>
               <th className="text-right px-3 py-2 uppercase text-xs whitespace-nowrap">Rechazadas</th>
               <th className="text-right px-3 py-2 uppercase text-xs whitespace-nowrap">Faltantes</th>
-              <th className="text-right px-3 py-2 uppercase text-xs whitespace-nowrap">Recibidas (se pagan)</th>
+              <th className="text-right px-3 py-2 uppercase text-xs whitespace-nowrap">Embarcadas (se pagan)</th>
             </tr>
           </thead>
           <tbody>
@@ -275,7 +278,7 @@ export default function TallySheetPage() {
                     <button type="button" onClick={() => setHistorial({ compraId: c.id })} title="Historial de las tarjas de esta compra" className="ml-2 inline-flex align-middle text-primario hover:text-primario-hover"><History size={15} /></button>
                   </td>
                   <td className={`${tdLectura} text-right`}>{formatoCajas(c.boxes)}</td>
-                  <td className={`${tdLectura} text-right ${emb > c.boxes ? 'text-amber-700 font-semibold' : ''}`} title={emb > c.boxes ? 'Llegó más de lo comprado' : ''}>{formatoCajas(emb)}</td>
+                  <td className={`${tdLectura} text-right ${emb > c.boxes ? 'text-amber-700 font-semibold' : ''}`} title={emb > c.boxes ? 'Llegó más de lo estimado' : ''}>{formatoCajas(emb)}</td>
                   <td className={`${tdLectura} text-right`}>{formatoCajas(suma(lista, (t) => n(t.boxes_fallen)))}</td>
                   <td className={`${tdLectura} text-right text-red-600`}>
                     {formatoCajas(rech)}
@@ -302,11 +305,11 @@ export default function TallySheetPage() {
               <th className="text-left px-3 py-2 uppercase text-xs whitespace-nowrap">N° tarja</th>
               <th className="text-left px-3 py-2 uppercase text-xs whitespace-nowrap">Placa</th>
               <th className="text-left px-3 py-2 uppercase text-xs whitespace-nowrap">Contenedor</th>
-              <th className="text-right px-3 py-2 uppercase text-xs whitespace-nowrap">Embarcadas</th>
+              <th className="text-right px-3 py-2 uppercase text-xs whitespace-nowrap">Recibidas</th>
               <th className="text-right px-3 py-2 uppercase text-xs whitespace-nowrap">Caídas</th>
               <th className="text-right px-3 py-2 uppercase text-xs whitespace-nowrap">Rechazadas</th>
               <th className="text-right px-3 py-2 uppercase text-xs whitespace-nowrap">Faltantes</th>
-              <th className="text-right px-3 py-2 uppercase text-xs whitespace-nowrap">Recibidas</th>
+              <th className="text-right px-3 py-2 uppercase text-xs whitespace-nowrap">Embarcadas</th>
               <th className="px-3 py-3 w-20"></th>
             </tr>
           </thead>
@@ -377,7 +380,7 @@ export default function TallySheetPage() {
           <button type="button" onClick={agregarTarja} disabled={compras.length === 0} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-primario text-white hover:bg-primario-hover disabled:opacity-50 transition">
             <Plus size={18} /> Agregar tarja
           </button>
-          <p className="text-xs text-gray-500">Recibidas (se pagan) = embarcadas − caídas − rechazadas − faltantes</p>
+          <p className="text-xs text-gray-500">Embarcadas (se pagan) = recibidas − caídas − rechazadas − faltantes</p>
         </div>
       </div>
 
