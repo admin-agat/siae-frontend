@@ -8,7 +8,8 @@ import SelectBuscable from './SelectBuscable';
 
 const MAX_BOTONES = 4;
 
-export default function BarraPuertos({ puertos, value, onChange, disabled = false, ariaLabel = 'Puerto de salida', className = '' }) {
+// 18/11/2026: `compacta` (opcional) = botones más chicos, para las grillas
+export default function BarraPuertos({ puertos, value, onChange, disabled = false, ariaLabel = 'Puerto de salida', className = '', compacta = false }) {
   if (puertos.length > MAX_BOTONES) {
     return (
       <SelectBuscable value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled} className={className}>
@@ -25,7 +26,7 @@ export default function BarraPuertos({ puertos, value, onChange, disabled = fals
         return (
           <button key={p.id} type="button" disabled={disabled} onClick={() => !elegido && onChange(String(p.id))}
             aria-pressed={elegido}
-            className={`px-2.5 py-2 whitespace-nowrap ${elegido ? 'bg-primario text-white' : 'bg-white text-primario hover:bg-primario-claro'} disabled:opacity-60`}>
+            className={`${compacta ? 'px-1.5 py-1' : 'px-2.5 py-2'} whitespace-nowrap ${elegido ? 'bg-primario text-white' : 'bg-white text-primario hover:bg-primario-claro'} disabled:opacity-60`}>
             {p.name}
           </button>
         );

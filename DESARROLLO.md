@@ -273,6 +273,14 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 18/11/2026 — Pedido semanal: columnas angostas para no mover a la derecha
+- **Contenedores × cajas:** dos casillas chicas (9 × 1200), la columna baja de 150 a 100 px.
+- **Columnas más angostas:**
+  - Marca 130, Presentación 125, Modalidad 135, Cajas 75 e Incoterm 65;
+  - Puerto 120, Tipo 95, Precio 95, N° pedido 90 y Notas 120.
+- La tabla baja de 1.400 a 1.100 px de ancho mínimo.
+- `BarraPuertos` tiene la prop opcional `compacta`, con botones más chicos; se usa en la grilla del pedido.
+
 ### 18/11/2026 — Pedido semanal: columna Cliente angosta
 La columna Cliente queda fija en 115 px (alcanza para "JSC GRAND"). El nombre completo se ve al pasar el mouse.
 

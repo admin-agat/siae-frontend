@@ -485,7 +485,8 @@ export default function CustomerOrderFormPage() {
       {/* 11/11/2026: se ven ~5 líneas y la tabla se desplaza sola (barra ancha), así no hay que bajar toda la página */}
       <div className="bg-white rounded-xl shadow overflow-hidden mb-4">
        <div ref={tablaLineasRef} className="overflow-auto max-h-[19rem] scroll-ancho">
-        <table className="w-full text-sm min-w-[1400px] border-collapse">
+        {/* 18/11/2026 (Peter): columnas angostas para no tener que mover a la derecha */}
+        <table className="w-full text-sm min-w-[1100px] border-collapse">
           <thead className="bg-primario text-white sticky top-0 z-10">
             <tr>
               <th className="text-left px-2 py-2 uppercase text-xs w-8">#</th>
@@ -519,39 +520,39 @@ export default function CustomerOrderFormPage() {
                       ))}
                     </SelectBuscable>
                   </td>
-                  <td className={`${tdGrilla} min-w-[160px]`}>
+                  <td className={`${tdGrilla} min-w-[130px]`}>
                     <SelectBuscable value={l.brand_id} onChange={(e) => cambiarLinea(l._key, 'brand_id', e.target.value)} className={celda} disabled={!l.customer_id}>
                       <option value="">{l.customer_id && marcasDe(l.customer_id).length === 0 ? 'SIN MARCAS' : 'SELECCIONAR...'}</option>
                       {marcasDe(l.customer_id).map((m) => <option key={m.id} value={String(m.id)}>{m.name}</option>)}
                     </SelectBuscable>
                   </td>
-                  <td className={`${tdGrilla} min-w-[175px]`}>
+                  <td className={`${tdGrilla} min-w-[125px]`}>
                     {/* 14/11/2026: un clic para CONVENCIONAL/PACKED (como CONTRATO/SPOT en Compra de fruta), sin abrir lista */}
                     <div className="inline-flex rounded-lg border border-primario/30 overflow-hidden text-xs font-semibold" role="group" aria-label={`Línea ${i + 1}: presentación`}>
                       {PRESENTACIONES.map((p) => (
                         <button key={p} type="button" onClick={() => l.presentation !== p && cambiarLinea(l._key, 'presentation', p)}
                           aria-pressed={l.presentation === p}
-                          className={`px-2.5 py-1 ${l.presentation === p ? 'bg-primario text-white' : 'bg-white text-primario hover:bg-primario-claro'}`}>
+                          className={`px-2 py-1 ${l.presentation === p ? 'bg-primario text-white' : 'bg-white text-primario hover:bg-primario-claro'}`}>
                           {ETIQUETA_PRESENTACION[p] /* 18/11/2026: NORMAL / BANDA */}
                         </button>
                       ))}
                     </div>
                   </td>
-                  <td className={`${tdGrilla} min-w-[170px]`}>
+                  <td className={`${tdGrilla} min-w-[135px]`}>
                     <SelectBuscable value={l.cargo_type} onChange={(e) => cambiarLinea(l._key, 'cargo_type', e.target.value)} className={celda}>
                       {TIPOS_CARGA.map((t) => <option key={t.valor} value={t.valor}>{t.etiqueta}</option>)}
                     </SelectBuscable>
                   </td>
-                  <td className={`${tdGrilla} min-w-[150px]`}>
+                  <td className={`${tdGrilla} min-w-[100px]`}>
                     {contenedor ? (
-                      <div className="flex items-center gap-1">
-                        <CampoNumero decimales={0} value={l.containers_qty} onChange={(e) => cambiarLinea(l._key, 'containers_qty', e.target.value)} placeholder="9" className={celda} />
+                      <div className="flex items-center gap-0.5">{/* 18/11/2026 (Peter): 3 × 1200 en poco espacio */}
+                        <CampoNumero decimales={0} value={l.containers_qty} onChange={(e) => cambiarLinea(l._key, 'containers_qty', e.target.value)} placeholder="9" className={`${celda.replace('w-full ', '')} w-9 text-right`} />
                         <span className="text-gray-400">×</span>
-                        <CampoNumero decimales={0} value={l.boxes_per_container} onChange={(e) => cambiarLinea(l._key, 'boxes_per_container', e.target.value)} placeholder="1200" className={celda} />
+                        <CampoNumero decimales={0} value={l.boxes_per_container} onChange={(e) => cambiarLinea(l._key, 'boxes_per_container', e.target.value)} placeholder="1200" className={`${celda.replace('w-full ', '')} w-14 text-right`} />
                       </div>
                     ) : <span className="text-gray-300">—</span>}
                   </td>
-                  <td className={`${tdGrilla} min-w-[100px]`}>
+                  <td className={`${tdGrilla} min-w-[75px]`}>
                     {/* En contenedor las cajas se calculan solas */}
                     <CampoNumero decimales={0} value={l.boxes}
                       onChange={(e) => cambiarLinea(l._key, 'boxes', e.target.value)}
@@ -560,23 +561,23 @@ export default function CustomerOrderFormPage() {
                       className={`${celda} ${contenedor ? 'text-gray-500' : ''}`}
                     />
                   </td>
-                  <td className={`${tdGrilla} min-w-[80px]`}>
+                  <td className={`${tdGrilla} min-w-[65px]`}>
                     <SelectBuscable value={l.incoterm} onChange={(e) => cambiarLinea(l._key, 'incoterm', e.target.value)} className={celda}>
                       {INCOTERMS.map((x) => <option key={x} value={x}>{x}</option>)}
                     </SelectBuscable>
                   </td>
-                  <td className={`${tdGrilla} min-w-[140px]`}>
+                  <td className={`${tdGrilla} min-w-[120px]`}>
                     {/* 16/11/2026: puerto de salida con un clic (barra), como la presentación */}
                     <BarraPuertos puertos={puertos} value={l.departure_port_id} onChange={(v) => cambiarLinea(l._key, 'departure_port_id', v)}
-                      ariaLabel={`Línea ${i + 1}: puerto de salida`} className={inputClass} />
+                      ariaLabel={`Línea ${i + 1}: puerto de salida`} className={celda} compacta />
                   </td>
-                  <td className={`${tdGrilla} min-w-[110px]`}>
+                  <td className={`${tdGrilla} min-w-[95px]`}>
                     <SelectBuscable value={l.negotiation_type} onChange={(e) => cambiarLinea(l._key, 'negotiation_type', e.target.value)} className={celda}>
                       <option value="CONTRATO">CONTRATO</option>
                       <option value="SPOT">SPOT</option>
                     </SelectBuscable>
                   </td>
-                  <td className={`${tdGrilla} min-w-[120px]`}>
+                  <td className={`${tdGrilla} min-w-[95px]`}>
                     {l.negotiation_type === 'SPOT' ? (
                       <CampoNumero decimales={2} value={l.box_price} onChange={(e) => cambiarLinea(l._key, 'box_price', e.target.value)} placeholder="Pendiente" className={celda} />
                     ) : origen === 'SIN_CONTRATO' ? (
@@ -593,10 +594,10 @@ export default function CustomerOrderFormPage() {
                       </span>
                     )}
                   </td>
-                  <td className={`${tdGrilla} min-w-[110px]`}>
+                  <td className={`${tdGrilla} min-w-[90px]`}>
                     <input value={l.order_number} onChange={(e) => cambiarLinea(l._key, 'order_number', e.target.value.toUpperCase())} placeholder="Después" className={celda} />
                   </td>
-                  <td className={`${tdGrilla} min-w-[160px]`}>
+                  <td className={`${tdGrilla} min-w-[120px]`}>
                     <input value={l.notes} onChange={(e) => cambiarLinea(l._key, 'notes', e.target.value.toUpperCase())} placeholder="Ej: CINTA AZUL" className={celda} />
                   </td>
                   <td className={`${tdGrilla}`}>
