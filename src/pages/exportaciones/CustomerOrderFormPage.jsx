@@ -414,7 +414,7 @@ export default function CustomerOrderFormPage() {
   const labelClass = 'block text-xs font-semibold text-gray-600 uppercase mb-1';
   // 18/11/2026 (Peter): las líneas se ven como la grilla de Compra de fruta (tipo SAP): celdas planas, línea gris
   // fina y la celda activa en amarillo
-  const tdGrilla = 'px-0.5 py-0 border border-gray-200 align-middle focus-within:bg-yellow-100 focus-within:text-gray-900';
+  const tdGrilla = 'px-0.5 py-0 border border-gray-200 align-middle focus-within:bg-green-100 focus-within:text-gray-900';
   const celda = 'w-full bg-transparent border-0 rounded-none px-1.5 py-0.5 text-sm text-inherit outline-none disabled:opacity-60 disabled:cursor-not-allowed';
 
   if (cargando) {

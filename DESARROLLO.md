@@ -273,6 +273,9 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 18/11/2026 — Celda que se edita en verde claro
+- En todas las grillas tipo SAP (Compra de fruta, Pedido semanal, Distribución en barcos, Cierre, Tarjas, Inventario, OC, Gastos del viaje, Liquidación, Dividir compra), la celda donde se escribe ya no es amarilla sino verde claro (`bg-green-100`). Pedido de Peter. Solo visual.
+
 ### 18/11/2026 — Estilo de grillas en tablas secundarias
 - Columna #, celdas con línea fina, filas alternadas blanco/lila y línea elegida en verde en: detalle de una orden de compra (Pedidos por departamento y Contabilidad) y detalle por insumo de "Materiales del pedido" (Pedido semanal y Por despachar).
 - Transferencias pendientes: los modales Ver y Confirmar llevan el encabezado azul de las demás tablas.

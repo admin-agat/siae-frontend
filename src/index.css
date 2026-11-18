@@ -69,7 +69,7 @@
 }
 
 /* 18/11/2026 (Peter): en las grillas (Compra de fruta, Pedido semanal) la fila elegida va en verde con TODO el
-   texto en blanco: botones, precios, flechas y textos guía. Menos el N° (gris) y la celda que se edita (amarilla). */
+   texto en blanco: botones, precios, flechas y textos guía. Menos el N° (gris) y la celda que se edita (verde claro, 18/11/2026). */
 tr.fila-grilla:focus-within > td:not(:first-child):not(:focus-within),
 tr.fila-grilla:focus-within > td:not(:first-child):not(:focus-within) * {
   color: #fff !important;

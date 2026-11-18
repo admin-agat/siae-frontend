@@ -183,7 +183,7 @@ export default function DividirCompraModal({
   const rojo = 'ring-1 ring-red-500';
   // 18/11/2026 (Peter): filas de la división como la grilla de Compra de fruta (tipo SAP): celdas planas, línea
   // gris fina, filas alternadas, la fila donde se trabaja en verde y la celda que se edita en amarillo
-  const tdGrilla = 'px-0.5 py-0 border border-gray-200 align-middle focus-within:bg-yellow-100 focus-within:text-gray-900';
+  const tdGrilla = 'px-0.5 py-0 border border-gray-200 align-middle focus-within:bg-green-100 focus-within:text-gray-900';
   const celda = 'w-full bg-transparent border-0 rounded-none px-1.5 py-0.5 text-xs text-inherit outline-none disabled:opacity-60 disabled:cursor-not-allowed';
   const tdNumero = 'bg-gray-200 border border-gray-300 px-1 py-0.5 text-center text-sm font-bold text-gray-700 whitespace-nowrap cursor-pointer outline-none';
   const productorNombre = (id) => productores.find((p) => String(p.id) === String(id))?.name || '';

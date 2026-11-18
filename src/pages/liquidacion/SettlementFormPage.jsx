@@ -138,7 +138,7 @@ export default function SettlementFormPage() {
   // 18/11/2026 (Peter): fruta y materiales como las listas compactas (# gris, línea fina, filas alternadas) y los
   // anticipos como la grilla de Compra de fruta (tipo SAP): la fila donde se trabaja en verde, la celda en amarillo
   const tdLectura = 'px-3 py-1.5 border border-gray-200';
-  const tdGrilla = 'px-0.5 py-0 border border-gray-200 align-middle focus-within:bg-yellow-100 focus-within:text-gray-900';
+  const tdGrilla = 'px-0.5 py-0 border border-gray-200 align-middle focus-within:bg-green-100 focus-within:text-gray-900';
   const celda = 'bg-transparent border-0 rounded-none px-1.5 py-0.5 text-sm text-inherit outline-none disabled:opacity-60 disabled:cursor-not-allowed';
   const tdNumero = 'bg-gray-200 border border-gray-300 px-1 py-0.5 text-center text-sm font-bold text-gray-700 whitespace-nowrap cursor-pointer outline-none';
 
