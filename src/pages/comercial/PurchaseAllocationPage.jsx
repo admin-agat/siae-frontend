@@ -1313,7 +1313,7 @@ export default function PurchaseAllocationPage() {
                           return (
                             <Fragment key={c._key}>
                             <tr data-fila={c._key}
-                              className={`group text-gray-800 ${filaMarcada === c._key ? 'bg-red-50 outline outline-2 -outline-offset-2 outline-red-500' : `${fondo} focus-within:bg-green-600 focus-within:text-white`}`}>
+                              className={`fila-grilla group text-gray-800 ${filaMarcada === c._key ? 'bg-red-50 outline outline-2 -outline-offset-2 outline-red-500' : `${fondo} focus-within:bg-green-600 focus-within:text-white`}`}>
                               {/* 18/11/2026: N° de la compra (clic = marca la fila en verde), ⋯ abre el detalle (F2) y las letras avisan qué tiene adentro */}
                               <td tabIndex={-1} title="Clic para marcar la fila" className="cursor-pointer outline-none sticky left-0 z-10 bg-gray-200 border border-gray-300 w-16 min-w-[64px] px-1 py-0.5 text-center align-middle whitespace-nowrap">
                                 <span className="hidden group-focus-within:inline text-primario mr-0.5" aria-hidden="true">▶</span><span className={`text-sm font-bold ${vacia ? 'text-gray-400' : 'text-gray-700'}`}>{j + 1}</span>

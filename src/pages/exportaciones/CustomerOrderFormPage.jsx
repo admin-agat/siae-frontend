@@ -35,7 +35,7 @@ const INCOTERMS = ['FOB', 'CFR', 'CIF'];
 // 10/11/2026: las 4 modalidades con los nombres de Exportaciones y Logística (utils/modalidades.js)
 const TIPOS_CARGA = MODALIDADES_CARGA;
 // 18/11/2026 (Peter): ancho fijo de cada columna de las líneas (px), para que la tabla entre sin mover a la derecha
-const ANCHOS_PEDIDO = [32, 115, 130, 132, 130, 92, 72, 68, 155, 95, 92, 85, 100, 40];
+const ANCHOS_PEDIDO = [32, 115, 130, 132, 130, 125, 72, 68, 155, 95, 92, 85, 100, 40];
 const ANCHO_TABLA_PEDIDO = ANCHOS_PEDIDO.reduce((s, x) => s + x, 0);
 
 const esContenedor = (tipo) => tipo?.endsWith('_CONTENEDOR');
@@ -514,7 +514,7 @@ export default function CustomerOrderFormPage() {
               const { precio, origen } = precioLinea(l);
               const contenedor = esContenedor(l.cargo_type);
               return (
-                <tr key={l._key} className={`group text-gray-800 ${i % 2 === 0 ? 'bg-white' : 'bg-violet-50'} focus-within:bg-green-600 focus-within:text-white`}>
+                <tr key={l._key} className={`fila-grilla group text-gray-800 ${i % 2 === 0 ? 'bg-white' : 'bg-violet-50'} focus-within:bg-green-600 focus-within:text-white`}>
                   {/* 18/11/2026 (Peter): clic en el N° marca la fila en verde */}
                   <td tabIndex={-1} title="Clic para marcar la fila" className="cursor-pointer outline-none bg-gray-200 border border-gray-300 px-0.5 py-0.5 text-center text-sm font-bold text-gray-700 whitespace-nowrap"><span className="hidden group-focus-within:inline text-primario mr-0.5" aria-hidden="true">▶</span>{i + 1}</td>
                   <td className={`${tdGrilla} overflow-hidden`}>{/* 18/11/2026 (Peter): columna angosta, basta con ver "JSC GRAND" */}

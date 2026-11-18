@@ -273,6 +273,10 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 18/11/2026 — Grillas: fila elegida con todo el texto en blanco; Cont. × cajas más ancha
+- **Texto en blanco:** en `src/index.css`, la regla `tr.fila-grilla:focus-within` pone en blanco todo el texto de la fila verde: botones, precios, flechas y textos guía. Los botones no elegidos y los fondos blancos o lila quedan transparentes. No aplica al N° ni a la celda que se edita, que sigue amarilla. Se usa en Compra de fruta y en el Pedido semanal.
+- **Pedido semanal:** Cont. × cajas pasa de 92 a 125 px, porque el 1200 se cortaba.
+
 ### 18/11/2026 — Grillas: clic en el N° marca la fila en verde
 En Compra de fruta y en el Pedido semanal, el N° de cada fila recibe el foco con un clic (`tabIndex={-1}`). Así, al tocar el número, la fila se pinta de verde con ▶ igual que al editar una celda.
 
