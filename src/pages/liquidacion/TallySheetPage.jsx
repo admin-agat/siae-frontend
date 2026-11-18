@@ -248,6 +248,8 @@ export default function TallySheetPage() {
         <table className="w-full text-sm min-w-[900px] border-collapse">
           <thead className="bg-primario text-white">
             <tr>
+              {/* 18/11/2026 (Peter): columna # */}
+              <th className="text-center px-2 py-2 uppercase text-xs w-10">#</th>
               <th className="text-left px-3 py-2 uppercase text-xs whitespace-nowrap">Productor — Marca (Cliente)</th>
               <th className="text-right px-3 py-2 uppercase text-xs whitespace-nowrap">Comprado</th>
               <th className="text-right px-3 py-2 uppercase text-xs whitespace-nowrap">Embarcadas</th>
@@ -259,13 +261,14 @@ export default function TallySheetPage() {
           </thead>
           <tbody>
             {compras.length === 0 ? (
-              <tr><td colSpan={7} className="text-center py-6 text-gray-400">Comercial aún no compra fruta para esta semana</td></tr>
+              <tr><td colSpan={8} className="text-center py-6 text-gray-400">Comercial aún no compra fruta para esta semana</td></tr>
             ) : compras.map((c, i) => {
               const lista = tarjasDeCompra(c.id);
               const emb = suma(lista, (t) => n(t.boxes_shipped));
               const rech = suma(lista, (t) => n(t.boxes_rejected));
               return (
                 <tr key={c.id} className={i % 2 === 0 ? 'bg-white' : 'bg-violet-50'}>
+                  <td className="bg-gray-200 border border-gray-300 px-1 py-1 text-center text-sm font-bold text-gray-700">{i + 1}</td>
                   <td className={`${tdLectura} font-medium`}>
                     {etiquetaCompra(c)}
                     {c.liquidada && <span className="ml-2 inline-flex items-center gap-1 text-[10px] text-gray-500"><Lock size={10} /> LIQUIDADO</span>}

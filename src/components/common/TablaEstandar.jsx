@@ -134,6 +134,8 @@ export default function TablaEstandar({
                     {/* Encabezado color primario; "uppercase" pone los títulos en MAYÚSCULAS */}
                     <thead className="bg-primario text-white">
                         <tr>
+                            {/* 18/11/2026 (Peter): en la versión compacta, columna # (número de fila) al inicio */}
+                            {compacta && <th className="px-2 py-2 text-center text-xs w-10">#</th>}
                             {columnas.map((col) => (
                                 <th key={col.titulo} className={compacta ? 'text-left px-3 py-2 uppercase text-xs whitespace-nowrap' : 'text-left px-4 py-3 uppercase'}>
                                     {col.titulo}
@@ -144,13 +146,13 @@ export default function TablaEstandar({
                     <tbody>
                         {cargando ? (
                             <tr>
-                                <td colSpan={columnas.length} className="text-center py-8 text-gray-400">
+                                <td colSpan={columnas.length + (compacta ? 1 : 0)} className="text-center py-8 text-gray-400">
                                     Cargando {nombreRegistros}...
                                 </td>
                             </tr>
                         ) : filasPagina.length === 0 ? (
                             <tr>
-                                <td colSpan={columnas.length} className="text-center py-8 text-gray-400">
+                                <td colSpan={columnas.length + (compacta ? 1 : 0)} className="text-center py-8 text-gray-400">
                                     No hay {nombreRegistros} para mostrar
                                 </td>
                             </tr>
@@ -169,6 +171,7 @@ export default function TablaEstandar({
                                                 : (i % 2 === 0 ? 'bg-gray-50' : 'bg-white')
                                         }`}
                                     >
+                                        {compacta && <td className="bg-gray-200 border border-gray-300 px-1 py-1.5 text-center text-sm font-bold text-gray-700">{inicio + i + 1}</td>}
                                         {columnas.map((col) => (
                                             <td key={col.titulo} className={`${compacta ? 'px-3 py-1.5 border border-gray-200' : 'px-4 py-3'} ${col.className || ''}`}>
                                                 {/* Si el dato viene vacío, se muestra "—" */}

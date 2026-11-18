@@ -273,6 +273,11 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 18/11/2026 — Columna # en las listas compactas y en el resumen de tarjas
+- La `TablaEstandar` compacta pone al inicio una columna **#** gris con el número de fila. Sigue la paginación: la página 2 empieza en 11. La usan las listas de Pedido semanal, Distribución en barcos y Tarjas.
+- El resumen por compra de Tarjas también lleva su columna **#**.
+- En la fila elegida (verde), el # conserva su color gris.
+
 ### 18/11/2026 — Tarjas con el estilo de las grillas
 Es solo visual: el formato nuevo de tarjeta de embarque sigue esperando respuestas de Peter.
 - **Resumen por compra:** solo lectura, con celdas planas y filas alternadas.
