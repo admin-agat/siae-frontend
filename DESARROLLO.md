@@ -273,6 +273,24 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 18/11/2026 — Compra de fruta: vendedor nuevo desde la celda (alta rápida, fase 2 sin migración)
+Pedido de Peter: así como "+ NUEVA FINCA", crear el vendedor o el productor real que no existe.
+- **Backend:** `POST /customer-orders/{id}/purchases/third-parties` (`PurchaseAllocationController::crearVendedor`), con la pantalla `compra_fruta` y un límite de 20 por minuto.
+  - Solo crea PRODUCTOR o COMERCIALIZADORA con tipo, APELLIDOS NOMBRES y cédula/RUC. Clientes y proveedores siguen solo en Terceros.
+  - La cédula es **opcional**. Si viene, se valida con el dígito verificador (`IdentificacionEcuador`).
+  - Revisa la misma cédula, y la cédula dentro de un RUC, en cualquier tercero, y el mismo nombre + tipo. Responde 422 con `existente`; si está desactivado, pide hablar con ADMIN.
+  - Busca **nombres parecidos** en PHP: el nombre corto dentro del completo, otro orden, error de tipeo o sigla de asociación. Responde 409 `PARECIDOS` (máximo 5, con la cédula enmascarada) hasta que se confirme "No es ninguno".
+  - Queda en la bitácora (Auditable).
+- **Pantalla:**
+  - **+ NUEVO VENDEDOR** en "Se le compra a" y **+ NUEVO PRODUCTOR** en "Productor real" (solo con comercializadora). Van siempre al final de la lista, aunque se esté buscando, y traen lo escrito.
+  - El formulario corto tiene tipo, apellidos y nombres, y cédula/RUC. Si hay parecidos ofrece "¿Es alguno de estos?" con **Usar este**.
+  - Al crearlo, queda puesto en la celda y el cursor pasa a Productor real o a Finca.
+  - "+ NUEVA FINCA" usa la misma opción fija y trae lo escrito.
+- **SIN CÉDULA en rojo:** la celda del vendedor o del productor sin cédula ni RUC lleva una barra roja con el aviso al pasar el mouse.
+- `SelectBuscable` tiene la prop opcional `crear`; Tab nunca elige esa opción.
+- La columna Comerciales se ensancha a 250 px para que no ocupe dos líneas.
+- Sigue pendiente la fase 2b: la ficha y la cuenta bancaria desde Liquidaciones (botón +), y el bloqueo de pago sin cuenta.
+
 ### 18/11/2026 — Compra de fruta: avance de compra y de contratos en la misma línea
 Las dos barras amarillas (comprado del pedido y contratos de la semana) van lado a lado en pantallas anchas (desde 1280 px). En pantallas más angostas siguen una debajo de la otra.
 

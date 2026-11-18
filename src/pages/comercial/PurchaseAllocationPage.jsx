@@ -24,10 +24,11 @@
 // salen en Inventario → Por despachar. Las ya enviadas no se repiten; "Quitar envío" mientras no retire nada.
 // 11/11/2026: los COMERCIALES de cada compra (uno o varios) se eligen de una lista que maneja ADMIN (botón
 // "Comerciales"); la tabla de cada bloque muestra ~6 compras y se desplaza dentro de su recuadro.
-import { Fragment, useState, useEffect, useRef } from 'react';
+import { Fragment, useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { flushSync } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Plus, Trash2, Save, X, Lock, ChevronDown, ChevronRight, AlertTriangle, Truck, Undo2, Users, Ban, RotateCcw, Copy, Split } from 'lucide-react';
-import { getOrderPurchases, saveOrderPurchases, createPurchaseFarm, sendPurchasesToWarehouse, unsendPurchase } from '../../api/customerOrders';
+import { getOrderPurchases, saveOrderPurchases, createPurchaseFarm, createPurchaseThirdParty, sendPurchasesToWarehouse, unsendPurchase } from '../../api/customerOrders';
 import DividirCompraModal from '../../components/DividirCompraModal';
 import { getThirdParties } from '../../api/thirdParties';
 import { getPorts } from '../../api/ports';
@@ -296,6 +297,10 @@ export default function PurchaseAllocationPage() {
   // 18/11/2026 (grilla): compras con su fila de detalle abierta (transporte, bono y notas), { cKey: true }
   const [detalle, setDetalle] = useState({});
   const guardarRef = useRef(null); // Ctrl+S llama siempre al handleGuardar del último render
+  // 18/11/2026: vendedor nuevo desde la celda { bKey, cKey, campo, type, name, identification, parecidos, error }
+  const [nuevoVendedor, setNuevoVendedor] = useState(null);
+  const [guardandoVendedor, setGuardandoVendedor] = useState(false);
+  const cambiarRef = useRef(null); // cambiarCompra del último render (ya con el vendedor nuevo en la lista)
   const semanaDeCompra = (c) => Number(c.purchase_week) || pedido?.week;
 
   const aplicarRespuesta = (data) => {
@@ -357,6 +362,9 @@ export default function PurchaseAllocationPage() {
   const productores = vendedores.filter((v) => v.type === 'PRODUCTOR');
   const comercializadoras = vendedores.filter((v) => v.type === 'COMERCIALIZADORA');
   const tipoDe = (tpId) => vendedores.find((v) => String(v.id) === tpId)?.type;
+  // 18/11/2026 (Peter): vendedor o productor sin cédula ni RUC: la celda lleva una barra roja para que lo revisen
+  const sinCedula = (tpId) => { const v = tpId && vendedores.find((x) => String(x.id) === String(tpId)); return Boolean(v && !v.identification); };
+  const AVISO_SIN_CEDULA = 'SIN CÉDULA NI RUC: PENDIENTE DE REVISAR (LIQUIDACIONES LA COMPLETA)';
   const colorBarco = (shipId) => {
     const i = barcos.findIndex((x) => String(x.id) === String(shipId));
     return i < 0 ? SIN_BARCO : COLORES_BARCO[i % COLORES_BARCO.length];
@@ -895,11 +903,53 @@ export default function PurchaseAllocationPage() {
     setToast({ tipo: 'exito', mensaje: `Compra dividida en ${data.divididas} filas${data.saldo ? ` · ${data.saldo} cajas quedan por dividir` : ''}` });
   };
 
-  const abrirNuevaFinca = (bKey, c) => {
+  const abrirNuevaFinca = (bKey, c, nombre = '') => {
     const duenoId = duenoFinca(c);
     setErrorFinca('');
-    setNuevaFinca({ bKey, cKey: c._key, third_party_id: duenoId, dueno: vendedores.find((v) => String(v.id) === String(duenoId))?.name || '', name: '', magap_code: '', zone: '' });
+    // 18/11/2026: con lo que se escribió en la búsqueda
+    setNuevaFinca({ bKey, cKey: c._key, third_party_id: duenoId, dueno: vendedores.find((v) => String(v.id) === String(duenoId))?.name || '', name: nombre.toUpperCase(), magap_code: '', zone: '' });
   };
+
+  // ---------------- Vendedor nuevo desde la celda (18/11/2026, Peter) ----------------
+  // "+ NUEVO VENDEDOR" en "Se le compra a" (productor o comercializadora) y "+ NUEVO PRODUCTOR" en "Productor real"
+  // (siempre productor). 3 datos: tipo, APELLIDOS NOMBRES y cédula/RUC (opcional: sin ella queda SIN CÉDULA en rojo
+  // para que Liquidaciones la complete). El backend avisa si ya existe o si hay nombres parecidos.
+  useLayoutEffect(() => { cambiarRef.current = cambiarCompra; });
+  const abrirNuevoVendedor = (bKey, c, campo, nombre) => setNuevoVendedor({
+    bKey, cKey: c._key, campo, type: campo === 'producer_id' ? 'PRODUCTOR' : '', name: (nombre || '').toUpperCase(),
+    identification: '', parecidos: null, existente: null, error: '',
+  });
+  // Pone el vendedor (nuevo o uno que ya existía) en la celda; primero lo suma a la lista para que la compra lo reconozca
+  const ponerVendedor = (v) => {
+    const { bKey, cKey, campo } = nuevoVendedor;
+    flushSync(() => setVendedores((prev) => (prev.some((x) => x.id === v.id) ? prev : [...prev, v].sort((a, b) => a.name.localeCompare(b.name)))));
+    cambiarRef.current(bKey, cKey, campo, String(v.id));
+    setNuevoVendedor(null);
+    setEnfocar({ fila: cKey, campo: campo === 'third_party_id' && v.type === 'COMERCIALIZADORA' ? 'productor' : 'finca' });
+  };
+  const guardarNuevoVendedor = async (e, confirmar = false) => {
+    e?.preventDefault?.();
+    const nv = nuevoVendedor;
+    if (!nv.type) { setNuevoVendedor((p) => ({ ...p, error: 'ELIGE SI ES PRODUCTOR O COMERCIALIZADORA.' })); return; }
+    if (nv.name.trim().length < 5) { setNuevoVendedor((p) => ({ ...p, error: 'ESCRIBE EL NOMBRE COMPLETO: APELLIDOS Y NOMBRES.' })); return; }
+    setGuardandoVendedor(true);
+    try {
+      const { data } = await createPurchaseThirdParty(id, { type: nv.type, name: nv.name, identification: nv.identification || null, confirmar_parecidos: confirmar });
+      ponerVendedor(data);
+      setToast({ tipo: 'exito', mensaje: `${data.type === 'PRODUCTOR' ? 'Productor' : 'Comercializadora'} ${data.name} creado${data.identification ? '' : ' (SIN CÉDULA: Liquidaciones la completa)'}` });
+    } catch (err) {
+      const r = err.response?.data || {};
+      if (err.response?.status === 409 && r.codigo === 'PARECIDOS') setNuevoVendedor((p) => ({ ...p, parecidos: r.parecidos, existente: null, error: '' }));
+      else {
+        const errs = r.errors;
+        setNuevoVendedor((p) => ({ ...p, existente: r.existente || null, parecidos: null, error: errs ? Object.values(errs).flat().join(' ') : r.message || 'NO SE PUDO CREAR EL VENDEDOR.' }));
+      }
+    } finally {
+      setGuardandoVendedor(false);
+    }
+  };
+  // Un parecido o existente se puede usar si está activo y es del tipo que pide la celda
+  const sirveVendedor = (v) => v.status && (nuevoVendedor?.campo !== 'producer_id' || v.type === 'PRODUCTOR');
 
   const guardarNuevaFinca = async (e) => {
     e.preventDefault();
@@ -1286,8 +1336,10 @@ export default function PurchaseAllocationPage() {
                                   </span>
                                 )}
                               </td>
-                              <td data-campo="vendedor" data-copiar="third_party_id" className={`sticky left-16 z-10 bg-inherit shadow-[2px_0_0_#e5e7eb] ${tdGrilla} min-w-[220px]`}>
-                                <SelectBuscable value={c.third_party_id} onChange={cambiar('third_party_id')} disabled={fijo} abrirAlEnfocar={false} tabElige aria-label={`Compra ${j + 1}: se le compra a`} className={`${celda} ${c.third_party_id ? '' : (vacia ? '' : 'shadow-[inset_0_0_0_1px_#fbbf24]')}`}>
+                              <td data-campo="vendedor" data-copiar="third_party_id" title={sinCedula(c.third_party_id) ? AVISO_SIN_CEDULA : undefined}
+                                className={`sticky left-16 z-10 bg-inherit ${sinCedula(c.third_party_id) ? 'shadow-[2px_0_0_#e5e7eb,inset_3px_0_0_#dc2626]' : 'shadow-[2px_0_0_#e5e7eb]'} ${tdGrilla} min-w-[220px]`}>
+                                <SelectBuscable value={c.third_party_id} onChange={cambiar('third_party_id')} disabled={fijo} abrirAlEnfocar={false} tabElige aria-label={`Compra ${j + 1}: se le compra a`}
+                                  crear={{ etiqueta: (t) => (t ? `+ NUEVO VENDEDOR: ${t.toUpperCase()}` : '+ NUEVO VENDEDOR'), onCrear: (t) => abrirNuevoVendedor(b._key, c, 'third_party_id', t) }} className={`${celda} ${c.third_party_id ? '' : (vacia ? '' : 'shadow-[inset_0_0_0_1px_#fbbf24]')}`}>
                                   <option value="">SELECCIONAR...</option>
                                   <optgroup label="COMERCIALES / COMERCIALIZADORAS">
                                     {comercializadoras.map((v) => <option key={v.id} value={String(v.id)}>{v.name}</option>)}
@@ -1298,8 +1350,10 @@ export default function PurchaseAllocationPage() {
                                 </SelectBuscable>
                                 {fijo && <span className="flex items-center gap-1 text-xs text-gray-500 mt-0.5"><Lock size={12} /> {c.bloqueo}</span>}
                               </td>
-                              <td data-campo="productor" data-copiar="producer_id" className={`${tdGrilla} min-w-[200px]`}>
-                                <SelectBuscable value={c.pending_split ? POR_DIVIDIR : c.producer_id} onChange={cambiar('producer_id')} disabled={!esComercial || c.liquidada} abrirAlEnfocar={false} tabElige title={esComercial ? 'Productor que realmente cosecha' : 'Compra directa al productor'} className={celda}>
+                              <td data-campo="productor" data-copiar="producer_id" title={sinCedula(c.producer_id) ? AVISO_SIN_CEDULA : undefined}
+                                className={`${tdGrilla} min-w-[200px] ${sinCedula(c.producer_id) ? 'shadow-[inset_3px_0_0_#dc2626]' : ''}`}>
+                                <SelectBuscable value={c.pending_split ? POR_DIVIDIR : c.producer_id} onChange={cambiar('producer_id')} disabled={!esComercial || c.liquidada} abrirAlEnfocar={false} tabElige
+                                  crear={esComercial ? { etiqueta: (t) => (t ? `+ NUEVO PRODUCTOR: ${t.toUpperCase()}` : '+ NUEVO PRODUCTOR'), onCrear: (t) => abrirNuevoVendedor(b._key, c, 'producer_id', t) } : undefined} title={esComercial ? 'Productor que realmente cosecha' : 'Compra directa al productor'} className={celda}>
                                   <option value="">{esComercial ? '—' : 'COMPRA DIRECTA'}</option>
                                   {/* 13/11/2026: compra global; se divide cuando llega el cuadro de despacho */}
                                   {esComercial && <option value={POR_DIVIDIR}>POR DIVIDIR (CUADRO PENDIENTE)</option>}
@@ -1316,16 +1370,16 @@ export default function PurchaseAllocationPage() {
                                 <SelectBuscable value={c.farm_id}
                                   onChange={(e) => (e.target.value === '__nueva' ? abrirNuevaFinca(b._key, c) : cambiarCompra(b._key, c._key, 'farm_id', e.target.value))}
                                   disabled={c.liquidada || !duenoFinca(c) || c.pending_split} abrirAlEnfocar={false} tabElige
+                                  crear={{ etiqueta: () => '+ NUEVA FINCA', onCrear: (t) => abrirNuevaFinca(b._key, c, t) }}
                                   title={c.pending_split ? 'La finca se elige al dividir la compra' : !duenoFinca(c) ? 'Elige primero a quién se le compra' : c.mag_code ? `Código MAG ${c.mag_code} (sale de la finca; se corrige en Configuración → Fincas)` : 'Fincas del productor real (o del vendedor si es compra directa)'}
                                   className={`${celda} ${!c.farm_id && !c.liquidada && duenoFinca(c) && !c.pending_split ? (vacia ? '' : 'shadow-[inset_0_0_0_1px_#fbbf24]') : ''}`}>
                                   <option value="">{c.farm_name && !c.farm_id ? `${c.farm_name} (SIN CATÁLOGO)` : 'SELECCIONAR...'}</option>
                                   {fincasDe(duenoFinca(c), c.farm_id).map((f) => <option key={f.id} value={String(f.id)}>{f.name}{f.magap_code ? ` · ${f.magap_code}` : ''}</option>)}
-                                  <option value="__nueva">+ NUEVA FINCA</option>
                                 </SelectBuscable>
                                 {/* 13/11/2026 (test de usabilidad): el código MAG va debajo de la finca (sale de ella; ya no es columna) */}
                                 {/* 18/11/2026 (filas más bajas): el código MAG se ve al pasar el mouse por la finca */}
                               </td>
-                              <td data-campo="comerciales" data-copiar="executive" className={`${tdGrilla} min-w-[170px]`}>
+                              <td data-campo="comerciales" data-copiar="executive" className={`${tdGrilla} min-w-[250px]`}>
                                 {/* 11/11/2026: uno o varios comerciales de la lista (los que ya tenía la compra se respetan) */}
                                 {(() => {
                                   const elegidos = listaComerciales(c.executive);
@@ -1724,6 +1778,64 @@ export default function PurchaseAllocationPage() {
             <label className={etiqueta}>Zona</label>
             <input value={nuevaFinca.zone} maxLength={100} onChange={(e) => setNuevaFinca((p) => ({ ...p, zone: e.target.value.toUpperCase() }))} placeholder="EJ. MACHALA" className={inputClass} />
           </div>
+        </ModalShell>
+      )}
+
+      {/* 18/11/2026: vendedor nuevo desde la celda */}
+      {nuevoVendedor && (
+        <ModalShell title={nuevoVendedor.campo === 'producer_id' ? 'Nuevo productor' : 'Nuevo vendedor'} size="sm" onClose={() => setNuevoVendedor(null)}
+          onSubmit={(e) => guardarNuevoVendedor(e, false)} guardando={guardandoVendedor} error={nuevoVendedor.error}>
+          <div>
+            <label className={etiqueta}>Tipo *</label>
+            <select value={nuevoVendedor.type} disabled={nuevoVendedor.campo === 'producer_id'} autoFocus={nuevoVendedor.campo !== 'producer_id'}
+              onChange={(e) => setNuevoVendedor((p) => ({ ...p, type: e.target.value, parecidos: null, existente: null, error: '' }))} className={inputClass}>
+              <option value="">SELECCIONAR...</option>
+              <option value="PRODUCTOR">PRODUCTOR</option>
+              <option value="COMERCIALIZADORA">COMERCIALIZADORA</option>
+            </select>
+          </div>
+          <div>
+            <label className={etiqueta}>Apellidos y nombres *</label>
+            <input value={nuevoVendedor.name} maxLength={255} autoFocus={nuevoVendedor.campo === 'producer_id'}
+              onChange={(e) => setNuevoVendedor((p) => ({ ...p, name: e.target.value.toUpperCase(), parecidos: null, existente: null }))}
+              placeholder="EJ. PEREZ LOPEZ JUAN CARLOS" className={inputClass} />
+            <span className="block text-[11px] text-gray-500 mt-1">PRIMERO LOS APELLIDOS. EN UNA EMPRESA O ASOCIACIÓN, SU NOMBRE COMPLETO.</span>
+          </div>
+          <div>
+            <label className={etiqueta}>Cédula / RUC</label>
+            <input value={nuevoVendedor.identification} maxLength={13} inputMode="numeric"
+              onChange={(e) => setNuevoVendedor((p) => ({ ...p, identification: e.target.value.replace(/\D/g, ''), existente: null }))}
+              placeholder="10 DÍGITOS (CÉDULA) O 13 (RUC)" className={inputClass} />
+            {!nuevoVendedor.identification && <span className="block text-[11px] font-semibold text-red-600 mt-1">SIN CÉDULA NI RUC QUEDARÁ PENDIENTE (EN ROJO) PARA QUE LIQUIDACIONES LA COMPLETE.</span>}
+          </div>
+          {nuevoVendedor.existente && sirveVendedor(nuevoVendedor.existente) && (
+            <button type="button" onClick={() => ponerVendedor(nuevoVendedor.existente)} className="text-sm font-semibold text-primario hover:underline">
+              Usar {nuevoVendedor.existente.name}
+            </button>
+          )}
+          {nuevoVendedor.parecidos && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm">
+              <p className="font-semibold text-amber-800 mb-2">¿ES ALGUNO DE ESTOS? ASÍ NO SE DUPLICA</p>
+              <ul className="space-y-1">
+                {nuevoVendedor.parecidos.map((v) => (
+                  <li key={v.id} className="flex items-center justify-between gap-2">
+                    <span>
+                      {v.name} <span className="text-xs text-gray-500">· {v.type}{v.identificacion ? ` · ${v.identificacion}` : ''}</span>
+                      {!v.identificacion && <span className="ml-1 text-xs font-semibold text-red-600">SIN CÉDULA</span>}
+                      {!v.status && <span className="ml-1 text-xs text-gray-500">(DESACTIVADO: PÍDELE AL ADMIN)</span>}
+                    </span>
+                    {sirveVendedor(v) && (
+                      <button type="button" onClick={() => ponerVendedor(v)} className="shrink-0 px-2 py-1 text-xs font-semibold rounded-lg bg-primario text-white hover:bg-primario-hover">Usar este</button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              <button type="button" disabled={guardandoVendedor} onClick={() => guardarNuevoVendedor(null, true)}
+                className="mt-3 px-3 py-1.5 text-xs font-semibold rounded-lg bg-guardar text-guardar-texto hover:bg-guardar-hover disabled:opacity-50">
+                No es ninguno: crear {nuevoVendedor.name}
+              </button>
+            </div>
+          )}
         </ModalShell>
       )}
 

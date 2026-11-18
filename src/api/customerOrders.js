@@ -39,6 +39,8 @@ export const saveOrderPurchases = (id, data) => axios.put(`/customer-orders/${id
 
 // 04/11/2026: finca nueva desde la compra { third_party_id, name, magap_code, zone } → queda en el catálogo
 export const createPurchaseFarm = (id, data) => axios.post(`/customer-orders/${id}/purchases/farms`, data);
+// 18/11/2026: vendedor nuevo (productor o comercializadora) desde la compra: { type, name, identification, confirmar_parecidos }
+export const createPurchaseThirdParty = (id, data) => axios.post(`/customer-orders/${id}/purchases/third-parties`, data);
 
 // 10/11/2026: enviar compras a bodega para que despache los materiales (una o todo el bloque).
 // Las ya enviadas no se repiten. Devuelve lo mismo que getOrderPurchases + { enviadas, ya_enviadas }

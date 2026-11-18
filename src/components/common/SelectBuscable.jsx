@@ -65,6 +65,9 @@ export default function SelectBuscable({
     abrirAlEnfocar = true, // false: llegar con Tab no abre la lista (se abre al escribir, con ↓ o con clic)
     tabElige = false,      // true: Tab elige la opción marcada si se escribió algo; sin resultados, Tab no avanza
     inputProps,            // atributos extra para el input (ej. data-copiar de la grilla)
+    // 18/11/2026: opción fija al final de la lista, aunque se esté buscando ("+ NUEVA FINCA", "+ NUEVO VENDEDOR"):
+    // { etiqueta: (texto) => string, onCrear: (texto) => void }; recibe lo escrito. Tab nunca la elige.
+    crear,
     children,
 }) {
     const opciones = useMemo(() => leerOpciones(children), [children]);
@@ -92,6 +95,11 @@ export default function SelectBuscable({
             .sort((a, b) => a.p - b.p || a.i - b.i)
             .map((x) => x.o);
     }, [opciones, busqueda]);
+    // 18/11/2026: la opción de crear va siempre al final
+    const lista = useMemo(
+        () => (crear ? [...filtradas, { value: '__crear', etiqueta: crear.etiqueta(busqueda.trim()), disabled: false, grupo: null, crear: true }] : filtradas),
+        [filtradas, crear, busqueda]
+    );
 
     const ubicar = () => {
         const r = cajaRef.current?.getBoundingClientRect();
@@ -122,6 +130,12 @@ export default function SelectBuscable({
 
     const elegir = (op) => {
         if (!op || op.disabled) return;
+        if (op.crear) {
+            const escrito = busqueda.trim();
+            cerrar();
+            crear.onCrear(escrito);
+            return;
+        }
         cerrar();
         if (op.value !== valor) onChange?.({ target: { name, value: op.value }, currentTarget: { name, value: op.value } });
     };
@@ -154,8 +168,8 @@ export default function SelectBuscable({
     }, [activo, abierto]);
 
     const siguienteHabilitada = (desde, paso) => {
-        for (let i = desde + paso; i >= 0 && i < filtradas.length; i += paso) {
-            if (!filtradas[i].disabled) return i;
+        for (let i = desde + paso; i >= 0 && i < lista.length; i += paso) {
+            if (!lista[i].disabled) return i;
         }
         return desde;
     };
@@ -168,14 +182,14 @@ export default function SelectBuscable({
             setActivo((a) => siguienteHabilitada(a, e.key === 'ArrowDown' ? 1 : -1));
         } else if (e.key === 'Enter') {
             e.preventDefault(); // no enviar el formulario
-            if (abierto) elegir(filtradas[activo]);
+            if (abierto) elegir(lista[activo]);
             else abrir();
         } else if (e.key === 'Escape') {
             if (abierto) { e.stopPropagation(); cerrar(); }
         } else if (e.key === 'Tab') {
             // 18/11/2026: en la grilla, Tab confirma lo escrito (y no avanza si no hay coincidencia)
             if (tabElige && abierto && busqueda.trim()) {
-                const op = filtradas[activo] && !filtradas[activo].disabled ? filtradas[activo] : filtradas.find((o) => !o.disabled);
+                const op = lista[activo] && !lista[activo].disabled && !lista[activo].crear ? lista[activo] : filtradas.find((o) => !o.disabled);
                 if (!op) { e.preventDefault(); return; }
                 elegir(op);
                 return;
@@ -257,10 +271,10 @@ export default function SelectBuscable({
                     className="z-[100] overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-xl py-1 text-sm text-gray-800"
                 >
                     {filtradas.length === 0 && <li className="px-3 py-2 text-gray-400 italic">Sin resultados</li>}
-                    {filtradas.map((o, i) => {
+                    {lista.map((o, i) => {
                         // 18/11/2026: al buscar se ordena por parecido y los grupos se mezclan: el grupo va al lado de cada opción
                         const buscando = Boolean(busqueda.trim());
-                        const titulo = !buscando && o.grupo && o.grupo !== filtradas[i - 1]?.grupo ? o.grupo : null;
+                        const titulo = !buscando && o.grupo && o.grupo !== lista[i - 1]?.grupo ? o.grupo : null;
                         return (
                             <li key={`${o.grupo ?? ''}-${o.value}-${i}`}>
                                 {titulo && <div className="px-3 pt-2 pb-1 text-[11px] font-bold text-gray-400 uppercase tracking-wide">{titulo}</div>}
@@ -271,7 +285,7 @@ export default function SelectBuscable({
                                     aria-disabled={o.disabled}
                                     onMouseEnter={() => !o.disabled && setActivo(i)}
                                     onClick={() => elegir(o)}
-                                    className={`px-3 py-1.5 ${o.grupo ? 'pl-5' : ''} ${o.disabled ? 'text-gray-400 cursor-not-allowed' : 'cursor-pointer'} ${i === activo && !o.disabled ? 'bg-indigo-50 text-indigo-700' : ''} ${o.value === valor ? 'font-semibold' : ''} ${o.value === '' ? 'text-gray-500' : ''}`}
+                                    className={`px-3 py-1.5 ${o.grupo ? 'pl-5' : ''} ${o.disabled ? 'text-gray-400 cursor-not-allowed' : 'cursor-pointer'} ${i === activo && !o.disabled ? 'bg-indigo-50 text-indigo-700' : ''} ${o.value === valor ? 'font-semibold' : ''} ${o.value === '' ? 'text-gray-500' : ''} ${o.crear ? 'border-t border-gray-100 font-semibold text-primario' : ''}`}
                                 >
                                     {o.etiqueta}
                                     {buscando && o.grupo && <span className="ml-2 text-[10px] font-semibold text-gray-400 uppercase">{o.grupo}</span>}
