@@ -29,6 +29,8 @@ export default function CustomerOrderViewModal({ pedidoId, onClose, onEditar, im
     const { user } = useAuth();
     const [pedido, setPedido] = useState(null);
     const [error, setError] = useState('');
+    // 18/11/2026 (Peter): fila elegida en verde, como en las demás listas
+    const [filaSeleccionada, setFilaSeleccionada] = useState(null);
     const yaImpreso = useRef(false);
 
     useEffect(() => {
@@ -233,10 +235,11 @@ export default function CustomerOrderViewModal({ pedidoId, onClose, onEditar, im
 
                             {/* Líneas (sin overflow en el contenedor para que el encabezado quede fijo al bajar) */}
                             <div className="rounded-xl border">
-                                <table className="w-full text-sm">
+                                {/* 18/11/2026 (Peter): estilo de las listas compactas (columna #, línea fina, filas alternadas) */}
+                                <table className="w-full text-sm border-collapse">
                                     <thead>
                                         <tr>
-                                            <th className={`${thPantalla} text-left rounded-tl-xl`}>#</th>
+                                            <th className={`${thPantalla} text-center text-xs w-10 rounded-tl-xl`}>#</th>
                                             <th className={`${thPantalla} text-left`}>Cliente</th>
                                             <th className={`${thPantalla} text-left`}>Carga</th>
                                             <th className={`${thPantalla} text-right`}>Cajas</th>
@@ -248,23 +251,24 @@ export default function CustomerOrderViewModal({ pedidoId, onClose, onEditar, im
                                     </thead>
                                     <tbody>
                                         {lineas.map((l, i) => (
-                                            <tr key={l.id} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                                                <td className="px-3 py-2 text-gray-400">{i + 1}</td>
-                                                <td className="px-3 py-2 font-medium">
+                                            <tr key={l.id} onClick={() => setFilaSeleccionada(l.id)}
+                                                className={`cursor-pointer ${filaSeleccionada === l.id ? 'fila-elegida bg-green-600 text-white' : (i % 2 === 0 ? 'bg-white hover:bg-yellow-50' : 'bg-violet-50 hover:bg-yellow-50')}`}>
+                                                <td className="bg-gray-200 border border-gray-300 px-1 py-1.5 text-center text-sm font-bold text-gray-700">{i + 1}</td>
+                                                <td className="px-3 py-1.5 border border-gray-200 font-medium">
                                                     <span className="whitespace-nowrap">{l.customer?.third_party?.name}</span>
                                                     {l.brand && <span className="block text-xs font-normal text-gray-500">{marcaConPresentacion(l.brand.name, l.presentation)}</span>}
                                                     {l.order_number && <span className="block text-xs font-normal text-gray-500">N° pedido: {l.order_number}</span>}
                                                     {l.notes && <span className="block text-xs font-normal text-gray-500 italic max-w-xs">{l.notes}</span>}
                                                 </td>
-                                                <td className="px-3 py-2">
+                                                <td className="px-3 py-1.5 border border-gray-200">
                                                     <span className="whitespace-nowrap">{TIPOS_CARGA[l.cargo_type] || l.cargo_type}</span>
                                                     {l.containers_qty && (
                                                         <span className="block text-xs text-gray-500">{l.containers_qty} × {formatoCajas(l.boxes_per_container)}</span>
                                                     )}
                                                 </td>
-                                                <td className="px-3 py-2 text-right font-semibold whitespace-nowrap">{formatoCajas(l.boxes)}</td>
-                                                <td className="px-3 py-2 whitespace-nowrap">{l.departure_port?.name}</td>
-                                                <td className="px-3 py-2 whitespace-nowrap">
+                                                <td className="px-3 py-1.5 border border-gray-200 text-right font-semibold whitespace-nowrap">{formatoCajas(l.boxes)}</td>
+                                                <td className="px-3 py-1.5 border border-gray-200 whitespace-nowrap">{l.departure_port?.name}</td>
+                                                <td className="px-3 py-1.5 border border-gray-200 whitespace-nowrap">
                                                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                                                         l.negotiation_type === 'CONTRATO' ? 'bg-primario-claro text-primario' : 'bg-amber-50 text-amber-700'
                                                     }`}>
@@ -272,10 +276,10 @@ export default function CustomerOrderViewModal({ pedidoId, onClose, onEditar, im
                                                     </span>
                                                     <span className="block text-xs text-gray-500 mt-0.5">{l.incoterm}</span>
                                                 </td>
-                                                <td className="px-3 py-2 text-right whitespace-nowrap">
+                                                <td className="px-3 py-1.5 border border-gray-200 text-right whitespace-nowrap">
                                                     {sinPrecio(l) ? <span className="text-amber-600 text-xs font-semibold">PENDIENTE</span> : `$ ${formatoDinero(l.box_price)}`}
                                                 </td>
-                                                <td className="px-3 py-2 text-right whitespace-nowrap">
+                                                <td className="px-3 py-1.5 border border-gray-200 text-right whitespace-nowrap">
                                                     {sinPrecio(l) ? '—' : `$ ${formatoDinero(l.boxes * Number(l.box_price))}`}
                                                 </td>
                                             </tr>

@@ -27,6 +27,8 @@ export default function VacationLedgerModal({ empleado, onClose, onCambio }) {
   const [error, setError] = useState('');
   const [form, setForm] = useState(null); // { type, signo, days, movement_date, reason }
   const [guardando, setGuardando] = useState(false);
+  // 18/11/2026 (Peter): fila elegida en verde, como en las demás listas
+  const [filaSeleccionada, setFilaSeleccionada] = useState(null);
 
   const cargar = useCallback(() => getEmployeeLedger(empleado.id)
     .then((r) => setDatos(r.data))
@@ -94,9 +96,11 @@ export default function VacationLedgerModal({ empleado, onClose, onCambio }) {
               )}
 
               <div className="overflow-auto max-h-80 border border-gray-200 rounded-xl">
-                <table className="w-full text-sm">
+                {/* 18/11/2026 (Peter): estilo de las listas compactas (columna #, línea fina, filas alternadas) */}
+                <table className="w-full text-sm border-collapse">
                   <thead className="sticky top-0 bg-primario text-white text-xs uppercase">
                     <tr>
+                      <th className="px-2 py-2 text-center text-xs w-10">#</th>
                       <th className="text-left px-3 py-2">Fecha</th>
                       <th className="text-left px-3 py-2">Tipo</th>
                       <th className="text-left px-3 py-2">Detalle</th>
@@ -107,15 +111,16 @@ export default function VacationLedgerModal({ empleado, onClose, onCambio }) {
                   </thead>
                   <tbody>
                     {datos.movements.length === 0 ? (
-                      <tr><td colSpan={6} className="text-center text-gray-400 py-6">Sin movimientos todavía (los días se acreditan al cumplir cada año).</td></tr>
-                    ) : datos.movements.map((m) => (
-                      <tr key={m.id} className="border-t odd:bg-white even:bg-gray-50">
-                        <td className="px-3 py-1.5 whitespace-nowrap">{fFecha(m.movement_date)}</td>
-                        <td className="px-3 py-1.5 font-semibold">{ETIQUETA[m.type] || m.type}</td>
-                        <td className="px-3 py-1.5">{m.reason || '—'}</td>
-                        <td className={`px-3 py-1.5 text-right font-semibold ${m.days < 0 ? 'text-red-700' : 'text-green-700'}`}>{m.days > 0 ? '+' : ''}{fDias(m.days)}</td>
-                        <td className="px-3 py-1.5 text-right">{fDias(m.saldo)}</td>
-                        <td className="px-3 py-1.5 text-xs text-gray-500">{m.created_by}</td>
+                      <tr><td colSpan={7} className="text-center text-gray-400 py-6">Sin movimientos todavía (los días se acreditan al cumplir cada año).</td></tr>
+                    ) : datos.movements.map((m, i) => (
+                      <tr key={m.id} onClick={() => setFilaSeleccionada(m.id)} className={`cursor-pointer ${filaSeleccionada === m.id ? 'fila-elegida bg-green-600 text-white' : (i % 2 === 0 ? 'bg-white hover:bg-yellow-50' : 'bg-violet-50 hover:bg-yellow-50')}`}>
+                        <td className="bg-gray-200 border border-gray-300 px-1 py-1.5 text-center text-sm font-bold text-gray-700">{i + 1}</td>
+                        <td className="px-3 py-1.5 border border-gray-200 whitespace-nowrap">{fFecha(m.movement_date)}</td>
+                        <td className="px-3 py-1.5 border border-gray-200 font-semibold">{ETIQUETA[m.type] || m.type}</td>
+                        <td className="px-3 py-1.5 border border-gray-200">{m.reason || '—'}</td>
+                        <td className={`px-3 py-1.5 border border-gray-200 text-right font-semibold ${m.days < 0 ? 'text-red-700' : 'text-green-700'}`}>{m.days > 0 ? '+' : ''}{fDias(m.days)}</td>
+                        <td className="px-3 py-1.5 border border-gray-200 text-right">{fDias(m.saldo)}</td>
+                        <td className="px-3 py-1.5 border border-gray-200 text-xs text-gray-500">{m.created_by}</td>
                       </tr>
                     ))}
                   </tbody>

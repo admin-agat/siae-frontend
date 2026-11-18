@@ -625,27 +625,30 @@ export default function CustomerOrderFormPage() {
       </div>
 
       {/* Resumen por cliente */}
+      {/* 18/11/2026 (Peter): estilo de las listas compactas (columna #, línea fina, filas alternadas) */}
       <div className="bg-white rounded-xl shadow overflow-hidden mb-4">
-        <table className="w-full text-sm">
-          <thead className="bg-primario-claro text-primario">
+        <table className="w-full text-sm border-collapse">
+          <thead className="bg-primario text-white">
             <tr>
-              <th className="text-left px-4 py-2 uppercase">Cliente</th>
-              <th className="text-right px-4 py-2 uppercase">Contrato</th>
-              <th className="text-right px-4 py-2 uppercase">Spot</th>
-              <th className="text-right px-4 py-2 uppercase">Total cajas</th>
-              <th className="text-right px-4 py-2 uppercase">Monto (USD)</th>
+              <th className="px-2 py-2 text-center text-xs w-10">#</th>
+              <th className="text-left px-3 py-2 uppercase text-xs">Cliente</th>
+              <th className="text-right px-3 py-2 uppercase text-xs">Contrato</th>
+              <th className="text-right px-3 py-2 uppercase text-xs">Spot</th>
+              <th className="text-right px-3 py-2 uppercase text-xs">Total cajas</th>
+              <th className="text-right px-3 py-2 uppercase text-xs">Monto (USD)</th>
             </tr>
           </thead>
           <tbody>
             {resumen.length === 0 ? (
-              <tr><td colSpan={5} className="text-center py-4 text-gray-400">Agrega líneas para ver el resumen</td></tr>
-            ) : resumen.map((r) => (
-              <tr key={r.customer_id} className="border-t">
-                <td className="px-4 py-2 font-medium">{r.nombre}</td>
-                <td className="px-4 py-2 text-right">{formatoCajas(r.contrato)}</td>
-                <td className="px-4 py-2 text-right">{formatoCajas(r.spot)}</td>
-                <td className="px-4 py-2 text-right font-semibold">{formatoCajas(r.contrato + r.spot)}</td>
-                <td className="px-4 py-2 text-right">
+              <tr><td colSpan={6} className="text-center py-4 text-gray-400">Agrega líneas para ver el resumen</td></tr>
+            ) : resumen.map((r, i) => (
+              <tr key={r.customer_id} className={i % 2 === 0 ? 'bg-white hover:bg-yellow-50' : 'bg-violet-50 hover:bg-yellow-50'}>
+                <td className="bg-gray-200 border border-gray-300 px-1 py-1.5 text-center text-sm font-bold text-gray-700">{i + 1}</td>
+                <td className="px-3 py-1.5 border border-gray-200 font-medium">{r.nombre}</td>
+                <td className="px-3 py-1.5 border border-gray-200 text-right">{formatoCajas(r.contrato)}</td>
+                <td className="px-3 py-1.5 border border-gray-200 text-right">{formatoCajas(r.spot)}</td>
+                <td className="px-3 py-1.5 border border-gray-200 text-right font-semibold">{formatoCajas(r.contrato + r.spot)}</td>
+                <td className="px-3 py-1.5 border border-gray-200 text-right">
                   {formatoDinero(r.monto)}
                   {r.sinPrecio > 0 && <span className="block text-xs text-amber-600">{formatoCajas(r.sinPrecio)} cajas sin precio</span>}
                 </td>
@@ -655,10 +658,11 @@ export default function CustomerOrderFormPage() {
           {resumen.length > 0 && (
             <tfoot className="bg-gray-50 border-t-2">
               <tr>
-                <td className="px-4 py-2 font-bold">TOTAL SEMANA {cabecera.week}</td>
+                <td></td>
+                <td className="px-3 py-2 font-bold">TOTAL SEMANA {cabecera.week}</td>
                 <td colSpan={2}></td>
-                <td className="px-4 py-2 text-right font-bold">{formatoCajas(totalCajas)}</td>
-                <td className="px-4 py-2 text-right font-bold">
+                <td className="px-3 py-2 text-right font-bold">{formatoCajas(totalCajas)}</td>
+                <td className="px-3 py-2 text-right font-bold">
                   {formatoDinero(totalMonto)}
                   {totalSinPrecio > 0 && <span className="block text-xs font-normal text-amber-600">{formatoCajas(totalSinPrecio)} cajas sin precio</span>}
                 </td>

@@ -20,6 +20,8 @@ export default function PortTariffItemModal({ item, portId, onClose, onGuardado 
     const [mostrarConfirmarSalida, setMostrarConfirmarSalida] = useState(false);
 
     const [mostrandoHistorial, setMostrandoHistorial] = useState(false);
+    // 18/11/2026 (Peter): fila elegida del historial en verde, como en las demás listas
+    const [filaSeleccionada, setFilaSeleccionada] = useState(null);
     const [historial, setHistorial] = useState([]);
     const [cargandoHistorial, setCargandoHistorial] = useState(false);
 
@@ -162,22 +164,25 @@ export default function PortTariffItemModal({ item, portId, onClose, onGuardado 
                             ) : historial.length === 0 ? (
                                 <p className="text-sm text-gray-500">Sin cambios de precio registrados.</p>
                             ) : (
-                                <table className="w-full text-sm">
-                                    <thead>
-                                        <tr className="text-left text-gray-600">
-                                            <th className="pb-1">Fecha</th>
-                                            <th className="pb-1">Anterior</th>
-                                            <th className="pb-1">Nuevo</th>
-                                            <th className="pb-1">Usuario</th>
+                                // 18/11/2026 (Peter): historial con el estilo de las listas compactas (columna #, línea fina, filas alternadas)
+                                <table className="w-full text-sm border-collapse bg-white">
+                                    <thead className="bg-primario text-white">
+                                        <tr className="text-left">
+                                            <th className="px-2 py-2 text-center text-xs w-10">#</th>
+                                            <th className="px-3 py-2 text-xs">Fecha</th>
+                                            <th className="px-3 py-2 text-xs">Anterior</th>
+                                            <th className="px-3 py-2 text-xs">Nuevo</th>
+                                            <th className="px-3 py-2 text-xs">Usuario</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {historial.map((h) => (
-                                            <tr key={h.id} className="border-t border-gray-200">
-                                                <td className="py-1">{new Date(h.changed_at).toLocaleDateString()}</td>
-                                                <td className="py-1">${dinero(h.old_amount)}</td>
-                                                <td className="py-1">${dinero(h.new_amount)}</td>
-                                                <td className="py-1">{h.changedByUser?.name || '—'}</td>
+                                        {historial.map((h, i) => (
+                                            <tr key={h.id} onClick={() => setFilaSeleccionada(h.id)} className={`cursor-pointer ${filaSeleccionada === h.id ? 'fila-elegida bg-green-600 text-white' : (i % 2 === 0 ? 'bg-white hover:bg-yellow-50' : 'bg-violet-50 hover:bg-yellow-50')}`}>
+                                                <td className="bg-gray-200 border border-gray-300 px-1 py-1.5 text-center text-sm font-bold text-gray-700">{i + 1}</td>
+                                                <td className="px-3 py-1.5 border border-gray-200">{new Date(h.changed_at).toLocaleDateString()}</td>
+                                                <td className="px-3 py-1.5 border border-gray-200">${dinero(h.old_amount)}</td>
+                                                <td className="px-3 py-1.5 border border-gray-200">${dinero(h.new_amount)}</td>
+                                                <td className="px-3 py-1.5 border border-gray-200">{h.changedByUser?.name || '—'}</td>
                                             </tr>
                                         ))}
                                     </tbody>

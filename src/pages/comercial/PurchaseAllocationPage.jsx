@@ -1046,10 +1046,10 @@ export default function PurchaseAllocationPage() {
             </div>
             {abierto && !completo && (
               <div className="mt-3 max-h-64 overflow-auto scroll-ancho rounded-lg border border-amber-200 bg-white">
-                <table className="w-full text-xs">
-                  <thead className="sticky top-0 bg-gray-50 text-gray-600">
+                <table className="w-full text-xs border-collapse">
+                  <thead className="sticky top-0 bg-primario text-white">
                     <tr>
-                      {/* 18/11/2026 (Peter): columna # también en la lista de vendedores que faltan */}
+                      {/* 18/11/2026 (Peter): columna # también en la lista de vendedores que faltan; luego encabezado azul y línea fina como las demás listas */}
                       <th className="text-center px-2 py-1.5 w-8">#</th>
                       <th className="text-left px-3 py-1.5">Vendedor</th>
                       <th className="text-right px-3 py-1.5">Cupo semanal</th>
@@ -1059,12 +1059,12 @@ export default function PurchaseAllocationPage() {
                   </thead>
                   <tbody>
                     {s.faltan.map((v, k) => (
-                      <tr key={v.id} className={k % 2 === 0 ? 'bg-white' : 'bg-violet-50'}>
+                      <tr key={v.id} className={k % 2 === 0 ? 'bg-white hover:bg-yellow-50' : 'bg-violet-50 hover:bg-yellow-50'}>
                         <td className="bg-gray-200 border border-gray-300 px-1 py-1 text-center font-bold text-gray-700">{k + 1}</td>
-                        <td className="px-3 py-1.5">{v.nombre}</td>
-                        <td className="px-3 py-1.5 text-right">{formatoCajas(v.cupo)}</td>
-                        <td className="px-3 py-1.5 text-right">{formatoCajas(v.comprado)}</td>
-                        <td className="px-3 py-1.5 text-right font-semibold text-amber-700">{formatoCajas(v.falta)}</td>
+                        <td className="px-3 py-1.5 border border-gray-200">{v.nombre}</td>
+                        <td className="px-3 py-1.5 border border-gray-200 text-right">{formatoCajas(v.cupo)}</td>
+                        <td className="px-3 py-1.5 border border-gray-200 text-right">{formatoCajas(v.comprado)}</td>
+                        <td className="px-3 py-1.5 border border-gray-200 text-right font-semibold text-amber-700">{formatoCajas(v.falta)}</td>
                       </tr>
                     ))}
                   </tbody>

@@ -420,22 +420,23 @@ export default function ShipmentClosingPage() {
           return (
             <div key={c.id} className="bg-white rounded-xl shadow p-4">
               <p className="font-bold text-gray-800">{c.name}</p>
-              <table className="w-full text-sm mt-2">
+              {/* 18/11/2026 (Peter): mini resumen con línea fina y filas alternadas, como las grillas (sin #: son 3 filas fijas) */}
+              <table className="w-full text-sm mt-2 border-collapse">
                 <thead>
                   <tr className="text-[10px] text-gray-500 uppercase">
                     <th className="text-left font-normal"></th>
-                    <th className="text-right font-normal">Pedido</th>
-                    <th className="text-right font-normal">Embarcado</th>
-                    <th className="text-right font-normal">Dif.</th>
+                    <th className="px-2 text-right font-normal">Pedido</th>
+                    <th className="px-2 text-right font-normal">Embarcado</th>
+                    <th className="px-2 text-right font-normal">Dif.</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {[['CONTRATO', c.pedido_contrato, c.contrato], ['SPOT', c.pedido_spot, c.spot], ['TOTAL', c.pedido, c.embarcado]].map(([tipo, ped, emb]) => (
-                    <tr key={tipo} className={tipo === 'TOTAL' ? 'font-semibold border-t' : ''}>
-                      <td className="text-xs text-gray-600">{tipo}</td>
-                      <td className="text-right">{formatoCajas(ped)}</td>
-                      <td className="text-right">{formatoCajas(emb)}</td>
-                      <td className={`text-right ${emb - ped < 0 ? 'text-amber-700' : emb - ped > 0 ? 'text-green-700' : 'text-gray-400'}`}>{emb - ped > 0 ? '+' : ''}{formatoCajas(emb - ped)}</td>
+                  {[['CONTRATO', c.pedido_contrato, c.contrato], ['SPOT', c.pedido_spot, c.spot], ['TOTAL', c.pedido, c.embarcado]].map(([tipo, ped, emb], i) => (
+                    <tr key={tipo} className={tipo === 'TOTAL' ? 'font-semibold bg-gray-100' : (i % 2 === 0 ? 'bg-white' : 'bg-violet-50')}>
+                      <td className="px-2 py-1 border border-gray-200 text-xs text-gray-600">{tipo}</td>
+                      <td className="px-2 py-1 border border-gray-200 text-right">{formatoCajas(ped)}</td>
+                      <td className="px-2 py-1 border border-gray-200 text-right">{formatoCajas(emb)}</td>
+                      <td className={`px-2 py-1 border border-gray-200 text-right ${emb - ped < 0 ? 'text-amber-700' : emb - ped > 0 ? 'text-green-700' : 'text-gray-400'}`}>{emb - ped > 0 ? '+' : ''}{formatoCajas(emb - ped)}</td>
                     </tr>
                   ))}
                 </tbody>

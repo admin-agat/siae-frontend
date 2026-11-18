@@ -181,6 +181,11 @@ export default function DividirCompraModal({
 
   const inputClass = 'w-full bg-gray-100 rounded-2xl border border-gray-200 px-2 py-1.5 text-xs text-gray-800 outline-none focus:ring-2 focus:ring-primario';
   const rojo = 'ring-1 ring-red-500';
+  // 18/11/2026 (Peter): filas de la división como la grilla de Compra de fruta (tipo SAP): celdas planas, línea
+  // gris fina, filas alternadas, la fila donde se trabaja en verde y la celda que se edita en amarillo
+  const tdGrilla = 'px-0.5 py-0 border border-gray-200 align-middle focus-within:bg-yellow-100 focus-within:text-gray-900';
+  const celda = 'w-full bg-transparent border-0 rounded-none px-1.5 py-0.5 text-xs text-inherit outline-none disabled:opacity-60 disabled:cursor-not-allowed';
+  const tdNumero = 'bg-gray-200 border border-gray-300 px-1 py-0.5 text-center text-sm font-bold text-gray-700 whitespace-nowrap cursor-pointer outline-none';
   const productorNombre = (id) => productores.find((p) => String(p.id) === String(id))?.name || '';
 
   return (
@@ -216,16 +221,16 @@ export default function DividirCompraModal({
 
         {/* Filas de la división */}
         <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="text-left text-gray-500">
-                <th className="px-1 py-1">#</th>
-                <th className="px-1 py-1 min-w-[170px]">Bloque (marca)</th>
-                {esComercializadora && <th className="px-1 py-1 min-w-[180px]">Productor</th>}
-                <th className="px-1 py-1 min-w-[160px]">Finca</th>
-                <th className="px-1 py-1 w-20">Cajas</th>
-                <th className="px-1 py-1 w-20" title="Vacío = el de la compra. Obligatorio en filas con BANDA de otro bloque">P. real</th>
-                <th className="px-1 py-1 min-w-[150px]">Notas</th>
+          <table className="w-full text-xs border-collapse">
+            <thead className="bg-primario text-white">
+              <tr className="text-left">
+                <th className="px-2 py-2 text-center text-xs w-10">#</th>
+                <th className="px-3 py-2 text-xs whitespace-nowrap min-w-[170px]">Bloque (marca)</th>
+                {esComercializadora && <th className="px-3 py-2 text-xs whitespace-nowrap min-w-[180px]">Productor</th>}
+                <th className="px-3 py-2 text-xs whitespace-nowrap min-w-[160px]">Finca</th>
+                <th className="px-3 py-2 text-xs whitespace-nowrap w-20">Cajas</th>
+                <th className="px-3 py-2 text-xs whitespace-nowrap w-20" title="Vacío = el de la compra. Obligatorio en filas con BANDA de otro bloque">P. real</th>
+                <th className="px-3 py-2 text-xs whitespace-nowrap min-w-[150px]">Notas</th>
                 <th />
               </tr>
             </thead>
@@ -236,20 +241,20 @@ export default function DividirCompraModal({
                 const propias = dueno ? fincasDe(dueno) : [];
                 const pidePrecio = b?.presentation === 'PACKED' && String(b.id) !== String(bloque.id);
                 return (
-                  <tr key={f._key} className={i % 2 ? 'bg-white' : 'bg-gray-50'}>
-                    <td className="px-1 py-1 text-gray-400">{i + 1}</td>
-                    <td className="px-1 py-1">
+                  <tr key={f._key} className={`fila-grilla group text-gray-800 ${i % 2 === 0 ? 'bg-white' : 'bg-violet-50'} focus-within:bg-green-600 focus-within:text-white`}>
+                    <td tabIndex={-1} title="Clic para marcar la fila" className={tdNumero}><span className="hidden group-focus-within:inline text-primario mr-0.5" aria-hidden="true">▶</span>{i + 1}</td>
+                    <td className={tdGrilla}>
                       <SelectBuscable value={f.purchase_block_id} onChange={(e) => cambiar(f._key, 'purchase_block_id', e.target.value)}
-                        aria-label={`Fila ${i + 1}: bloque`} className={`${inputClass} ${b ? '' : rojo}`}>
+                        aria-label={`Fila ${i + 1}: bloque`} className={`${celda} ${b ? '' : rojo}`}>
                         <option value="">{f.texto_marca ? `${f.texto_marca}: ELEGIR…` : 'ELEGIR…'}</option>
                         {opcionesBloque.map((x) => <option key={x.id} value={String(x.id)}>{etiquetaBloque(x)}</option>)}
                       </SelectBuscable>
                       {b?.presentation === 'PACKED' && <span className="block text-[11px] text-amber-700">PACKED: SIEMPRE SPOT</span>}
                     </td>
                     {esComercializadora && (
-                      <td className="px-1 py-1">
+                      <td className={tdGrilla}>
                         <SelectBuscable value={f.producer_id} onChange={(e) => cambiar(f._key, 'producer_id', e.target.value)}
-                          aria-label={`Fila ${i + 1}: productor`} className={`${inputClass} ${f.producer_id ? '' : rojo}`}>
+                          aria-label={`Fila ${i + 1}: productor`} className={`${celda} ${f.producer_id ? '' : rojo}`}>
                           <option value="">{f.texto_productor ? `${f.texto_productor}: ELEGIR…` : 'ELEGIR…'}</option>
                           {productores.map((p) => <option key={p.id} value={String(p.id)}>{p.name}</option>)}
                         </SelectBuscable>
@@ -258,31 +263,31 @@ export default function DividirCompraModal({
                         )}
                       </td>
                     )}
-                    <td className="px-1 py-1">
+                    <td className={tdGrilla}>
                       <SelectBuscable value={f.farm_id}
                         onChange={(e) => (e.target.value === '__nueva'
                           ? setNuevaFinca({ key: f._key, producer_id: dueno, dueno: esComercializadora ? productorNombre(dueno) : vendedor, name: f.texto_finca, magap_code: '' })
                           : cambiar(f._key, 'farm_id', e.target.value))}
-                        disabled={!dueno} aria-label={`Fila ${i + 1}: finca`} className={`${inputClass} ${f.farm_id || !dueno ? '' : rojo}`}>
+                        disabled={!dueno} aria-label={`Fila ${i + 1}: finca`} className={`${celda} ${f.farm_id || !dueno ? '' : rojo}`}>
                         <option value="">{f.texto_finca ? `${f.texto_finca}: ELEGIR…` : 'ELEGIR…'}</option>
                         {propias.map((x) => <option key={x.id} value={String(x.id)}>{x.name}{x.magap_code ? ` · ${x.magap_code}` : ''}</option>)}
                         <option value="__nueva">+ NUEVA FINCA</option>
                       </SelectBuscable>
                     </td>
-                    <td className="px-1 py-1">
+                    <td className={tdGrilla}>
                       <CampoNumero decimales={0} value={f.boxes} onChange={(e) => cambiar(f._key, 'boxes', e.target.value)}
-                        aria-label={`Fila ${i + 1}: cajas`} className={`${inputClass} text-right`} />
+                        aria-label={`Fila ${i + 1}: cajas`} className={`${celda} text-right`} />
                     </td>
-                    <td className="px-1 py-1">
+                    <td className={tdGrilla}>
                       <CampoNumero decimales={2} value={f.real_price} onChange={(e) => cambiar(f._key, 'real_price', e.target.value)}
                         placeholder={pidePrecio ? 'OBLIG.' : (compra.real_price || '')} aria-label={`Fila ${i + 1}: precio real`}
-                        className={`${inputClass} text-right ${pidePrecio && f.real_price === '' ? rojo : ''}`} />
+                        className={`${celda} text-right ${pidePrecio && f.real_price === '' ? rojo : ''}`} />
                     </td>
-                    <td className="px-1 py-1">
+                    <td className={tdGrilla}>
                       <input value={f.notes} maxLength={255} onChange={(e) => cambiar(f._key, 'notes', e.target.value.toUpperCase())}
-                        aria-label={`Fila ${i + 1}: notas`} className={inputClass} />
+                        aria-label={`Fila ${i + 1}: notas`} className={celda} />
                     </td>
-                    <td className="px-1 py-1">
+                    <td className={tdGrilla}>
                       <button type="button" onClick={() => quitar(f._key)} title="Quitar fila" aria-label={`Quitar fila ${i + 1}`}
                         className="text-white p-1 rounded-lg bg-red-600 hover:bg-red-700"><Trash2 size={14} /></button>
                     </td>

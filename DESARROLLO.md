@@ -276,6 +276,9 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 ### 18/11/2026 — Estilo de grillas en tablas secundarias
 - Columna #, celdas con línea fina, filas alternadas blanco/lila y línea elegida en verde en: detalle de una orden de compra (Pedidos por departamento y Contabilidad) y detalle por insumo de "Materiales del pedido" (Pedido semanal y Por despachar).
 - Transferencias pendientes: los modales Ver y Confirmar llevan el encabezado azul de las demás tablas.
+- También con el estilo de las listas compactas: ventana Ver pedido (líneas en pantalla; la hoja impresa no cambia), resumen por cliente de Nuevo/Editar pedido, vendedores que faltan en Compra de fruta (encabezado azul y línea fina), historial de precios de Tarifas portuarias y movimientos de Vacaciones.
+- Dividir compra: las filas de la división pasan a la grilla tipo SAP (celdas planas, fila en verde y celda en amarillo al editar).
+- Cierre de embarque: el mini resumen por cliente (CONTRATO/SPOT/TOTAL) lleva línea fina y filas alternadas, sin # porque son 3 filas fijas.
 - Es solo visual: no cambian cálculos ni permisos.
 
 ### 18/11/2026 — Estilo de grillas en todo el sistema (Inventario y el resto de módulos)
