@@ -9,6 +9,19 @@ import { ChevronDown } from 'lucide-react';
 
 const normalizar = (t) => String(t ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
+// 18/11/2026 (grilla de compras): búsqueda por palabras en cualquier orden ("MAYRA OBANDO" encuentra
+// "OBANDO RIERA MAYRA VANESSA"), sin puntos (S.A., ASOC.). Orden: exacta, empieza igual, todas las palabras, contiene.
+const sinPuntos = (t) => normalizar(t).replace(/[.,]/g, '').replace(/\s+/g, ' ').trim();
+const puntaje = (etiqueta, q, palabras) => {
+    const e = sinPuntos(etiqueta);
+    if (e === q) return 0;
+    if (e.startsWith(q)) return 1;
+    const suyas = e.split(' ');
+    if (palabras.every((p) => suyas.some((s) => s.startsWith(p)))) return 2;
+    if (e.includes(q)) return 3;
+    return -1;
+};
+
 const textoDe = (nodo) => {
     if (nodo == null || typeof nodo === 'boolean') return '';
     if (typeof nodo === 'string' || typeof nodo === 'number') return String(nodo);
@@ -48,6 +61,10 @@ export default function SelectBuscable({
     title,
     id,
     'aria-label': ariaLabel, // 06/11/2026: nombre para lectores de pantalla cuando no hay <label>
+    // 18/11/2026 (grilla de compras), opcionales; por defecto todo sigue igual en el resto del sistema:
+    abrirAlEnfocar = true, // false: llegar con Tab no abre la lista (se abre al escribir, con ↓ o con clic)
+    tabElige = false,      // true: Tab elige la opción marcada si se escribió algo; sin resultados, Tab no avanza
+    inputProps,            // atributos extra para el input (ej. data-copiar de la grilla)
     children,
 }) {
     const opciones = useMemo(() => leerOpciones(children), [children]);
@@ -65,9 +82,15 @@ export default function SelectBuscable({
     const listaRef = useRef(null);
 
     const filtradas = useMemo(() => {
-        const q = normalizar(busqueda.trim());
+        const q = sinPuntos(busqueda);
         if (!q) return opciones;
-        return opciones.filter((o) => o.value !== '' && normalizar(o.etiqueta).includes(q));
+        // 18/11/2026: por palabras y ordenadas por parecido (el grupo se respeta: primero el puntaje, luego el orden original)
+        const palabras = q.split(' ');
+        return opciones
+            .map((o, i) => ({ o, i, p: o.value === '' ? -1 : puntaje(o.etiqueta, q, palabras) }))
+            .filter((x) => x.p >= 0)
+            .sort((a, b) => a.p - b.p || a.i - b.i)
+            .map((x) => x.o);
     }, [opciones, busqueda]);
 
     const ubicar = () => {
@@ -150,6 +173,13 @@ export default function SelectBuscable({
         } else if (e.key === 'Escape') {
             if (abierto) { e.stopPropagation(); cerrar(); }
         } else if (e.key === 'Tab') {
+            // 18/11/2026: en la grilla, Tab confirma lo escrito (y no avanza si no hay coincidencia)
+            if (tabElige && abierto && busqueda.trim()) {
+                const op = filtradas[activo] && !filtradas[activo].disabled ? filtradas[activo] : filtradas.find((o) => !o.disabled);
+                if (!op) { e.preventDefault(); return; }
+                elegir(op);
+                return;
+            }
             cerrar();
         }
     };
@@ -188,8 +218,18 @@ export default function SelectBuscable({
                 disabled={disabled}
                 value={abierto ? busqueda : (seleccionada && seleccionada.value !== '' ? seleccionada.etiqueta : '')}
                 placeholder={abierto && seleccionada && seleccionada.value !== '' ? seleccionada.etiqueta : textoGuia}
-                onChange={(e) => { if (abierto) setBusqueda(e.target.value); else abrir(e.target.value); setActivo(0); }}
-                onFocus={() => abrir()}
+                onChange={(e) => {
+                    if (abierto) setBusqueda(e.target.value);
+                    else {
+                        // 18/11/2026: cerrado, el input muestra la opción elegida; si se escribe al final, se busca solo lo nuevo
+                        const actual = seleccionada && seleccionada.value !== '' ? seleccionada.etiqueta : '';
+                        const v = e.target.value;
+                        abrir(actual && v.startsWith(actual) ? v.slice(actual.length) : v);
+                    }
+                    setActivo(0);
+                }}
+                {...inputProps}
+                onFocus={() => abrirAlEnfocar && abrir()}
                 onClick={() => abrir()}
                 onKeyDown={teclado}
                 className="w-full min-w-0 bg-transparent outline-none border-0 p-0 pr-5 text-inherit placeholder:text-gray-500 disabled:cursor-not-allowed truncate"
@@ -218,7 +258,9 @@ export default function SelectBuscable({
                 >
                     {filtradas.length === 0 && <li className="px-3 py-2 text-gray-400 italic">Sin resultados</li>}
                     {filtradas.map((o, i) => {
-                        const titulo = o.grupo && o.grupo !== filtradas[i - 1]?.grupo ? o.grupo : null;
+                        // 18/11/2026: al buscar se ordena por parecido y los grupos se mezclan: el grupo va al lado de cada opción
+                        const buscando = Boolean(busqueda.trim());
+                        const titulo = !buscando && o.grupo && o.grupo !== filtradas[i - 1]?.grupo ? o.grupo : null;
                         return (
                             <li key={`${o.grupo ?? ''}-${o.value}-${i}`}>
                                 {titulo && <div className="px-3 pt-2 pb-1 text-[11px] font-bold text-gray-400 uppercase tracking-wide">{titulo}</div>}
@@ -232,6 +274,7 @@ export default function SelectBuscable({
                                     className={`px-3 py-1.5 ${o.grupo ? 'pl-5' : ''} ${o.disabled ? 'text-gray-400 cursor-not-allowed' : 'cursor-pointer'} ${i === activo && !o.disabled ? 'bg-indigo-50 text-indigo-700' : ''} ${o.value === valor ? 'font-semibold' : ''} ${o.value === '' ? 'text-gray-500' : ''}`}
                                 >
                                     {o.etiqueta}
+                                    {buscando && o.grupo && <span className="ml-2 text-[10px] font-semibold text-gray-400 uppercase">{o.grupo}</span>}
                                 </div>
                             </li>
                         );

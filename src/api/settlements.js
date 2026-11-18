@@ -8,6 +8,9 @@ import axios from "./axios";
 export const getTallyWeeks = () => axios.get("/tallies/weeks");
 export const getOrderTallies = (orderId) => axios.get(`/customer-orders/${orderId}/tallies`);
 export const saveOrderTallies = (orderId, data) => axios.put(`/customer-orders/${orderId}/tallies`, data);
+// 17/11/2026: historial de tarjas (sin montos): de una tarja o de todas las de una compra
+export const getTallyHistory = (tallyId) => axios.get(`/tallies/${tallyId}/history`);
+export const getPurchaseTallyHistory = (purchaseId) => axios.get("/tallies/history", { params: { producer_quota_line_id: purchaseId } });
 
 // ---- Anticipos y préstamos ----
 // params opcional: { third_party_id, status, con_saldo: 1 }

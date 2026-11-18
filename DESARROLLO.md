@@ -273,6 +273,85 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 18/11/2026 — Compra de fruta como grilla tipo SAP (fase 1, solo frontend)
+Pedido de Peter: llenar las compras con el teclado, con menos clics. Diseño en `docs/modulos/compra-fruta-grilla.md` (parte A); las fases 2 y 2b (alta rápida de vendedor, ficha y cuenta bancaria desde Liquidaciones) esperan respuestas de Peter.
+- **Teclado** en la tabla de compras de cada bloque:
+  - Enter o ↓ baja a la misma columna de la compra siguiente; en la última crea una compra nueva.
+  - Shift+Enter o ↑ sube.
+  - Ctrl+D copia el valor de la compra de arriba. La finca solo se copia si es del mismo dueño.
+  - Ctrl+Shift+D duplica la fila, F2 abre el detalle y Ctrl+S guarda desde cualquier parte de la pantalla.
+  - Las flechas no se usan en listas, fechas ni casillas.
+- **Listas** (vendedor, productor, finca, entrega, bodega):
+  - Llegar con Tab no abre la lista: se abre al escribir.
+  - Tab elige lo escrito; si no hay coincidencia, no avanza.
+- **Búsqueda por palabras en cualquier orden** en todos los `SelectBuscable` del sistema: "MAYRA OBANDO" encuentra "OBANDO RIERA MAYRA VANESSA". Se ignoran tildes, mayúsculas, puntos y comas. El orden es: exacta, empieza igual, todas las palabras, contiene.
+- **Columnas**:
+  - N° visible (1, 2, 3…) con el botón ⋯ y las letras T, B y N si la compra tiene transporte, bono o notas.
+  - Transporte, bono y notas pasan a la **fila de detalle** (⋯ o F2). Se abre sola si un error es de ahí.
+  - Total real y nota de crédito van en una sola columna. La tabla baja de 17 a 13 columnas.
+- **Fila vacía**: una compra nueva sin vendedor ni cajas se descarta al guardar, sin error. Antes daba "FALTA A QUIÉN SE LE COMPRA".
+- Sin cambios en el backend, las validaciones ni el control de versión.
+
+### 17/11/2026 — Blindaje de seguridad (código), por los ciberataques
+Revisaron 4 agentes: backend, navegador, servidor y cuentas. No hubo hallazgos críticos ni señales de ataque en las cuentas. Corregido en el código:
+
+| Área | Cambio |
+|---|---|
+| Frontend | `axios.js`: timeout de 60 s y mensaje claro si no hay respuesta (antes podía quedar "Cargando…" para siempre). |
+| Frontend | `DialogoConfirmacion`: si `onAceptar` devuelve una promesa, se bloquea solo hasta que termine, así un doble clic ya no repite la acción. Aplica a todas las pantallas. |
+| Frontend | `index.html`: `lang="es"`. |
+| Backend: permisos | `GET material-dispatch/quotas/{id}` exige la pantalla `despacho` (antes cualquier usuario veía los cupos de cualquier productor). |
+| Backend: permisos | `PurchaseOrderController::show` solo abre OC de bodega. Las de departamento no se leían recorriendo ids con una pantalla de inventario. |
+| Backend: bodega | Editar o anular movimientos, anular despachos y cancelar transferencias exige `puedeBodega()` sobre la bodega del registro. Antes un coordinador limitado a una bodega anulaba los de otra. |
+| Backend: bitácora | Los 403 de `pantalla:`, `rol:`, `admin` y `solo_tarjas` quedan como `ACCESO_DENEGADO`, con usuario, IP y ruta. Como mucho uno por usuario y ruta cada 10 min (`AuditLog::registrarDenegado`). |
+| Backend: bitácora | `LOGIN_FALLIDO`: si lo escrito no es un usuario existente, se guarda enmascarado (podría ser la clave pegada por error). |
+| Backend: usuarios | No se puede desactivar ni quitar el rol al último ADMIN activo. |
+| Backend: límites | Limitador `pesado` (20/min por usuario) en `audit-logs`, los tableros, `voyage-profit` y `inventory/kardex`. |
+
+- Pruebas: `tests/Feature/SeguridadRonda2Test.php` (QA). Suite 211/211.
+- **Servidor:** plan en `docs/seguridad/blindaje-servidor-2026-11-17.md` y script `docs/seguridad/blindaje-servidor.sh`, que corre Peter con sudo. Incluye ufw, fail2ban, SSH, cabeceras HSTS, X-Frame y nosniff, `server_tokens off`, `limit_req`, 404 reales para `/assets` y para los escáneres, y permisos.
+- **Pendiente de decisión de Peter:**
+  - CSP;
+  - qué roles ven la cédula/RUC de terceros (lista blanca);
+  - que quien aprueba una OC no sea quien la creó;
+  - política de contraseñas;
+  - reinicio del servidor y PostgreSQL solo local;
+  - respaldo externo (B2 o MEGA);
+  - `composer update` (CVE baja de laravel/framework, no aplica) y `npm audit fix` (solo herramientas de compilación).
+
+### 17/11/2026 — Tarjas con historial y guardado sin borrar lo de otros (fase 1a)
+- Peter pidió el historial de cada tarja "desde el inicio hasta el final" y que nadie borre el camión que agregó otra persona.
+  - **Antes:** guardar la semana borraba las tarjas que no venían en la lista. Si el celular agregaba un camión mientras la laptop tenía la semana abierta, el guardado de la laptop lo borraba.
+- **Migración `2026_11_17_000003_tarjas_historial`** (`tally_sheets`):
+  - `status`;
+  - `deactivation_reason`, con el CHECK `status OR deactivation_reason IS NOT NULL`;
+  - `client_key` uuid único;
+  - índice parcial por compra `WHERE status`.
+  - Su `down()` se detiene si hay tarjas quitadas.
+- **Las tarjas ya no se borran:** se quitan con motivo y quedan en la bitácora.
+  - Las quitadas no suman en ningún lado: `ProducerQuotaLine::tallies()` filtra `status`, igual que PurchaseAllocation, ShipmentClosing y VoyageCost.
+- **`PUT /customer-orders/{id}/tallies`:**
+  - recibe solo las tarjas nuevas o cambiadas, con su `updated_at`, más `removed: [{id, reason}]`;
+  - ya no quita lo que no viene;
+  - si otra persona cambió o quitó la tarja, responde **409**: "LA TARJA … LA CAMBIÓ <USUARIO> A LAS hh:mm. RECARGA LA PÁGINA…".
+- **Endpoints nuevos** (para la vista de celular, que viene después):
+  - `POST /tallies`, con `client_key`: el reenvío sin señal no duplica;
+  - `PUT /tallies/{id}`, con 409;
+  - `PATCH /tallies/{id}/deactivate` (motivo obligatorio) y `PATCH /tallies/{id}/reactivate`;
+  - bloqueados si el cupo está LIQUIDADO.
+- **Historial:** `GET /tallies/{id}/history` y `GET /tallies/history?producer_quota_line_id=` (pantallas `tarjas` o `liquidar`).
+  - Lee solo `audit_logs` de `tally_sheets`, con una lista blanca de campos (sin IP ni ruta). Traduce el barco y la compra a nombres.
+  - Suma los eventos LIQUIDADA y LIQUIDACIÓN ANULADA, sin montos ni tipo de negociación.
+  - Incluye las tarjas borradas antes de hoy.
+- `SoloTarjas`: el TARJADOR también puede usar `api/tallies/*`.
+- **Frontend `TallySheetPage`:**
+  - icono History en cada tarja guardada y en cada compra del resumen;
+  - quitar una tarja guardada usa el icono `Ban` y pide el motivo (las filas sin guardar siguen con `Trash2`);
+  - guarda solo lo cambiado;
+  - ante un 409 ofrece "Recargar la semana".
+- Modal nuevo `src/components/HistorialTarjaModal.jsx`: línea de tiempo de solo lectura.
+- Pendiente: vista de celular con "Guardar camión" (usa `POST`/`PUT /tallies`) y enlace al historial desde el detalle de la liquidación.
+
 ### 17/11/2026 — Tipo base TARJADOR: la persona del puerto ve solo Tarjas y ningún precio
 - Peter: las tarjas las llena una persona en el puerto (celular o laptop). Solo ve la orden de corte y los campos que llena, sin precios ni montos.
 - **Migración `2026_11_17_000002_tipo_tarjador`**: agrega TARJADOR a los CHECK de `users.role` y `profiles.base_role`, y crea el perfil TARJADOR con la pantalla `tarjas`. Tiene `down()`.

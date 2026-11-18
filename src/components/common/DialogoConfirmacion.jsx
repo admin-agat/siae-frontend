@@ -19,6 +19,7 @@
 //       </DialogoConfirmacion>
 //   )}
 // Las clases están escritas COMPLETAS (Tailwind v4 no genera clases armadas con variables).
+import { useRef, useState } from 'react';
 import { AlertTriangle, RotateCcw } from 'lucide-react';
 
 export default function DialogoConfirmacion({
@@ -31,6 +32,27 @@ export default function DialogoConfirmacion({
     onCancelar,
     procesando = false,
 }) {
+    // 17/11/2026 (seguridad): si onAceptar devuelve una promesa, el botón se bloquea solo hasta que termine.
+    // Antes, en las pantallas que no pasaban `procesando`, un doble clic repetía la acción (aprobar, desactivar...).
+    const [ocupado, setOcupado] = useState(false);
+    const enCurso = useRef(false);
+    const aceptar = async () => {
+        if (enCurso.current || procesando) return;
+        const resultado = onAceptar?.();
+        if (!resultado || typeof resultado.then !== 'function') return;
+        enCurso.current = true;
+        setOcupado(true);
+        try {
+            await resultado;
+        } catch {
+            // el error lo maneja la pantalla que llamó
+        } finally {
+            enCurso.current = false;
+            setOcupado(false);
+        }
+    };
+    const bloqueado = procesando || ocupado;
+
     return (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
@@ -51,22 +73,22 @@ export default function DialogoConfirmacion({
                     <button
                         type="button"
                         onClick={onCancelar}
-                        disabled={procesando}
+                        disabled={bloqueado}
                         className="px-4 py-2 text-sm font-semibold bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50"
                     >
                         {textoCancelar}
                     </button>
                     <button
                         type="button"
-                        onClick={onAceptar}
-                        disabled={procesando}
+                        onClick={aceptar}
+                        disabled={bloqueado}
                         className={`px-4 py-2 text-sm font-semibold text-white rounded-lg disabled:opacity-50 ${
                             peligro
                                 ? 'bg-red-600 hover:bg-red-700'
                                 : 'bg-primario hover:bg-primario-hover'
                         }`}
                     >
-                        {procesando ? 'Procesando...' : textoAceptar}
+                        {bloqueado ? 'Procesando...' : textoAceptar}
                     </button>
                 </div>
             </div>

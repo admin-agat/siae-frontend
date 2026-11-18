@@ -9,15 +9,19 @@
 // (Antes "recibidas" era el total y se pagaban embarcadas + caídas.)
 // Arriba, el resumen por compra (comprado vs embarcado vs recibido).
 // Las tarjas de un productor ya liquidado quedan bloqueadas.
+// 17/11/2026 (fase 1a): las tarjas guardadas ya no se borran: se quitan con motivo (icono Ban) y todo queda en el
+// historial (icono History, por tarja y por compra). Al guardar se mandan solo las nuevas o cambiadas, con su
+// updated_at: si otra persona (por ejemplo el tarjador desde el celular) la cambió, el sistema avisa en vez de pisarla.
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, Save, X, Lock } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Save, X, Lock, Ban, History, RefreshCw } from 'lucide-react';
 import { getOrderTallies, saveOrderTallies } from '../../api/settlements';
 import DialogoConfirmacion from '../../components/common/DialogoConfirmacion';
 import { useAvisoSalida } from '../../components/common/AvisoSalida';
 import ToastFlotante from '../../components/common/ToastFlotante';
 import SelectBuscable from '../../components/common/SelectBuscable';
 import CampoNumero from '../../components/common/CampoNumero';
+import HistorialTarjaModal from '../../components/HistorialTarjaModal';
 import { hoyISO } from '../../utils/fecha';
 
 const formatoCajas = (n) => Number(n || 0).toLocaleString('es-EC');
@@ -39,6 +43,7 @@ const tarjaDesdeBackend = (t) => ({
   boxes_fallen: String(t.boxes_fallen),
   boxes_rejected: String(t.boxes_rejected),
   boxes_missing: String(t.boxes_missing ?? 0), // 17/11/2026: FALTANTES
+  updated_at: t.updated_at, // 17/11/2026: versión, para no pisar el cambio de otra persona
 });
 
 const n = (v) => Number(v) || 0;
@@ -61,6 +66,13 @@ export default function TallySheetPage() {
   const [errores, setErrores] = useState([]);
   const [toast, setToast] = useState(null);
   const [mostrarConfirmarSalida, setMostrarConfirmarSalida] = useState(false);
+  // 17/11/2026: tarjas guardadas que se quitan al guardar ({ id, reason }), el diálogo del motivo, el historial
+  // abierto ({ tarjaId } o { compraId }) y si otra persona cambió algo (409: hay que recargar)
+  const [quitadas, setQuitadas] = useState([]);
+  const [porQuitar, setPorQuitar] = useState(null);
+  const [motivo, setMotivo] = useState('');
+  const [historial, setHistorial] = useState(null);
+  const [conflicto, setConflicto] = useState(false);
 
   const aplicarRespuesta = (data) => {
     setPedido(data.order);
@@ -69,6 +81,14 @@ export default function TallySheetPage() {
     const lista = data.tallies.map(tarjaDesdeBackend);
     setTarjas(lista);
     setInicial(JSON.stringify(lista));
+    setQuitadas([]);
+    setConflicto(false);
+  };
+
+  const recargar = () => {
+    setErrores([]);
+    getOrderTallies(id).then((res) => aplicarRespuesta(res.data))
+      .catch(() => setErrores(['NO SE PUDIERON CARGAR LAS TARJAS DE ESTA SEMANA.']));
   };
 
   useEffect(() => {
@@ -122,9 +142,23 @@ export default function TallySheetPage() {
     }]);
   };
 
-  const quitarTarja = (key) => setTarjas((prev) => prev.filter((t) => t._key !== key));
+  // 17/11/2026: una fila sin guardar se quita y ya; una guardada pide motivo y se quita al guardar
+  const quitarTarja = (t) => {
+    if (!t.id) {
+      setTarjas((prev) => prev.filter((x) => x._key !== t._key));
+      return;
+    }
+    setMotivo('');
+    setPorQuitar(t);
+  };
+  const confirmarQuitar = () => {
+    if (!motivo.trim()) return;
+    setQuitadas((prev) => [...prev, { id: porQuitar.id, reason: motivo.trim() }]);
+    setTarjas((prev) => prev.filter((x) => x._key !== porQuitar._key));
+    setPorQuitar(null);
+  };
 
-  const hayCambios = () => inicial !== null && inicial !== JSON.stringify(tarjas);
+  const hayCambios = () => inicial !== null && (inicial !== JSON.stringify(tarjas) || quitadas.length > 0);
   // 12/11/2026: también pregunta al ir a otra opción del menú, recargar o usar "atrás" del navegador (antes se perdía lo digitado)
   useAvisoSalida(hayCambios());
   const volver = () => (hayCambios() ? setMostrarConfirmarSalida(true) : navigate('/liquidacion/tarjas'));
@@ -145,10 +179,14 @@ export default function TallySheetPage() {
       return;
     }
 
+    // 17/11/2026: solo las nuevas o cambiadas (las demás pueden estar cambiando en otro equipo)
+    const originales = Object.fromEntries(JSON.parse(inicial || '[]').map((t) => [t._key, JSON.stringify(t)]));
+    const cambiadas = tarjas.filter((t) => !t.id || originales[t._key] !== JSON.stringify(t));
     setGuardando(true);
     try {
       const res = await saveOrderTallies(id, {
-        tallies: tarjas.map((t) => ({
+        removed: quitadas,
+        tallies: cambiadas.map((t) => ({
           id: t.id,
           producer_quota_line_id: Number(t.producer_quota_line_id),
           shipment_id: t.shipment_id ? Number(t.shipment_id) : null,
@@ -160,6 +198,7 @@ export default function TallySheetPage() {
           boxes_fallen: n(t.boxes_fallen),
           boxes_rejected: n(t.boxes_rejected),
           boxes_missing: n(t.boxes_missing),
+          updated_at: t.updated_at || null,
         })),
       });
       aplicarRespuesta(res.data);
@@ -168,6 +207,7 @@ export default function TallySheetPage() {
       console.error('ERROR AL GUARDAR LAS TARJAS:', err);
       const e = err.response?.data?.errors;
       setErrores(e ? Object.values(e).flat() : [err.response?.data?.message || 'Error al guardar las tarjas']);
+      setConflicto(err.response?.status === 409);
     } finally {
       setGuardando(false);
     }
@@ -223,6 +263,7 @@ export default function TallySheetPage() {
                   <td className="px-3 py-2 font-medium">
                     {etiquetaCompra(c)}
                     {c.liquidada && <span className="ml-2 inline-flex items-center gap-1 text-[10px] text-gray-500"><Lock size={10} /> LIQUIDADO</span>}
+                    <button type="button" onClick={() => setHistorial({ compraId: c.id })} title="Historial de las tarjas de esta compra" className="ml-2 inline-flex align-middle text-primario hover:text-primario-hover"><History size={15} /></button>
                   </td>
                   <td className="px-3 py-2 text-right">{formatoCajas(c.boxes)}</td>
                   <td className={`px-3 py-2 text-right ${emb > c.boxes ? 'text-amber-700 font-semibold' : ''}`} title={emb > c.boxes ? 'Llegó más de lo comprado' : ''}>{formatoCajas(emb)}</td>
@@ -257,7 +298,7 @@ export default function TallySheetPage() {
               <th className="text-right px-3 py-3 uppercase">Rechazadas</th>
               <th className="text-right px-3 py-3 uppercase">Faltantes</th>
               <th className="text-right px-3 py-3 uppercase">Recibidas</th>
-              <th className="px-3 py-3 w-10"></th>
+              <th className="px-3 py-3 w-20"></th>
             </tr>
           </thead>
           <tbody>
@@ -293,9 +334,16 @@ export default function TallySheetPage() {
                   <td className="px-3 py-2 min-w-[80px]"><CampoNumero decimales={0} value={t.boxes_missing} onChange={(e) => cambiar(t._key, 'boxes_missing', e.target.value)} disabled={bloqueada} className={`${inputClass} text-right`} /></td>
                   <td className={`px-3 py-2 text-right font-semibold ${recibidas(t) < 0 ? 'text-red-600' : 'text-green-700'}`}>{formatoCajas(recibidas(t))}</td>
                   <td className="px-3 py-2">
-                    <button type="button" onClick={() => quitarTarja(t._key)} disabled={bloqueada} title={bloqueada ? 'Ya liquidado: no se puede quitar' : 'Quitar tarja'} className="text-white p-1.5 rounded-lg shadow-sm transition bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:hover:bg-red-600">
-                      <Trash2 size={16} />
-                    </button>
+                    <div className="flex gap-1.5">
+                      {t.id && (
+                        <button type="button" onClick={() => setHistorial({ tarjaId: t.id })} title="Historial de esta tarja" className="text-primario p-1.5 rounded-lg border border-primario/40 hover:bg-primario-claro transition">
+                          <History size={16} />
+                        </button>
+                      )}
+                      <button type="button" onClick={() => quitarTarja(t)} disabled={bloqueada} title={bloqueada ? 'Ya liquidado: no se puede quitar' : 'Quitar tarja'} className="text-white p-1.5 rounded-lg shadow-sm transition bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:hover:bg-red-600">
+                        {t.id ? <Ban size={16} /> : <Trash2 size={16} />}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               );
@@ -326,7 +374,16 @@ export default function TallySheetPage() {
       {errores.length > 0 && (
         <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3 mb-4">
           {errores.map((e) => <p key={e}>{e}</p>)}
+          {conflicto && (
+            <button type="button" onClick={recargar} className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-primario text-white hover:bg-primario-hover">
+              <RefreshCw size={14} /> Recargar la semana (se pierde lo que no guardaste)
+            </button>
+          )}
         </div>
+      )}
+
+      {quitadas.length > 0 && (
+        <p className="text-xs text-red-700 mb-3 text-right">Se quitarán {quitadas.length} tarja(s) al guardar.</p>
       )}
 
       <div className="flex justify-end gap-3">
@@ -337,6 +394,22 @@ export default function TallySheetPage() {
           <Save size={16} /> {guardando ? 'Guardando...' : 'Guardar tarjas'}
         </button>
       </div>
+
+      {/* 17/11/2026: quitar una tarja guardada pide el motivo (queda en su historial) */}
+      {porQuitar && (
+        <DialogoConfirmacion
+          titulo={porQuitar.number ? `¿Quitar la tarja ${porQuitar.number}?` : '¿Quitar esta tarja?'}
+          textoAceptar="Quitar tarja"
+          onCancelar={() => setPorQuitar(null)}
+          onAceptar={confirmarQuitar}
+        >
+          Se quita al guardar y queda en el historial con este motivo:
+          <input autoFocus value={motivo} maxLength={255} onChange={(e) => setMotivo(e.target.value.toUpperCase())} placeholder="EJ. CAMIÓN REGISTRADO DOS VECES" className={`${inputClass} mt-2 block`} />
+          {!motivo.trim() && <span className="block text-[11px] text-red-600 mt-1">ESCRIBE EL MOTIVO PARA QUITAR LA TARJA.</span>}
+        </DialogoConfirmacion>
+      )}
+
+      {historial && <HistorialTarjaModal tarjaId={historial.tarjaId} compraId={historial.compraId} onClose={() => setHistorial(null)} />}
 
       {mostrarConfirmarSalida && (
         <DialogoConfirmacion

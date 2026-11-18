@@ -24,7 +24,7 @@
 // salen en Inventario → Por despachar. Las ya enviadas no se repiten; "Quitar envío" mientras no retire nada.
 // 11/11/2026: los COMERCIALES de cada compra (uno o varios) se eligen de una lista que maneja ADMIN (botón
 // "Comerciales"); la tabla de cada bloque muestra ~6 compras y se desplaza dentro de su recuadro.
-import { useState, useEffect, useRef } from 'react';
+import { Fragment, useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Plus, Trash2, Save, X, Lock, ChevronDown, ChevronRight, AlertTriangle, Truck, Undo2, Users, Ban, RotateCcw, Copy, Split } from 'lucide-react';
 import { getOrderPurchases, saveOrderPurchases, createPurchaseFarm, sendPurchasesToWarehouse, unsendPurchase } from '../../api/customerOrders';
@@ -279,6 +279,9 @@ export default function PurchaseAllocationPage() {
   const [editOfFila, setEditOfFila] = useState(null);       // _key de la compra con su oficial abierto
   const [verContratosFila, setVerContratosFila] = useState(null); // _key de la compra con el popover (i)
   const [bonoTotal, setBonoTotal] = useState(null);         // { cKey, valor } monto total a repartir ÷ cajas
+  // 18/11/2026 (grilla): compras con su fila de detalle abierta (transporte, bono y notas), { cKey: true }
+  const [detalle, setDetalle] = useState({});
+  const guardarRef = useRef(null); // Ctrl+S llama siempre al handleGuardar del último render
   const semanaDeCompra = (c) => Number(c.purchase_week) || pedido?.week;
 
   const aplicarRespuesta = (data) => {
@@ -587,16 +590,76 @@ export default function PurchaseAllocationPage() {
 
   const seleccionar = (e) => e.target.select();
 
-  // 12/11/2026: Enter en cajas o precios baja al mismo campo de la compra siguiente;
-  // en la última compra pasa al botón "Agregar compra" (otro Enter la agrega)
-  const enterBaja = (bKey, cKey, campo) => (e) => {
-    if (e.key !== 'Enter') return;
-    e.preventDefault();
-    const compras = bloques.find((x) => x._key === bKey)?.purchases || [];
-    const i = compras.findIndex((p) => p._key === cKey);
-    if (i >= 0 && i < compras.length - 1) setEnfocar({ fila: compras[i + 1]._key, campo });
-    else document.querySelector(`[data-agregar-compra="${bKey}"]`)?.focus();
+  // 18/11/2026 (grilla tipo SAP, reemplaza al enterBaja del 12/11): en cualquier celda de la compra
+  //   Enter / ↓ baja a la misma columna de la compra siguiente (en la última crea una compra nueva),
+  //   Shift+Enter / ↑ sube, Ctrl+D copia el valor de la compra de arriba, Ctrl+Shift+D duplica la fila,
+  //   F2 abre o cierra el detalle (transporte, bono y notas). Tab avanza a la celda siguiente (y en las
+  //   listas elige lo escrito). Las flechas no se usan en listas, fechas ni casillas (ahí tienen su uso).
+  const moverConFlechas = (el) => el.tagName === 'INPUT' && el.getAttribute('role') !== 'combobox' && !['date', 'checkbox'].includes(el.type);
+  const copiarDeArriba = (b, c, campo) => {
+    const arriba = b.purchases[b.purchases.findIndex((p) => p._key === c._key) - 1];
+    // Nada sobre una compra liquidada; con tarjas o materiales retirados no cambian vendedor, bodega ni semana
+    if (!arriba || c.liquidada || (c.bloqueo && ['third_party_id', 'pickup_warehouse_id', 'purchase_week'].includes(campo))) return;
+    if (campo === 'producer_id') return cambiarCompra(b._key, c._key, campo, arriba.pending_split ? POR_DIVIDIR : arriba.producer_id);
+    // La finca solo si es del mismo dueño (si no, el backend la rechaza)
+    if (campo === 'farm_id' && String(duenoFinca(arriba)) !== String(duenoFinca(c))) return;
+    cambiarCompra(b._key, c._key, campo, arriba[campo]);
+    if (campo === 'negotiation_type') cambiarCompra(b._key, c._key, 'payment_scheme', arriba.payment_scheme);
   };
+  const teclaGrilla = (b) => (e) => {
+    const tr = e.target.closest('tr[data-fila]');
+    const enDetalle = Boolean(tr?.dataset.fila.endsWith('-det')); // fila de detalle de la compra
+    const i = tr ? b.purchases.findIndex((p) => p._key === tr.dataset.fila.replace(/-det$/, '')) : -1;
+    if (i < 0) return;
+    const c = b.purchases[i];
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') {
+      e.preventDefault();
+      e.stopPropagation();
+      if (enDetalle) return; // en la fila de detalle no hay qué copiar (y no abre "agregar marcador")
+      if (e.shiftKey) duplicarCompra(b._key, c);
+      else {
+        const campo = e.target.closest('[data-copiar]')?.dataset.copiar;
+        if (campo) copiarDeArriba(b, c, campo);
+      }
+      return;
+    }
+    if (e.key === 'F2') {
+      e.preventDefault();
+      setDetalle((p) => ({ ...p, [c._key]: !p[c._key] }));
+      return;
+    }
+    if (enDetalle || e.target.getAttribute('aria-expanded') === 'true') return; // lista abierta: la maneja el buscador
+    const campo = e.target.closest('td[data-campo]')?.dataset.campo;
+    const enter = e.key === 'Enter' && e.target.tagName !== 'BUTTON';
+    const abajo = (enter && !e.shiftKey) || (e.key === 'ArrowDown' && moverConFlechas(e.target));
+    const arriba = (enter && e.shiftKey) || (e.key === 'ArrowUp' && moverConFlechas(e.target));
+    if (!campo || (!abajo && !arriba)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    // Salta las compras donde esa celda no se puede editar (liquidada, bloqueada, sin dueño de finca...)
+    const paso = arriba ? -1 : 1;
+    for (let k = i + paso; k >= 0 && k < b.purchases.length; k += paso) {
+      if (celdaEditable(b.purchases[k]._key, campo)) { setEnfocar({ fila: b.purchases[k]._key, campo }); return; }
+    }
+    if (!arriba) agregarCompra(b._key);
+  };
+  const celdaEditable = (fila, campo) => {
+    const celda = document.querySelector(`tr[data-fila="${fila}"] [data-campo="${campo}"]`);
+    const el = celda?.matches('input, select, button') ? celda : celda?.querySelector('input:not([type="hidden"]):not([tabindex="-1"]), select, button');
+    return Boolean(el && !el.disabled);
+  };
+
+  // 18/11/2026: Ctrl+S guarda desde cualquier parte de la pantalla
+  useEffect(() => {
+    const tecla = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        guardarRef.current?.();
+      }
+    };
+    document.addEventListener('keydown', tecla);
+    return () => document.removeEventListener('keydown', tecla);
+  }, []);
 
   // 12/11/2026: abre el bloque del error, baja a la compra y la resalta
   const irAError = (texto) => {
@@ -618,14 +681,22 @@ export default function PurchaseAllocationPage() {
   };
 
   // 12/11/2026: muestra los errores y abre los bloques que los tienen (los guardados arrancan cerrados)
-  const mostrarErrores = (lista) => {
+  // 18/11/2026: `base` = los bloques con que se numeraron los errores (al guardar ya sin las compras vacías)
+  const mostrarErrores = (lista, base = bloques) => {
+    const bloques = base;
     setErrores(lista);
     const abrir = {};
+    const conDetalle = {};
     lista.forEach((t) => {
-      const b = bloques[(ubicacionError(t)?.bloque || 0) - 1];
+      const u = ubicacionError(t);
+      const b = bloques[(u?.bloque || 0) - 1];
       if (b) abrir[b._key] = true;
+      // 18/11/2026: el bono, el transporte y las notas están en la fila de detalle: se abre si el error es de ahí
+      const c = b && u.compra ? b.purchases[u.compra - 1] : null;
+      if (c && /BONO|TRANSPORTE|NOTA/.test(t)) conDetalle[c._key] = true;
     });
     if (Object.keys(abrir).length) setAbiertos((p) => ({ ...p, ...abrir }));
+    if (Object.keys(conDetalle).length) setDetalle((p) => ({ ...p, ...conDetalle }));
   };
 
   const hayCambios = () => inicial !== null && inicial !== JSON.stringify(bloques);
@@ -636,10 +707,17 @@ export default function PurchaseAllocationPage() {
   // ---------------- Guardar ----------------
 
   const handleGuardar = async () => {
+    if (guardando) return;
     setErrores([]);
     setFilaMarcada(null);
+    // 18/11/2026 (grilla): la compra nueva que quedó vacía (sin vendedor ni cajas, solo con lo copiado de la
+    // anterior, p. ej. al bajar con Enter desde la última) se descarta sin dar error
+    const esVacia = (c) => !c.id && !c.third_party_id && !n(c.boxes);
+    const hayVacias = bloques.some((b) => b.purchases.some(esVacia));
+    const lista = hayVacias ? bloques.map((b) => ({ ...b, purchases: b.purchases.filter((c) => !esVacia(c)) })) : bloques;
+    if (hayVacias) setBloques(lista);
     const faltan = [];
-    bloques.forEach((b, i) => {
+    lista.forEach((b, i) => {
       if (!b.shipment_id || !b.customer_id || !b.brand_id) faltan.push(`BLOQUE ${i + 1}: ELIGE BARCO, CLIENTE Y MARCA.`);
       b.purchases.forEach((c, j) => {
         if (!c.third_party_id) faltan.push(`BLOQUE ${i + 1}, COMPRA ${j + 1}: FALTA A QUIÉN SE LE COMPRA.`);
@@ -668,7 +746,7 @@ export default function PurchaseAllocationPage() {
       });
     });
     if (faltan.length) {
-      mostrarErrores(faltan);
+      mostrarErrores(faltan, lista);
       return;
     }
 
@@ -677,7 +755,7 @@ export default function PurchaseAllocationPage() {
     try {
       const res = await saveOrderPurchases(id, {
         version,
-        blocks: bloques.map((b) => ({
+        blocks: lista.map((b) => ({
           id: b.id,
           shipment_id: Number(b.shipment_id),
           brand_id: Number(b.brand_id),
@@ -719,11 +797,12 @@ export default function PurchaseAllocationPage() {
     } catch (err) {
       console.error('ERROR AL GUARDAR LAS COMPRAS:', err);
       const e = err.response?.data?.errors;
-      mostrarErrores(e ? Object.values(e).flat() : [err.response?.data?.message || 'Error al guardar las compras']);
+      mostrarErrores(e ? Object.values(e).flat() : [err.response?.data?.message || 'Error al guardar las compras'], lista);
     } finally {
       setGuardando(false);
     }
   };
+  useEffect(() => { guardarRef.current = handleGuardar; }); // 18/11/2026: Ctrl+S
 
   // ---------------- Enviar a bodega (10/11/2026) ----------------
 
@@ -1127,11 +1206,13 @@ export default function PurchaseAllocationPage() {
 
                   {/* Compras del bloque */}
                   {/* 11/11/2026: ~6 compras visibles; se desplaza dentro del recuadro y la barra horizontal queda a la vista */}
+                  {/* 18/11/2026 (grilla tipo SAP): se llena con el teclado (ayuda debajo); transporte, bono y notas
+                      pasaron a la fila de detalle (⋯ o F2) y Total real + Nota de crédito van en una sola columna */}
                   <div className="overflow-auto max-h-[31rem] border rounded-lg scroll-ancho">
-                    <table className="w-full text-sm min-w-[2100px]">
+                    <table className="w-full text-sm min-w-[1750px]" onKeyDownCapture={teclaGrilla(b)} aria-label={`Compras del bloque ${i + 1}`}>
                       <thead className="bg-primario text-white sticky top-0 z-30">
                         <tr>
-                          <th className={`${th} sticky left-0 z-20 bg-primario w-9 min-w-[36px]`}>#</th>
+                          <th className={`${th} sticky left-0 z-20 bg-primario w-9 min-w-[36px]`} title="N° de la compra en el bloque (el mismo de los errores: BLOQUE 1, COMPRA 3)">N°</th>
                           <th className={`${th} sticky left-9 z-20 bg-primario`}>Se le compra a *</th>
                           <th className={th}>Productor real</th>
                           <th className={th}>Finca</th>
@@ -1142,18 +1223,14 @@ export default function PurchaseAllocationPage() {
                           {/* 13/11/2026: el P. oficial pasó al encabezado del bloque; Tipo · Pago → Negociación; columna Bono / extra */}
                           <th className={`${th} text-right`} title="Precio real pagado al productor. Debajo, OF. $ si esta compra tiene otro precio oficial que el del bloque">P. real</th>
                           <th className={th} title="CONTRATO o SPOT, forma de pago y contrato del vendedor">Negociación</th>
-                          <th className={`${th} text-right`} title="Marca RECONOCER cuando el productor puso el transporte y escribe el $/caja (se paga por las cajas de la tarja)">Transporte</th>
-                          <th className={`${th} text-right`} title="Bono / extra al productor: $/caja que se paga aparte (cinta, empaque especial...), por las cajas de la tarja. No toca la nota de crédito">Bono / extra</th>
-                          <th className={`${th} text-right`} title="Cajas × (precio real + bono)">Total real</th>
-                          <th className={`${th} text-right`} title="Cajas × (precio oficial − precio real): la entrega el vendedor">Nota créd. $</th>
-                          <th className={th}>Notas</th>
+                          <th className={`${th} text-right`} title="Arriba: cajas × (precio real + bono). Abajo: nota de crédito = cajas × (precio oficial − precio real), la entrega el vendedor">Total real · NC $</th>
                           <th className={th}>Bodega</th>
                           <th className="px-2 py-2 w-10"></th>
                         </tr>
                       </thead>
                       <tbody>
                         {b.purchases.length === 0 ? (
-                          <tr><td colSpan={17} className="text-center py-5 text-gray-400">Agrega la primera compra de este bloque</td></tr>
+                          <tr><td colSpan={13} className="text-center py-5 text-gray-400">Agrega la primera compra de este bloque</td></tr>
                         ) : b.purchases.map((c, j) => {
                           const fijo = Boolean(c.bloqueo);
                           const esComercial = tipoDe(c.third_party_id) === 'COMERCIALIZADORA';
@@ -1162,12 +1239,26 @@ export default function PurchaseAllocationPage() {
                           const mag = precioMagDe(b, c);
                           const nc = notaCredito(c);
                           const ofBloque = oficialBloque(b).precio; // 13/11/2026
+                          const conDetalle = Boolean(detalle[c._key]); // 18/11/2026
+                          const fondo = j % 2 === 0 ? 'bg-gray-50' : 'bg-white';
                           return (
-                            <tr key={c._key} data-fila={c._key}
-                              className={filaMarcada === c._key ? 'bg-red-50 outline outline-2 -outline-offset-2 outline-red-500' : j % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                              <td className="sticky left-0 z-10 bg-inherit w-9 min-w-[36px] px-2 py-1.5 text-gray-400">{j + 1}</td>
-                              <td data-campo="vendedor" className="sticky left-9 z-10 bg-inherit shadow-[2px_0_0_#e5e7eb] px-2 py-1.5 min-w-[220px]">
-                                <SelectBuscable value={c.third_party_id} onChange={cambiar('third_party_id')} disabled={fijo} aria-label={`Compra ${j + 1}: se le compra a`} className={`${inputClass} ${c.third_party_id ? '' : 'ring-1 ring-amber-400'}`}>
+                            <Fragment key={c._key}>
+                            <tr data-fila={c._key}
+                              className={filaMarcada === c._key ? 'bg-red-50 outline outline-2 -outline-offset-2 outline-red-500' : fondo}>
+                              {/* 18/11/2026: N° de la compra, ⋯ abre el detalle (F2) y las letras avisan qué tiene adentro */}
+                              <td className="sticky left-0 z-10 bg-inherit w-9 min-w-[36px] px-1 py-1.5 text-center align-top">
+                                <span className="block text-sm font-bold text-gray-700">{j + 1}</span>
+                                <button type="button" tabIndex={-1} onClick={() => setDetalle((p) => ({ ...p, [c._key]: !conDetalle }))} aria-expanded={conDetalle}
+                                  title="Transporte, bono y notas de la compra (F2)" aria-label={`Detalle de la compra ${j + 1}`}
+                                  className={`mt-0.5 rounded px-1 text-xs font-bold leading-4 ${conDetalle ? 'bg-primario text-white' : 'text-primario hover:bg-primario-claro'}`}>⋯</button>
+                                {(c.reconoce_transporte || n(c.transport_deduction) > 0 || c.con_bono || c.notes) && (
+                                  <span className="block text-[10px] font-bold text-amber-700" title={[c.reconoce_transporte || n(c.transport_deduction) > 0 ? 'T = transporte' : '', c.con_bono ? 'B = bono' : '', c.notes ? 'N = notas' : ''].filter(Boolean).join(' · ')}>
+                                    {c.reconoce_transporte || n(c.transport_deduction) > 0 ? 'T' : ''}{c.con_bono ? 'B' : ''}{c.notes ? 'N' : ''}
+                                  </span>
+                                )}
+                              </td>
+                              <td data-campo="vendedor" data-copiar="third_party_id" className="sticky left-9 z-10 bg-inherit shadow-[2px_0_0_#e5e7eb] px-2 py-1.5 min-w-[220px]">
+                                <SelectBuscable value={c.third_party_id} onChange={cambiar('third_party_id')} disabled={fijo} abrirAlEnfocar={false} tabElige aria-label={`Compra ${j + 1}: se le compra a`} className={`${inputClass} ${c.third_party_id ? '' : 'ring-1 ring-amber-400'}`}>
                                   <option value="">SELECCIONAR...</option>
                                   <optgroup label="COMERCIALES / COMERCIALIZADORAS">
                                     {comercializadoras.map((v) => <option key={v.id} value={String(v.id)}>{v.name}</option>)}
@@ -1178,8 +1269,8 @@ export default function PurchaseAllocationPage() {
                                 </SelectBuscable>
                                 {fijo && <span className="flex items-center gap-1 text-xs text-gray-500 mt-0.5"><Lock size={12} /> {c.bloqueo}</span>}
                               </td>
-                              <td className="px-2 py-1.5 min-w-[200px]">
-                                <SelectBuscable value={c.pending_split ? POR_DIVIDIR : c.producer_id} onChange={cambiar('producer_id')} disabled={!esComercial || c.liquidada} title={esComercial ? 'Productor que realmente cosecha' : 'Compra directa al productor'} className={inputClass}>
+                              <td data-campo="productor" data-copiar="producer_id" className="px-2 py-1.5 min-w-[200px]">
+                                <SelectBuscable value={c.pending_split ? POR_DIVIDIR : c.producer_id} onChange={cambiar('producer_id')} disabled={!esComercial || c.liquidada} abrirAlEnfocar={false} tabElige title={esComercial ? 'Productor que realmente cosecha' : 'Compra directa al productor'} className={inputClass}>
                                   <option value="">{esComercial ? '—' : 'COMPRA DIRECTA'}</option>
                                   {/* 13/11/2026: compra global; se divide cuando llega el cuadro de despacho */}
                                   {esComercial && <option value={POR_DIVIDIR}>POR DIVIDIR (CUADRO PENDIENTE)</option>}
@@ -1192,10 +1283,10 @@ export default function PurchaseAllocationPage() {
                                   </span>
                                 )}
                               </td>
-                              <td className="px-2 py-1.5 min-w-[190px]">
+                              <td data-campo="finca" data-copiar="farm_id" className="px-2 py-1.5 min-w-[190px]">
                                 <SelectBuscable value={c.farm_id}
                                   onChange={(e) => (e.target.value === '__nueva' ? abrirNuevaFinca(b._key, c) : cambiarCompra(b._key, c._key, 'farm_id', e.target.value))}
-                                  disabled={c.liquidada || !duenoFinca(c) || c.pending_split}
+                                  disabled={c.liquidada || !duenoFinca(c) || c.pending_split} abrirAlEnfocar={false} tabElige
                                   title={c.pending_split ? 'La finca se elige al dividir la compra' : !duenoFinca(c) ? 'Elige primero a quién se le compra' : 'Fincas del productor real (o del vendedor si es compra directa)'}
                                   className={`${inputClass} ${!c.farm_id && !c.liquidada && duenoFinca(c) && !c.pending_split ? 'ring-1 ring-amber-400' : ''}`}>
                                   <option value="">{c.farm_name && !c.farm_id ? `${c.farm_name} (SIN CATÁLOGO)` : 'SELECCIONAR...'}</option>
@@ -1205,7 +1296,7 @@ export default function PurchaseAllocationPage() {
                                 {/* 13/11/2026 (test de usabilidad): el código MAG va debajo de la finca (sale de ella; ya no es columna) */}
                                 {c.mag_code && <span className="block mt-0.5 text-xs text-gray-500" title="Código MAG: sale de la finca elegida (se corrige en Configuración → Fincas)">MAG {c.mag_code}</span>}
                               </td>
-                              <td className="px-2 py-1.5 min-w-[170px]">
+                              <td data-campo="comerciales" data-copiar="executive" className="px-2 py-1.5 min-w-[170px]">
                                 {/* 11/11/2026: uno o varios comerciales de la lista (los que ya tenía la compra se respetan) */}
                                 {(() => {
                                   const elegidos = listaComerciales(c.executive);
@@ -1235,11 +1326,11 @@ export default function PurchaseAllocationPage() {
                                 })()}
                               </td>
                               {/* 13/11/2026 (Peter): corte, semana de compra y entrega en una misma línea (no uno sobre otro) */}
-                              <td className="px-2 py-1.5 min-w-[430px]">
+                              <td data-campo="corte" className="px-2 py-1.5 min-w-[430px]">
                                 <div className="flex items-center gap-1">
-                                  <input type="date" value={c.cut_date} onChange={cambiar('cut_date')} disabled={c.liquidada} aria-label={`Compra ${j + 1}: día de corte`} className={`${inputCorto} w-36 shrink-0`} />
+                                  <input type="date" data-copiar="cut_date" value={c.cut_date} onChange={cambiar('cut_date')} disabled={c.liquidada} aria-label={`Compra ${j + 1}: día de corte`} className={`${inputCorto} w-36 shrink-0`} />
                                   {semanasCompra.length > 1 && (
-                                    <select value={c.purchase_week || String(pedido.week)} onChange={cambiar('purchase_week')} disabled={Boolean(c.bloqueo)}
+                                    <select data-copiar="purchase_week" value={c.purchase_week || String(pedido.week)} onChange={cambiar('purchase_week')} disabled={Boolean(c.bloqueo)}
                                       aria-label="Semana de compra"
                                       title={c.bloqueo ? `No se cambia: ${c.bloqueo}` : 'Semana de compra (se liquida y cuenta en el contrato en esa semana)'}
                                       className={`${inputCorto} w-32 shrink-0 text-xs ${semanaDeCompra(c) !== pedido.week ? 'bg-sky-100 font-semibold' : ''}`}>
@@ -1247,22 +1338,22 @@ export default function PurchaseAllocationPage() {
                                     </select>
                                   )}
                                   <SelectBuscable value={c.delivery_port_id} onChange={cambiar('delivery_port_id')} disabled={c.liquidada}
-                                    aria-label={`Compra ${j + 1}: entrega en`} title="Dónde entrega la fruta" className={`${inputCorto} flex-1 min-w-[120px] text-xs`}>
+                                    abrirAlEnfocar={false} tabElige inputProps={{ 'data-copiar': 'delivery_port_id' }} aria-label={`Compra ${j + 1}: entrega en`} title="Dónde entrega la fruta" className={`${inputCorto} flex-1 min-w-[120px] text-xs`}>
                                     <option value="">ENTREGA EN…</option>
                                     {puertosSalida.map((p) => <option key={p.id} value={String(p.id)}>{p.name}</option>)}
                                   </SelectBuscable>
                                 </div>
                               </td>
-                              <td className="px-2 py-1.5 min-w-[150px]">
-                                <SelectBuscable value={c.pickup_warehouse_id} onChange={cambiar('pickup_warehouse_id')} disabled={fijo} title={fijo ? `No se cambia: ${c.bloqueo}` : 'Bodega donde retira cartón y materiales'} className={`${inputClass} ${c.pickup_warehouse_id ? '' : 'ring-1 ring-amber-400'}`}>
+                              <td data-campo="bodega" data-copiar="pickup_warehouse_id" className="px-2 py-1.5 min-w-[150px]">
+                                <SelectBuscable value={c.pickup_warehouse_id} onChange={cambiar('pickup_warehouse_id')} disabled={fijo} abrirAlEnfocar={false} tabElige title={fijo ? `No se cambia: ${c.bloqueo}` : 'Bodega donde retira cartón y materiales'} className={`${inputClass} ${c.pickup_warehouse_id ? '' : 'ring-1 ring-amber-400'}`}>
                                   <option value="">SELECCIONAR...</option>
                                   {bodegas.filter((w) => w.status || String(w.id) === c.pickup_warehouse_id).map((w) => <option key={w.id} value={String(w.id)}>{w.name}</option>)}
                                 </SelectBuscable>
                               </td>
                               {/* 12/11/2026: al entrar se selecciona lo escrito (se digita encima) y Enter baja a la compra siguiente */}
-                              <td data-campo="cajas" className="px-2 py-1.5 min-w-[90px]"><CampoNumero decimales={0} value={c.boxes} onChange={cambiar('boxes')} disabled={c.liquidada} onFocus={seleccionar} onKeyDown={enterBaja(b._key, c._key, 'cajas')} aria-label={`Compra ${j + 1}: cajas`} className={`${inputClass} text-right font-semibold ${n(c.boxes) ? '' : 'ring-1 ring-amber-400'}`} /></td>
+                              <td data-campo="cajas" data-copiar="boxes" className="px-2 py-1.5 min-w-[90px]"><CampoNumero decimales={0} value={c.boxes} onChange={cambiar('boxes')} disabled={c.liquidada} onFocus={seleccionar} aria-label={`Compra ${j + 1}: cajas`} className={`${inputClass} text-right font-semibold ${n(c.boxes) ? '' : 'ring-1 ring-amber-400'}`} /></td>
                               <td data-campo="real" className="px-2 py-1.5 min-w-[90px]">
-                                <CampoNumero decimales={2} value={c.real_price} onChange={cambiar('real_price')} disabled={c.liquidada} onFocus={seleccionar} onKeyDown={enterBaja(b._key, c._key, 'real')} aria-label={`Compra ${j + 1}: precio real`} className={`${inputClass} text-right font-semibold`} />
+                                <CampoNumero decimales={2} value={c.real_price} onChange={cambiar('real_price')} disabled={c.liquidada} onFocus={seleccionar} data-copiar="real_price" aria-label={`Compra ${j + 1}: precio real`} className={`${inputClass} text-right font-semibold`} />
                                 {/* 13/11/2026: el oficial va en el encabezado del bloque; aquí solo si esta compra tiene otro (o no tiene) */}
                                 {editOfFila === c._key ? (
                                   <div className="mt-0.5">
@@ -1282,7 +1373,7 @@ export default function PurchaseAllocationPage() {
                                   </button>
                                 ) : null}
                               </td>
-                              <td className="px-2 py-1.5 min-w-[170px]">
+                              <td data-campo="negociacion" data-copiar={b.presentation === 'PACKED' ? undefined : 'negotiation_type'} className="px-2 py-1.5 min-w-[170px]">
                                 {/* 02/11/2026: la fruta PACKED se compra siempre SPOT (precio negociado con cada productor) */}
                                 {/* 13/11/2026: un clic para CONTRATO/SPOT y la forma de pago como insignia (se cambia con un clic) */}
                                 <div className="flex items-center gap-1">
@@ -1376,92 +1467,16 @@ export default function PurchaseAllocationPage() {
                                   <span className="block text-xs font-semibold text-primario mt-1" title="El vendedor tiene contrato vigente en la semana de compra; esta compra va SPOT">TIENE CONTRATO</span>
                                 )}
                               </td>
-                              <td className="px-2 py-1.5 min-w-[170px]">
-                                {/* 13/11/2026 (Peter): solo se RECONOCE transporte: una casilla y el $/caja. El "descontar" ya no se
-                                    digita; las compras viejas que lo tienen lo muestran para verlo o quitarlo. */}
-                                {n(c.transport_deduction) > 0 && (
-                                  <span className="flex items-center justify-end gap-1 text-xs font-semibold text-red-600" title="Transporte a descontar registrado antes (monto total que se descuenta al liquidar)">
-                                    DESCONTAR $ {formatoDinero(c.transport_deduction)}
-                                    {!c.liquidada && <button type="button" onClick={() => cambiarCompra(b._key, c._key, 'transport_deduction', '')} aria-label="Quitar transporte a descontar" title="Quitar" className="hover:text-red-800"><X size={11} /></button>}
-                                  </span>
-                                )}
-                                {/* 11/11/2026: cuando el productor pone el transporte, se le reconoce $/caja (se paga por las cajas que llegan según tarja)
-                                    13/11/2026 (Peter): casilla y $/caja en la misma línea; el estimado va en el aviso al pasar el mouse */}
-                                <div className="flex items-center gap-1"
-                                  title={n(c.transport_recognized_rate) > 0 && n(c.boxes) > 0 ? `≈ + $ ${formatoDinero(n(c.boxes) * n(c.transport_recognized_rate))} (estimado con las cajas compradas; se paga por las de la tarja)` : 'El productor puso el transporte: se le paga $/caja por las cajas que lleguen según tarja'}>
-                                  <label className="flex items-center gap-1 text-xs text-gray-600 whitespace-nowrap">
-                                    <input type="checkbox" checked={c.reconoce_transporte} disabled={c.liquidada}
-                                      onChange={(e) => { cambiar('reconoce_transporte')({ target: { value: e.target.checked } }); if (!e.target.checked) cambiar('transport_recognized_rate')({ target: { value: '' } }); }} />
-                                    RECONOCER
-                                  </label>
-                                  {c.reconoce_transporte && (
-                                    <CampoNumero decimales={4} max={5} value={c.transport_recognized_rate} onChange={cambiar('transport_recognized_rate')} disabled={c.liquidada} placeholder="0,30" aria-label="Transporte reconocido por caja"
-                                      className={`${inputCorto} w-20 text-right ${n(c.transport_recognized_rate) ? '' : 'ring-1 ring-amber-400'}`} />
-                                  )}
-                                </div>
-                              </td>
-                              {/* 13/11/2026: BONO / EXTRA al productor ($/caja aparte de la fruta; se paga por tarja) */}
-                              {/* 13/11/2026 (Peter): casilla BONO como en Transporte; tarifa, motivo, detalle y ÷ CAJAS en la misma línea */}
-                              <td className="px-2 py-1.5 min-w-[200px]"
-                                title={n(c.bonus_rate) > 0 && n(c.boxes) > 0 ? `≈ + $ ${formatoDinero(n(c.boxes) * n(c.bonus_rate))} (estimado con las cajas compradas; se paga aparte por las de la tarja)` : 'Bono / extra por caja que se paga aparte del precio (cinta, empaque especial...)'}>
-                                <div className="flex items-center gap-1">
-                                  <label className="flex items-center gap-1 text-xs text-gray-600 whitespace-nowrap">
-                                    <input type="checkbox" checked={c.con_bono} disabled={c.liquidada} aria-label={`Compra ${j + 1}: tiene bono`}
-                                      onChange={(e) => {
-                                        cambiar('con_bono')({ target: { value: e.target.checked } });
-                                        if (!e.target.checked) { cambiarCompra(b._key, c._key, 'bonus_rate', ''); cambiarCompra(b._key, c._key, 'bonus_reason', ''); cambiarCompra(b._key, c._key, 'bonus_detail', ''); return; }
-                                        // En un bloque PACKED se propone CINTA; el cursor pasa al $/caja
-                                        if (!c.bonus_reason && b.presentation === 'PACKED') cambiarCompra(b._key, c._key, 'bonus_reason', 'CINTA');
-                                        setEnfocar({ fila: c._key, campo: 'bono' });
-                                      }} />
-                                    BONO
-                                  </label>
-                                  {c.con_bono && (
-                                    <>
-                                      {bonoTotal?.cKey === c._key ? (
-                                        <>
-                                          <CampoNumero decimales={2} value={bonoTotal.valor} autoFocus placeholder="TOTAL $" aria-label="Monto total del bono"
-                                            onChange={(e) => setBonoTotal((p) => ({ ...p, valor: e.target.value }))} className={`${inputCorto} w-24 text-right text-xs`} />
-                                          <button type="button" disabled={!n(bonoTotal.valor) || !n(c.boxes)}
-                                            onClick={() => { cambiarCompra(b._key, c._key, 'bonus_rate', String(Math.round((n(bonoTotal.valor) / n(c.boxes)) * 10000) / 10000)); setBonoTotal(null); }}
-                                            className="px-2 py-1 rounded-lg text-xs font-semibold bg-guardar text-guardar-texto hover:bg-guardar-hover disabled:opacity-40">OK</button>
-                                        </>
-                                      ) : (
-                                        <CampoNumero decimales={4} max={5} value={c.bonus_rate} disabled={c.liquidada} data-campo="bono" onFocus={seleccionar} onKeyDown={enterBaja(b._key, c._key, 'bono')} placeholder="$/CAJA"
-                                          onChange={cambiar('bonus_rate')} aria-label={`Compra ${j + 1}: bono por caja`}
-                                          className={`${inputCorto} w-20 text-right ${n(c.bonus_rate) ? '' : 'ring-1 ring-amber-400'}`} />
-                                      )}
-                                      {/* Si Comercial tiene un monto total: se reparte entre las cajas */}
-                                      {!c.liquidada && bonoTotal?.cKey !== c._key && (
-                                        <button type="button" onClick={() => setBonoTotal({ cKey: c._key, valor: '' })} disabled={!n(c.boxes)}
-                                          title="Tengo un monto total: dividirlo entre las cajas compradas" aria-label="Dividir un monto total entre las cajas"
-                                          className="text-xs font-semibold text-primario hover:underline disabled:opacity-40 whitespace-nowrap">÷ CAJAS</button>
-                                      )}
-                                      <SelectBuscable value={c.bonus_reason} onChange={cambiar('bonus_reason')} disabled={c.liquidada} aria-label={`Compra ${j + 1}: motivo del bono`}
-                                        className={`${inputCorto} w-40 text-xs ${c.bonus_reason ? '' : 'ring-1 ring-amber-400'}`}>
-                                        <option value="">¿MOTIVO?</option>
-                                        {Object.entries(MOTIVOS_BONO).filter(([k]) => k !== 'CINTA' || b.presentation === 'PACKED' || c.bonus_reason === 'CINTA')
-                                          .map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                                      </SelectBuscable>
-                                      {c.bonus_reason === 'OTRO' && (
-                                        <input value={c.bonus_detail} maxLength={100} onChange={mayus('bonus_detail')} disabled={c.liquidada} placeholder="DETALLE"
-                                          aria-label={`Compra ${j + 1}: detalle del bono`} className={`${inputCorto} w-36 text-xs ${c.bonus_detail.trim() ? '' : 'ring-1 ring-amber-400'}`} />
-                                      )}
-                                    </>
-                                  )}
-                                </div>
-                              </td>
+                              {/* 18/11/2026 (grilla): Total real arriba y nota de crédito abajo, en una sola columna */}
                               <td className="px-2 py-1.5 text-right whitespace-nowrap"
                                 title={n(c.bonus_rate) ? `Fruta $ ${formatoDinero(n(c.boxes) * n(c.real_price))} · Bono $ ${formatoDinero(n(c.boxes) * n(c.bonus_rate))}` : undefined}>
-                                {c.real_price === '' ? <span className="text-xs text-amber-600 font-semibold">SIN PRECIO</span> : `$ ${formatoDinero(n(c.boxes) * (n(c.real_price) + n(c.bonus_rate)))}`}
+                                {c.real_price === '' ? <span className="text-xs text-amber-600 font-semibold">SIN PRECIO</span> : <span className="font-semibold">$ {formatoDinero(n(c.boxes) * (n(c.real_price) + n(c.bonus_rate)))}</span>}
+                                <span className="block text-xs mt-0.5" title="Nota de crédito: cajas × (oficial − real), la entrega el vendedor">
+                                  {nc === null ? <span className="text-gray-400">NC —</span>
+                                    : realPasaOficial(c) ? <span className="font-semibold text-amber-700" title="El precio real es mayor al oficial: la nota de crédito queda en 0">NC $ 0,00 · REAL &gt; OFICIAL</span>
+                                      : <span className="text-gray-600">NC $ {formatoDinero(nc)}</span>}
+                                </span>
                               </td>
-                              <td className="px-2 py-1.5 text-right whitespace-nowrap">
-                                {/* 13/11/2026: si el real pasa el oficial la NC es 0 (se avisa) */}
-                                {nc === null ? <span className="text-gray-400">—</span>
-                                  : realPasaOficial(c) ? <span className="text-xs font-semibold text-amber-700" title="El precio real es mayor al oficial: la nota de crédito queda en 0">$ 0,00 · REAL &gt; OFICIAL</span>
-                                    : <span className="font-semibold text-gray-700">$ {formatoDinero(nc)}</span>}
-                              </td>
-                              <td className="px-2 py-1.5 min-w-[160px]"><input value={c.notes} maxLength={255} onChange={mayus('notes')} placeholder="EJ. CONSOLIDADO EN PTO" className={inputClass} /></td>
                               <td className="px-2 py-1.5 min-w-[150px]">
                                 {!c.id ? (
                                   <span className="text-xs text-gray-400" title="Primero guarda las compras">GUARDA PARA ENVIAR</span>
@@ -1508,11 +1523,108 @@ export default function PurchaseAllocationPage() {
                                 </button>
                               </td>
                             </tr>
+                            {/* 18/11/2026 (grilla): detalle de la compra (⋯ o F2): transporte reconocido, bono / extra y notas */}
+                            {conDetalle && (
+                              <tr data-fila={`${c._key}-det`} data-detalle-compra className={`${fondo} border-b-2 border-primario/30`}>
+                                <td colSpan={13} className="px-3 py-2">
+                                  <div className="sticky left-3 flex flex-wrap items-start gap-6 w-fit">
+                                    <div><p className={etiqueta}>Transporte</p>
+                              <div className="px-2 py-1.5 min-w-[170px]">
+                                {/* 13/11/2026 (Peter): solo se RECONOCE transporte: una casilla y el $/caja. El "descontar" ya no se
+                                    digita; las compras viejas que lo tienen lo muestran para verlo o quitarlo. */}
+                                {n(c.transport_deduction) > 0 && (
+                                  <span className="flex items-center justify-end gap-1 text-xs font-semibold text-red-600" title="Transporte a descontar registrado antes (monto total que se descuenta al liquidar)">
+                                    DESCONTAR $ {formatoDinero(c.transport_deduction)}
+                                    {!c.liquidada && <button type="button" onClick={() => cambiarCompra(b._key, c._key, 'transport_deduction', '')} aria-label="Quitar transporte a descontar" title="Quitar" className="hover:text-red-800"><X size={11} /></button>}
+                                  </span>
+                                )}
+                                {/* 11/11/2026: cuando el productor pone el transporte, se le reconoce $/caja (se paga por las cajas que llegan según tarja)
+                                    13/11/2026 (Peter): casilla y $/caja en la misma línea; el estimado va en el aviso al pasar el mouse */}
+                                <div className="flex items-center gap-1"
+                                  title={n(c.transport_recognized_rate) > 0 && n(c.boxes) > 0 ? `≈ + $ ${formatoDinero(n(c.boxes) * n(c.transport_recognized_rate))} (estimado con las cajas compradas; se paga por las de la tarja)` : 'El productor puso el transporte: se le paga $/caja por las cajas que lleguen según tarja'}>
+                                  <label className="flex items-center gap-1 text-xs text-gray-600 whitespace-nowrap">
+                                    <input type="checkbox" checked={c.reconoce_transporte} disabled={c.liquidada}
+                                      onChange={(e) => { cambiar('reconoce_transporte')({ target: { value: e.target.checked } }); if (!e.target.checked) cambiar('transport_recognized_rate')({ target: { value: '' } }); }} />
+                                    RECONOCER
+                                  </label>
+                                  {c.reconoce_transporte && (
+                                    <CampoNumero decimales={4} max={5} value={c.transport_recognized_rate} onChange={cambiar('transport_recognized_rate')} disabled={c.liquidada} placeholder="0,30" aria-label="Transporte reconocido por caja"
+                                      className={`${inputCorto} w-20 text-right ${n(c.transport_recognized_rate) ? '' : 'ring-1 ring-amber-400'}`} />
+                                  )}
+                                </div>
+                              </div>
+                                    </div>
+                                    <div><p className={etiqueta}>Bono / extra</p>
+                              {/* 13/11/2026: BONO / EXTRA al productor ($/caja aparte de la fruta; se paga por tarja) */}
+                              {/* 13/11/2026 (Peter): casilla BONO como en Transporte; tarifa, motivo, detalle y ÷ CAJAS en la misma línea */}
+                              <div className="px-2 py-1.5 min-w-[200px]"
+                                title={n(c.bonus_rate) > 0 && n(c.boxes) > 0 ? `≈ + $ ${formatoDinero(n(c.boxes) * n(c.bonus_rate))} (estimado con las cajas compradas; se paga aparte por las de la tarja)` : 'Bono / extra por caja que se paga aparte del precio (cinta, empaque especial...)'}>
+                                <div className="flex items-center gap-1">
+                                  <label className="flex items-center gap-1 text-xs text-gray-600 whitespace-nowrap">
+                                    <input type="checkbox" checked={c.con_bono} disabled={c.liquidada} aria-label={`Compra ${j + 1}: tiene bono`}
+                                      onChange={(e) => {
+                                        cambiar('con_bono')({ target: { value: e.target.checked } });
+                                        if (!e.target.checked) { cambiarCompra(b._key, c._key, 'bonus_rate', ''); cambiarCompra(b._key, c._key, 'bonus_reason', ''); cambiarCompra(b._key, c._key, 'bonus_detail', ''); return; }
+                                        // En un bloque PACKED se propone CINTA; el cursor pasa al $/caja
+                                        if (!c.bonus_reason && b.presentation === 'PACKED') cambiarCompra(b._key, c._key, 'bonus_reason', 'CINTA');
+                                        setEnfocar({ fila: `${c._key}-det`, campo: 'bono' });
+                                      }} />
+                                    BONO
+                                  </label>
+                                  {c.con_bono && (
+                                    <>
+                                      {bonoTotal?.cKey === c._key ? (
+                                        <>
+                                          <CampoNumero decimales={2} value={bonoTotal.valor} autoFocus placeholder="TOTAL $" aria-label="Monto total del bono"
+                                            onChange={(e) => setBonoTotal((p) => ({ ...p, valor: e.target.value }))} className={`${inputCorto} w-24 text-right text-xs`} />
+                                          <button type="button" disabled={!n(bonoTotal.valor) || !n(c.boxes)}
+                                            onClick={() => { cambiarCompra(b._key, c._key, 'bonus_rate', String(Math.round((n(bonoTotal.valor) / n(c.boxes)) * 10000) / 10000)); setBonoTotal(null); }}
+                                            className="px-2 py-1 rounded-lg text-xs font-semibold bg-guardar text-guardar-texto hover:bg-guardar-hover disabled:opacity-40">OK</button>
+                                        </>
+                                      ) : (
+                                        <CampoNumero decimales={4} max={5} value={c.bonus_rate} disabled={c.liquidada} data-campo="bono" onFocus={seleccionar} placeholder="$/CAJA"
+                                          onChange={cambiar('bonus_rate')} aria-label={`Compra ${j + 1}: bono por caja`}
+                                          className={`${inputCorto} w-20 text-right ${n(c.bonus_rate) ? '' : 'ring-1 ring-amber-400'}`} />
+                                      )}
+                                      {/* Si Comercial tiene un monto total: se reparte entre las cajas */}
+                                      {!c.liquidada && bonoTotal?.cKey !== c._key && (
+                                        <button type="button" onClick={() => setBonoTotal({ cKey: c._key, valor: '' })} disabled={!n(c.boxes)}
+                                          title="Tengo un monto total: dividirlo entre las cajas compradas" aria-label="Dividir un monto total entre las cajas"
+                                          className="text-xs font-semibold text-primario hover:underline disabled:opacity-40 whitespace-nowrap">÷ CAJAS</button>
+                                      )}
+                                      <SelectBuscable value={c.bonus_reason} onChange={cambiar('bonus_reason')} disabled={c.liquidada} aria-label={`Compra ${j + 1}: motivo del bono`}
+                                        className={`${inputCorto} w-40 text-xs ${c.bonus_reason ? '' : 'ring-1 ring-amber-400'}`}>
+                                        <option value="">¿MOTIVO?</option>
+                                        {Object.entries(MOTIVOS_BONO).filter(([k]) => k !== 'CINTA' || b.presentation === 'PACKED' || c.bonus_reason === 'CINTA')
+                                          .map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                                      </SelectBuscable>
+                                      {c.bonus_reason === 'OTRO' && (
+                                        <input value={c.bonus_detail} maxLength={100} onChange={mayus('bonus_detail')} disabled={c.liquidada} placeholder="DETALLE"
+                                          aria-label={`Compra ${j + 1}: detalle del bono`} className={`${inputCorto} w-36 text-xs ${c.bonus_detail.trim() ? '' : 'ring-1 ring-amber-400'}`} />
+                                      )}
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                                    </div>
+                                    <div className="min-w-[280px]"><p className={etiqueta}>Notas</p>
+                                      <input value={c.notes} maxLength={255} onChange={mayus('notes')} placeholder="EJ. CONSOLIDADO EN PTO" aria-label={`Compra ${j + 1}: notas`} className={inputClass} />
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                            </Fragment>
                           );
                         })}
                       </tbody>
                     </table>
                   </div>
+                  {/* 18/11/2026 (grilla): atajos del teclado */}
+                  <p className="mt-1.5 text-[11px] text-gray-500">
+                    <strong>Teclado:</strong> escribe para buscar y <kbd>Tab</kbd> elige · <kbd>Enter</kbd> baja (en la última crea otra compra) · <kbd>Shift+Enter</kbd> sube ·
+                    {' '}<kbd>Ctrl+D</kbd> copia de la compra de arriba · <kbd>Ctrl+Shift+D</kbd> duplica · <kbd>F2</kbd> o ⋯ transporte, bono y notas · <kbd>Ctrl+S</kbd> guarda
+                  </p>
                   <button type="button" onClick={() => agregarCompra(b._key)} data-agregar-compra={b._key} className="mt-3 flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-guardar text-guardar-texto hover:bg-guardar-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primario transition">
                     <Plus size={18} /> Agregar compra
                   </button>

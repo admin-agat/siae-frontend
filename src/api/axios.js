@@ -4,6 +4,9 @@ import axios from "axios";
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api",
   headers: { Accept: "application/json" },
+  // 17/11/2026 (seguridad/robustez): sin límite, con el servidor colgado o la red a medias la pantalla
+  // quedaba en "Cargando..." para siempre. 60 s alcanza para los reportes más pesados.
+  timeout: 60000,
 });
 
 // Agrega el token automáticamente en cada request
@@ -49,6 +52,13 @@ api.interceptors.response.use(
         window.dispatchEvent(new Event("siae:soltar-aviso")); // 11/11/2026: debe cambiar la clave: sin el aviso de "¿salir del sitio?"
         window.location.assign("/cambiar-clave");
       }
+    }
+
+    // 17/11/2026: sin respuesta del servidor (tiempo agotado o sin internet): mensaje claro en vez de "Network Error"
+    if (!error.response && error.code !== "ERR_CANCELED") {
+      error.response = { status: 0, data: { message: error.code === "ECONNABORTED"
+        ? "EL SERVIDOR TARDÓ DEMASIADO EN RESPONDER. REVISA TU CONEXIÓN E INTÉNTALO DE NUEVO."
+        : "SIN CONEXIÓN CON EL SERVIDOR. REVISA TU INTERNET E INTÉNTALO DE NUEVO." } };
     }
 
     if (status === 429 && error.response?.data) {
