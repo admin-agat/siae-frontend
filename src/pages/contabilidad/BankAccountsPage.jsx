@@ -2,8 +2,10 @@
 // Solo Contabilidad y el ADMIN las ven (no salen en Terceros) y cada cambio queda en la bitácora.
 // Pestaña BANCOS: el código de cada banco en el archivo de Banco Pichincha (lo da el banco en su tabla).
 import { useEffect, useState } from 'react';
-import { Pencil, Plus } from 'lucide-react';
-import { getCuentasProveedores, guardarCuenta, getBancos, crearBanco, actualizarBanco } from '../../api/accounting';
+import { Pencil, Plus, ShieldCheck } from 'lucide-react';
+import { getCuentasProveedores, guardarCuenta, getBancos, crearBanco, actualizarBanco, verificarCuenta } from '../../api/accounting';
+import DialogoConfirmacion from '../../components/common/DialogoConfirmacion';
+import EstadoCuenta from '../../components/common/EstadoCuenta';
 import EncabezadoPagina from '../../components/common/EncabezadoPagina';
 import TablaEstandar from '../../components/common/TablaEstandar';
 import ModalShell from '../../components/common/ModalShell';
@@ -146,6 +148,7 @@ export default function BankAccountsPage() {
     const [modalCuenta, setModalCuenta] = useState(null);
     const [modalBanco, setModalBanco] = useState(null); // null | { banco }
     const [toast, setToast] = useState(null);
+    const [aVerificar, setAVerificar] = useState(null); // 18/11/2026: tercero cuya cuenta se va a verificar
 
     const pedir = () =>
         Promise.all([getCuentasProveedores(), getBancos()])
@@ -162,7 +165,23 @@ export default function BankAccountsPage() {
 
     const conCuenta = terceros.filter((t) => t.bank_account);
     const sinCodigo = bancos.filter((b) => b.status && !b.code);
-    const visibles = terceros.filter((t) => filtro === 'TODOS' || (filtro === 'CON' ? t.bank_account : !t.bank_account));
+    // 18/11/2026 (Peter): cuentas PENDIENTES de verificar (las nuevas de Liquidaciones y las que se cambiaron)
+    const porVerificar = conCuenta.filter((t) => !t.bank_account.verified_at);
+    const visibles = terceros.filter((t) => filtro === 'TODOS'
+        || (filtro === 'CON' && t.bank_account) || (filtro === 'SIN' && !t.bank_account)
+        || (filtro === 'POR_VERIFICAR' && t.bank_account && !t.bank_account.verified_at));
+
+    const verificar = async () => {
+        try {
+            await verificarCuenta(aVerificar.id);
+            setAVerificar(null);
+            pedir();
+            setToast({ tipo: 'exito', mensaje: 'Cuenta verificada.' });
+        } catch (err) {
+            setAVerificar(null);
+            setToast({ tipo: 'error', mensaje: err.response?.data?.message || 'No se pudo verificar la cuenta.' });
+        }
+    };
     const pestanaBoton = (activa) => `px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition ${activa ? 'bg-primario text-white' : 'text-gray-600 hover:bg-gray-100'}`;
 
     return (
@@ -182,7 +201,7 @@ export default function BankAccountsPage() {
                 </div>
                 {pestana === 'CUENTAS' && (
                     <div className="flex gap-1 bg-white border rounded-lg p-1">
-                        {[['TODOS', 'TODOS'], ['CON', 'CON CUENTA'], ['SIN', 'SIN CUENTA']].map(([k, v]) => (
+                        {[['TODOS', 'TODOS'], ['CON', 'CON CUENTA'], ['SIN', 'SIN CUENTA'], ['POR_VERIFICAR', `POR VERIFICAR (${porVerificar.length})`]].map(([k, v]) => (
                             <button key={k} type="button" onClick={() => setFiltro(k)} className={pestanaBoton(filtro === k)}>{v}</button>
                         ))}
                     </div>
@@ -199,14 +218,37 @@ export default function BankAccountsPage() {
                         { titulo: 'Banco', render: (t) => t.bank_account?.bank?.name || <span className="text-red-600 text-xs font-semibold">SIN CUENTA</span> },
                         { titulo: 'Cuenta', render: (t) => (t.bank_account ? <span className="whitespace-nowrap">{t.bank_account.account_type === 'CORRIENTE' ? 'CTE' : 'AHO'} {t.bank_account.account_number}</span> : '—') },
                         { titulo: 'Titular', render: (t) => (t.bank_account ? <div><p>{t.bank_account.holder_name}</p><p className="text-xs text-gray-500">{TIPOS_ID[t.bank_account.holder_id_type]} {t.bank_account.holder_id}</p></div> : '—') },
+                        // 18/11/2026 (Peter): estado de la cuenta; quién la registró y quién la verificó
+                        {
+                            titulo: 'Estado',
+                            render: (t) => (!t.bank_account ? '—' : (
+                                <div>
+                                    <EstadoCuenta verificada={Boolean(t.bank_account.verified_at)} />
+                                    <p className="text-[11px] text-gray-500 mt-0.5 whitespace-nowrap">
+                                        {t.bank_account.verified_at
+                                            ? `${t.bank_account.verifier?.name || '—'} · ${String(t.bank_account.verified_at).slice(0, 10).split('-').reverse().join('/')}`
+                                            : `Registró ${t.bank_account.updater?.name || '—'}`}
+                                    </p>
+                                </div>
+                            )),
+                        },
                         // 18/11/2026 (Peter): botones de acciones con el estándar de color
                         {
                             titulo: 'Acciones',
                             render: (t) => (
-                                <button type="button" onClick={() => setModalCuenta(t)} title={t.bank_account ? 'Editar cuenta' : 'Agregar cuenta'} aria-label={t.bank_account ? 'Editar cuenta' : 'Agregar cuenta'}
-                                    className="text-white p-1.5 rounded-lg shadow-sm transition bg-green-600 hover:bg-green-700">
-                                    {t.bank_account ? <Pencil size={16} /> : <Plus size={16} />}
-                                </button>
+                                <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                                    <button type="button" onClick={() => setModalCuenta(t)} title={t.bank_account ? 'Editar cuenta' : 'Agregar cuenta'} aria-label={t.bank_account ? 'Editar cuenta' : 'Agregar cuenta'}
+                                        className="text-white p-1.5 rounded-lg shadow-sm transition bg-green-600 hover:bg-green-700">
+                                        {t.bank_account ? <Pencil size={16} /> : <Plus size={16} />}
+                                    </button>
+                                    {/* 18/11/2026: verificar la cuenta después de revisarla completa */}
+                                    {t.bank_account && !t.bank_account.verified_at && (
+                                        <button type="button" onClick={() => setAVerificar(t)} title="Marcar como verificada" aria-label="Marcar como verificada"
+                                            className="text-white p-1.5 rounded-lg shadow-sm transition bg-primario hover:bg-primario-hover">
+                                            <ShieldCheck size={16} />
+                                        </button>
+                                    )}
+                                </div>
                             ),
                         },
                     ]}
@@ -239,6 +281,12 @@ export default function BankAccountsPage() {
             )}
 
             {modalCuenta && <CuentaModal tercero={modalCuenta} bancos={bancos} onClose={() => setModalCuenta(null)} onGuardado={() => { pedir(); setToast({ tipo: 'exito', mensaje: 'Cuenta guardada.' }); }} />}
+            {aVerificar && (
+                <DialogoConfirmacion titulo="Verificar cuenta bancaria" peligro={false} textoAceptar="Verificar" onCancelar={() => setAVerificar(null)} onAceptar={verificar}>
+                    ¿Revisaste banco, tipo, número y titular de la cuenta de <strong>{aVerificar.name}</strong>? Quedará VERIFICADA a tu nombre.
+                    Si después se cambia, vuelve a PENDIENTE.
+                </DialogoConfirmacion>
+            )}
             {modalBanco && <BancoModal banco={modalBanco.banco} onClose={() => setModalBanco(null)} onGuardado={() => { pedir(); setToast({ tipo: 'exito', mensaje: 'Banco guardado.' }); }} />}
         </div>
     );

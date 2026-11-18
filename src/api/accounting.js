@@ -30,3 +30,5 @@ export const actualizarBanco = (id, data) => axios.put(`/accounting/banks/${id}`
 
 export const getCuentasProveedores = () => axios.get('/accounting/bank-accounts').then((res) => res.data);
 export const guardarCuenta = (thirdPartyId, data) => axios.put(`/accounting/bank-accounts/${thirdPartyId}`, data).then((res) => res.data);
+// 18/11/2026: Contabilidad marca la cuenta VERIFICADA (si después se cambia, vuelve a PENDIENTE)
+export const verificarCuenta = (thirdPartyId) => axios.patch(`/accounting/bank-accounts/${thirdPartyId}/verify`).then((res) => res.data);

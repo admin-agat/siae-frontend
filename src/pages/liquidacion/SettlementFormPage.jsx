@@ -17,6 +17,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Calculator, X, AlertTriangle, Plus } from 'lucide-react';
 import { getSettlementPreview, createSettlement } from '../../api/settlements';
 import CuentaBancariaVendedorModal from '../../components/CuentaBancariaVendedorModal';
+import EstadoCuenta from '../../components/common/EstadoCuenta';
 import DialogoConfirmacion from '../../components/common/DialogoConfirmacion';
 import CampoNumero from '../../components/common/CampoNumero';
 import { hoyISO } from '../../utils/fecha';
@@ -185,6 +186,13 @@ export default function SettlementFormPage() {
             <Plus size={14} /> Cuenta bancaria
           </button>
         </div>
+      )}
+      {/* 18/11/2026 (Peter): con cuenta, se ve su estado (PENDIENTE hasta que Contabilidad la verifique) */}
+      {datos.cuenta_vendedor?.tiene_cuenta && (
+        <p className="text-xs text-gray-600 mb-4">
+          Cuenta del vendedor: {datos.cuenta_vendedor.banco} · {datos.cuenta_vendedor.account_type} · <span className="font-mono">{datos.cuenta_vendedor.numero}</span>{' '}
+          <EstadoCuenta verificada={datos.cuenta_vendedor.verificada} />
+        </p>
       )}
       {cuentaAbierta && (
         <CuentaBancariaVendedorModal tercero={quota.third_party} onClose={() => setCuentaAbierta(false)}

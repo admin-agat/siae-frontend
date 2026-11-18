@@ -16,6 +16,7 @@ import { useAuth } from '../../context/AuthContext';
 import { puede } from '../../routes/menu';
 import CuentaBancariaVendedorModal from '../../components/CuentaBancariaVendedorModal';
 import FichaVendedorModal from '../../components/FichaVendedorModal';
+import EstadoCuenta from '../../components/common/EstadoCuenta';
 import EncabezadoPagina from '../../components/common/EncabezadoPagina';
 import TablaEstandar from '../../components/common/TablaEstandar';
 import ModalShell from '../../components/common/ModalShell';
@@ -349,6 +350,8 @@ export default function ProducerContractsPage({ modo = 'retencion' }) {
                         render: (t) => (t.cuenta?.tiene ? (
                             <button type="button" onClick={(e) => { e.stopPropagation(); setCuentaDe(t); }} title="Ver cuenta bancaria" className="text-xs text-left whitespace-nowrap hover:underline">
                                 <span className="font-semibold">{t.cuenta.banco}</span> · {t.cuenta.account_type} · <span className="font-mono">{t.cuenta.numero}</span>
+                                {/* 18/11/2026 (Peter): PENDIENTE hasta que Contabilidad la verifique */}
+                                <span className="block mt-0.5"><EstadoCuenta verificada={t.cuenta.verificada} /></span>
                             </button>
                         ) : (
                             <button type="button" onClick={(e) => { e.stopPropagation(); setCuentaDe(t); }} title="Registrar cuenta bancaria" aria-label="Registrar cuenta bancaria"

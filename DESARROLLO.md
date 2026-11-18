@@ -273,6 +273,14 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 18/11/2026 — Cuenta bancaria PENDIENTE / VERIFICADA
+Pedido de Peter (la validación de Contabilidad, P10, que había quedado para después).
+- Toda cuenta nueva o cambiada (banco, tipo, número o titular) queda **PENDIENTE**. Cambiar solo el correo no la cambia. **Contabilidad** (o ADMIN) la revisa completa en Cuentas bancarias y la marca **VERIFICADA** con el botón azul (escudo); queda quién y cuándo, y la bitácora lo registra.
+- Contabilidad → Cuentas bancarias: columna Estado y filtro **POR VERIFICAR (N)**. Retención de productores, la ventana de la cuenta, Liquidar y el Detalle muestran el estado (`EstadoCuenta`, ámbar o verde).
+- Las cuentas que ya existían (cargadas por Contabilidad) quedaron VERIFICADAS por quien las registró.
+- Con el bloqueo de pagos encendido (`config/liquidacion.php`), la cuenta además debe estar VERIFICADA.
+- Migración `2026_11_18_000002_verificacion_cuentas_bancarias` (`verified_at`, `verified_by`). Ruta `PATCH /accounting/bank-accounts/{id}/verify` (pantalla cuentas_bancarias).
+
 ### 18/11/2026 — Fase 2b: ficha y cuenta bancaria del vendedor desde Liquidaciones
 Diseño en `docs/modulos/compra-fruta-grilla.md` §B6 y §B7. Peter aprobó las propuestas (P3, P7, P8, P9, P10 y P11).
 - **LIQUIDACIÓN → Retención de productores:**

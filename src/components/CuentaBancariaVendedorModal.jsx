@@ -7,6 +7,7 @@ import { getCuentaVendedor, crearCuentaVendedor } from '../api/liquidacionBase';
 import { getBancos } from '../api/accounting';
 import ModalShell from './common/ModalShell';
 import SelectBuscable from './common/SelectBuscable';
+import EstadoCuenta from './common/EstadoCuenta';
 
 const TIPOS_ID = { C: 'CÉDULA', R: 'RUC', P: 'PASAPORTE' };
 const label = 'block text-sm font-semibold text-gray-700 mb-1.5';
@@ -72,11 +73,18 @@ export default function CuentaBancariaVendedorModal({ tercero, onClose, onGuarda
                         <div><p className="text-xs font-semibold text-gray-500 uppercase">Titular</p><p className="font-semibold">{cuenta.holder_name}</p><p className="text-xs text-gray-500 font-mono">{TIPOS_ID[cuenta.holder_id_type]} {cuenta.holder_id}</p></div>
                     </div>
                     {cuenta.registrada_por && <p className="text-xs text-gray-500">Registrada por {cuenta.registrada_por}{cuenta.registrada_el && ` el ${cuenta.registrada_el.split('-').reverse().join('/')}`}.</p>}
+                    {/* 18/11/2026 (Peter): estado de la verificación de Contabilidad */}
+                    <div className="flex items-center gap-2 text-xs text-gray-600">
+                        <EstadoCuenta verificada={cuenta.verificada} />
+                        {cuenta.verificada
+                            ? <span>por {cuenta.verificada_por}{cuenta.verificada_el && ` el ${cuenta.verificada_el.split('-').reverse().join('/')}`}</span>
+                            : <span>Contabilidad todavía no la revisa.</span>}
+                    </div>
                     <p className="rounded-lg border border-amber-200 bg-amber-50 text-amber-800 text-sm font-semibold px-3 py-2">PARA CAMBIARLA, PÍDELO A CONTABILIDAD.</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <p className="md:col-span-2 text-xs text-gray-500">Después de guardarla solo verás los 4 últimos dígitos. Revisa bien el número antes de guardar.</p>
+                    <p className="md:col-span-2 text-xs text-gray-500">Después de guardarla solo verás los 4 últimos dígitos y quedará PENDIENTE hasta que Contabilidad la verifique. Revisa bien el número antes de guardar.</p>
                     <div>
                         <label className={label}>Banco *</label>
                         <SelectBuscable value={form.bank_id} onChange={(e) => cambiar('bank_id', e.target.value)} className={input}>

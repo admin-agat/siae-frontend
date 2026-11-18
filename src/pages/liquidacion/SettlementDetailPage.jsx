@@ -14,6 +14,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Printer, Ban, CheckCircle, Undo2, Save, Plus } from 'lucide-react';
 import { getSettlement, paySettlement, unpaySettlement, annulSettlement, saveSettlementDocuments } from '../../api/settlements';
 import CuentaBancariaVendedorModal from '../../components/CuentaBancariaVendedorModal';
+import EstadoCuenta from '../../components/common/EstadoCuenta';
 import DialogoConfirmacion from '../../components/common/DialogoConfirmacion';
 import ToastFlotante from '../../components/common/ToastFlotante';
 import { useAuth } from '../../context/AuthContext';
@@ -393,7 +394,8 @@ export default function SettlementDetailPage() {
           </div>
         )}
         {liq.cuenta_vendedor?.tiene_cuenta && (
-          <p className="px-4 pt-2 text-xs text-gray-500 print:hidden">Cuenta: {liq.cuenta_vendedor.banco} · {liq.cuenta_vendedor.account_type} · <span className="font-mono">{liq.cuenta_vendedor.numero}</span></p>
+          <p className="px-4 pt-2 text-xs text-gray-500 print:hidden">Cuenta: {liq.cuenta_vendedor.banco} · {liq.cuenta_vendedor.account_type} · <span className="font-mono">{liq.cuenta_vendedor.numero}</span>{' '}
+            <EstadoCuenta verificada={liq.cuenta_vendedor.verificada} />{!liq.cuenta_vendedor.verificada && ' Contabilidad debe verificarla antes de pagar.'}</p>
         )}
         {cuentaAbierta && (
           <CuentaBancariaVendedorModal tercero={liq.third_party} onClose={() => setCuentaAbierta(false)}
