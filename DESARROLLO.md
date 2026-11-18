@@ -273,6 +273,17 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 18/11/2026 — Lista de Pedido semanal compacta (TablaEstandar `compacta`)
+- `TablaEstandar` recibe la prop opcional **`compacta`**:
+  - filas bajas con línea gris fina, alternadas blanco / lila, y amarillo claro al pasar el mouse;
+  - la fila que se toca, en **verde con letra blanca** (clase `fila-elegida`; en `index.css` los textos grises pasan a blanco);
+  - encabezado más bajo.
+  - Sin la prop, las otras 25 listas se ven como siempre.
+- **Pedido semanal (lista):**
+  - usa `compacta`;
+  - "SEMANA 47 / 2026", la fecha y el total van en una sola línea;
+  - el comentario largo va en una línea, completo al pasar el mouse.
+
 ### 18/11/2026 — Grillas: fila elegida con todo el texto en blanco; Cont. × cajas más ancha
 - **Texto en blanco:** en `src/index.css`, la regla `tr.fila-grilla:focus-within` pone en blanco todo el texto de la fila verde: botones, precios, flechas y textos guía. Los botones no elegidos y los fondos blancos o lila quedan transparentes. No aplica al N° ni a la celda que se edita, que sigue amarilla. Se usa en Compra de fruta y en el Pedido semanal.
 - **Pedido semanal:** Cont. × cajas pasa de 92 a 125 px, porque el 1200 se cortaba.

@@ -65,11 +65,12 @@ export default function CustomerOrdersPage() {
   };
 
   const columnas = [
-    { titulo: 'Semana', render: (p) => `SEMANA ${p.week} / ${p.year}`, className: 'font-medium' },
-    { titulo: 'Recibido', render: (p) => formatoFecha(p.received_at) },
+    // 18/11/2026 (Peter): lista compacta como las grillas; semana en una línea y comentario largo en una línea (completo al pasar el mouse)
+    { titulo: 'Semana', render: (p) => `SEMANA ${p.week} / ${p.year}`, className: 'font-semibold whitespace-nowrap' },
+    { titulo: 'Recibido', render: (p) => formatoFecha(p.received_at), className: 'whitespace-nowrap' },
     { titulo: 'Líneas', render: (p) => p.lines_count },
-    { titulo: 'Total cajas', render: (p) => formatoCajas(p.total_boxes), className: 'font-semibold' },
-    { titulo: 'Comentario', render: (p) => p.comment, className: 'text-xs text-gray-500' },
+    { titulo: 'Total cajas', render: (p) => formatoCajas(p.total_boxes), className: 'font-semibold whitespace-nowrap' },
+    { titulo: 'Comentario', render: (p) => (p.comment ? <span className="block truncate max-w-[560px]" title={p.comment}>{p.comment}</span> : null), className: 'text-xs text-gray-500' },
     { titulo: 'Estado', render: (p) => <EstadoBadge activo={p.status} /> },
     {
       titulo: 'Acciones',
@@ -104,6 +105,7 @@ export default function CustomerOrdersPage() {
         datos={pedidos}
         cargando={cargando}
         nombreRegistros="pedidos"
+        compacta
         placeholderBusqueda="Buscar por semana, año o comentario..."
         textosBusqueda={(p) => [`SEMANA ${p.week}`, p.week, p.year, p.comment]}
       />

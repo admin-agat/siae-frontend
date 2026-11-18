@@ -49,6 +49,9 @@ export default function TablaEstandar({
     campoEstado = 'status',           // nombre de la columna booleana de estado
     porPagina = 10,
     getId = (fila) => fila.id,        // cómo identificar cada fila (key + resaltado)
+    // 18/11/2026 (Peter): estilo de las grillas (Compra de fruta): filas bajas con línea fina, alternadas blanco/lila
+    // y la fila que se toca en verde con letra blanca. Opcional: por defecto la tabla se ve como siempre.
+    compacta = false,
 }) {
     const [busqueda, setBusqueda] = useState('');
     const [pestana, setPestana] = useState('ACTIVOS');
@@ -127,12 +130,12 @@ export default function TablaEstandar({
 
             {/* Tabla */}
             <div className="bg-white rounded-xl shadow overflow-hidden">
-                <table className="w-full text-sm">
+                <table className={compacta ? 'w-full text-sm border-collapse' : 'w-full text-sm'}>
                     {/* Encabezado color primario; "uppercase" pone los títulos en MAYÚSCULAS */}
                     <thead className="bg-primario text-white">
                         <tr>
                             {columnas.map((col) => (
-                                <th key={col.titulo} className="text-left px-4 py-3 uppercase">
+                                <th key={col.titulo} className={compacta ? 'text-left px-3 py-2 uppercase text-xs whitespace-nowrap' : 'text-left px-4 py-3 uppercase'}>
                                     {col.titulo}
                                 </th>
                             ))}
@@ -158,14 +161,16 @@ export default function TablaEstandar({
                                     <tr
                                         key={id}
                                         onClick={() => setFilaSeleccionada(id)}
-                                        className={`cursor-pointer transition ${
+                                        className={compacta
+                                            ? `cursor-pointer ${filaSeleccionada === id ? 'fila-elegida bg-green-600 text-white' : (i % 2 === 0 ? 'bg-white hover:bg-yellow-50' : 'bg-violet-50 hover:bg-yellow-50')}`
+                                            : `cursor-pointer transition ${
                                             filaSeleccionada === id
                                                 ? 'bg-primario-claro'
                                                 : (i % 2 === 0 ? 'bg-gray-50' : 'bg-white')
                                         }`}
                                     >
                                         {columnas.map((col) => (
-                                            <td key={col.titulo} className={`px-4 py-3 ${col.className || ''}`}>
+                                            <td key={col.titulo} className={`${compacta ? 'px-3 py-1.5 border border-gray-200' : 'px-4 py-3'} ${col.className || ''}`}>
                                                 {/* Si el dato viene vacío, se muestra "—" */}
                                                 {col.render(fila) ?? '—'}
                                             </td>

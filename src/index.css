@@ -82,3 +82,9 @@ tr.fila-grilla:focus-within > td:not(:first-child):not(:focus-within) .bg-primar
 tr.fila-grilla:focus-within > td:not(:first-child):not(:focus-within) .bg-white {
   background-color: rgba(255, 255, 255, 0.15) !important;
 }
+
+/* 18/11/2026: lista compacta (TablaEstandar compacta): en la fila elegida (verde) los textos grises pasan a blanco */
+tr.fila-elegida > td [class*="text-gray"],
+tr.fila-elegida > td[class*="text-gray"] {
+  color: #fff !important;
+}
