@@ -15,3 +15,8 @@ export const getContratosProductores = () => axios.get('/producer-contracts').th
 // 12/11/2026: LEGAL guarda contratos y cajas MAG; Liquidaciones solo la retención (rutas separadas)
 export const guardarContratosProductor = (thirdPartyId, data) => axios.put(`/producer-contracts/${thirdPartyId}/contracts`, data).then((res) => res.data);
 export const guardarRetencionProductor = (thirdPartyId, data) => axios.put(`/producer-contracts/${thirdPartyId}/retention`, data).then((res) => res.data);
+// 18/11/2026 (fase 2b): Liquidaciones completa la ficha del vendedor y registra su cuenta bancaria
+// (solo la crea; después la ve enmascarada ****1234; cambiarla es de Contabilidad)
+export const guardarFichaVendedor = (thirdPartyId, data) => axios.put(`/producer-profiles/${thirdPartyId}`, data).then((res) => res.data);
+export const getCuentaVendedor = (thirdPartyId) => axios.get(`/producer-bank-accounts/${thirdPartyId}`).then((res) => res.data);
+export const crearCuentaVendedor = (thirdPartyId, data) => axios.post(`/producer-bank-accounts/${thirdPartyId}`, data).then((res) => res.data);

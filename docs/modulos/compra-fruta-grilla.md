@@ -670,6 +670,8 @@ Hoy los 274 PRODUCTOR están sin cédula, así que al subir **todos** saldrán e
 - pegar desde Excel (fase futura);
 - la columna N°.
 
+**Respondidas el 18/11/2026 (fase 2b, "OK con tus propuestas"):** P3 sin cédula se liquida con aviso y el pago se bloquea; P7 la lista PENDIENTES muestra solo vendedores con compras; P8 solo aviso; P9 Liquidaciones solo crea la cuenta; P10 sin validación de Contabilidad por ahora; P11 sin excepción: no se paga sin cuenta.
+
 **Siguen abiertas:**
 1. **Fila nueva al bajar:** ¿Enter en la última fila crea otra compra, y la fila vacía (sin vendedor ni cajas) se descarta sola al guardar? Hoy da error.
 2. **Guardar y enviar:** ¿agregamos la casilla "Guardar y enviar a bodega" o el envío sigue siendo un paso aparte?

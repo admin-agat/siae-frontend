@@ -6,9 +6,16 @@
 // 12/11/2026: la misma pantalla sirve a dos departamentos (prop "modo"):
 //   modo="legal"     → LEGAL → Contratos de productores: edita contratos y cajas MAG (no la retención)
 //   modo="retencion" → LIQUIDACIÓN → Retención de productores: edita régimen y referencia de pago; ve los contratos
+// 18/11/2026 (fase 2b): en modo "retencion", columna CUENTA (banco y ****1234, o "+" para registrarla),
+//   botón Ficha (completar los datos del tercero, permiso ficha_vendedores) y filtro PENDIENTES:
+//   vendedores con compras que no tienen cédula/RUC o cuenta bancaria (sin eso no se les puede pagar).
 import { useEffect, useState } from 'react';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { Pencil, Plus, Trash2, IdCard } from 'lucide-react';
 import { getContratosProductores, guardarContratosProductor, guardarRetencionProductor } from '../../api/liquidacionBase';
+import { useAuth } from '../../context/AuthContext';
+import { puede } from '../../routes/menu';
+import CuentaBancariaVendedorModal from '../../components/CuentaBancariaVendedorModal';
+import FichaVendedorModal from '../../components/FichaVendedorModal';
 import EncabezadoPagina from '../../components/common/EncabezadoPagina';
 import TablaEstandar from '../../components/common/TablaEstandar';
 import ModalShell from '../../components/common/ModalShell';
@@ -256,6 +263,11 @@ export default function ProducerContractsPage({ modo = 'retencion' }) {
     const [filtro, setFiltro] = useState('TODOS');
     const [modal, setModal] = useState(null);
     const [toast, setToast] = useState(null);
+    // 18/11/2026 (fase 2b): ventanas de cuenta bancaria y de ficha del vendedor
+    const [cuentaDe, setCuentaDe] = useState(null);
+    const [fichaDe, setFichaDe] = useState(null);
+    const { user } = useAuth() || {};
+    const puedeFicha = !esLegal && puede(user, 'ficha_vendedores');
 
     const pedir = () =>
         getContratosProductores()
@@ -272,13 +284,17 @@ export default function ProducerContractsPage({ modo = 'retencion' }) {
 
     const activos = (t) => t.contracts.filter((c) => c.status);
     const excede = (t) => activos(t).some((c) => Number(c.cajas_semana) > Number(c.weekly_boxes));
+    // 18/11/2026 (fase 2b): lo que le falta al vendedor para poder pagarle (solo los que tienen compras)
+    const faltantes = (t) => (esLegal || !t.vende ? [] : [!t.identification && 'CÉDULA', t.cuenta && !t.cuenta.tiene && 'CUENTA'].filter(Boolean));
     const filtros = {
         TODOS: () => true,
         CON: (t) => activos(t).length > 0,
         SIN: (t) => activos(t).length === 0,
         NO_RETENER: (t) => t.retention_regime === 'NO_RETENER',
         EXCEDE: excede,
+        PENDIENTES: (t) => faltantes(t).length > 0,
     };
+    const pendientes = terceros.filter(filtros.PENDIENTES).length;
     const visibles = terceros.filter(filtros[filtro]);
     const pestanaBoton = (activa) => `px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition ${activa ? 'bg-primario text-white' : 'text-gray-600 hover:bg-gray-100'}`;
 
@@ -290,7 +306,8 @@ export default function ProducerContractsPage({ modo = 'retencion' }) {
                 : <EncabezadoPagina titulo="Retención de productores" subtitulo="Régimen de retención IR único banano y referencia de pago de cada vendedor. Los contratos los registra LEGAL" />}
 
             <div className="flex gap-1 bg-white border rounded-lg p-1 w-fit max-w-full overflow-x-auto">
-                {[['TODOS', `TODOS (${terceros.length})`], ['CON', 'CON CONTRATO'], ['SIN', 'SIN CONTRATO'], ['NO_RETENER', 'NO RETENER'], ['EXCEDE', 'EXCEDE CUPO']].map(([k, v]) => (
+                {[['TODOS', `TODOS (${terceros.length})`], ['CON', 'CON CONTRATO'], ['SIN', 'SIN CONTRATO'], ['NO_RETENER', 'NO RETENER'], ['EXCEDE', 'EXCEDE CUPO'],
+                    ...(esLegal ? [] : [['PENDIENTES', `PENDIENTES (${pendientes})`]])].map(([k, v]) => (
                     <button key={k} type="button" onClick={() => setFiltro(k)} className={pestanaBoton(filtro === k)}>{v}</button>
                 ))}
             </div>
@@ -299,7 +316,17 @@ export default function ProducerContractsPage({ modo = 'retencion' }) {
                 placeholderBusqueda="Buscar por nombre o RUC..."
                 textosBusqueda={(t) => [t.name, t.identification, t.payment_short_name]}
                 columnas={[
-                    { titulo: 'Productor / comercializadora', render: (t) => <div><p className="font-medium">{t.name}</p><p className="text-xs text-gray-500">{t.type}{!t.status && ' · INACTIVO'}</p></div> },
+                    {
+                        titulo: 'Productor / comercializadora',
+                        render: (t) => (
+                            <div>
+                                <p className="font-medium">{t.name}</p>
+                                <p className="text-xs text-gray-500">{t.type}{!t.status && ' · INACTIVO'}</p>
+                                {/* 18/11/2026 (fase 2b): sin cédula o sin cuenta no se le puede pagar */}
+                                {faltantes(t).length > 0 && <p className="text-[11px] font-semibold text-red-600">PENDIENTE: {faltantes(t).join(' · ')}</p>}
+                            </div>
+                        ),
+                    },
                     { titulo: 'RUC / Cédula', render: (t) => t.identification || '—' },
                     { titulo: 'Retención', render: (t) => <span className={`text-xs font-semibold px-2 py-0.5 rounded whitespace-nowrap ${colorRegimen[t.retention_regime]}`}>{t.retention_regime === 'NO_RETENER' ? 'NO RETENER' : t.retention_regime}</span> },
                     {
@@ -316,18 +343,42 @@ export default function ProducerContractsPage({ modo = 'retencion' }) {
                             </div>
                         )),
                     },
+                    // 18/11/2026 (fase 2b): cuenta bancaria enmascarada o "+" para registrarla (solo Liquidaciones)
+                    !esLegal && {
+                        titulo: 'Cuenta',
+                        render: (t) => (t.cuenta?.tiene ? (
+                            <button type="button" onClick={(e) => { e.stopPropagation(); setCuentaDe(t); }} title="Ver cuenta bancaria" className="text-xs text-left whitespace-nowrap hover:underline">
+                                <span className="font-semibold">{t.cuenta.banco}</span> · {t.cuenta.account_type} · <span className="font-mono">{t.cuenta.numero}</span>
+                            </button>
+                        ) : (
+                            <button type="button" onClick={(e) => { e.stopPropagation(); setCuentaDe(t); }} title="Registrar cuenta bancaria" aria-label="Registrar cuenta bancaria"
+                                className="text-white p-1.5 rounded-lg shadow-sm transition bg-red-600 hover:bg-red-700">
+                                <Plus size={16} />
+                            </button>
+                        )),
+                    },
                     {
                         titulo: 'Acciones',
                         render: (t) => (
-                            // 18/11/2026 (Peter): botones de acciones con el estándar de color
-                            <button type="button" onClick={() => setModal(t)} title={esLegal ? 'Editar contratos' : 'Editar retención'} aria-label={esLegal ? 'Editar contratos' : 'Editar retención'} className="text-white p-1.5 rounded-lg shadow-sm transition bg-green-600 hover:bg-green-700">
-                                <Pencil size={16} />
-                            </button>
+                            <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                                {/* 18/11/2026 (Peter): botones de acciones con el estándar de color */}
+                                <button type="button" onClick={() => setModal(t)} title={esLegal ? 'Editar contratos' : 'Editar retención'} aria-label={esLegal ? 'Editar contratos' : 'Editar retención'} className="text-white p-1.5 rounded-lg shadow-sm transition bg-green-600 hover:bg-green-700">
+                                    <Pencil size={16} />
+                                </button>
+                                {/* 18/11/2026 (fase 2b): completar la ficha del vendedor con los datos del tercero */}
+                                {puedeFicha && (
+                                    <button type="button" onClick={() => setFichaDe(t)} title="Ficha del vendedor (cédula, teléfono, correo, dirección)" aria-label="Ficha del vendedor" className="text-white p-1.5 rounded-lg shadow-sm transition bg-gray-600 hover:bg-gray-700">
+                                        <IdCard size={16} />
+                                    </button>
+                                )}
+                            </div>
                         ),
                     },
-                ]}
+                ].filter(Boolean)}
             />
 
+            {cuentaDe && <CuentaBancariaVendedorModal tercero={cuentaDe} onClose={() => setCuentaDe(null)} onGuardado={() => { pedir(); setToast({ tipo: 'exito', mensaje: 'Cuenta bancaria registrada.' }); }} />}
+            {fichaDe && <FichaVendedorModal tercero={fichaDe} onClose={() => setFichaDe(null)} onGuardado={() => { pedir(); setToast({ tipo: 'exito', mensaje: 'Ficha guardada.' }); }} />}
             {modal && <ProductorModal tercero={modal} semana={semana} modo={modo} onClose={() => setModal(null)} onGuardado={() => { pedir(); setToast({ tipo: 'exito', mensaje: 'Guardado.' }); }} />}
         </div>
     );

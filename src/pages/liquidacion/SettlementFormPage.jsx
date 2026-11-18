@@ -14,8 +14,9 @@
 //   se descuentan en la LQ de mayor valor de fruta.
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Calculator, X, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Calculator, X, AlertTriangle, Plus } from 'lucide-react';
 import { getSettlementPreview, createSettlement } from '../../api/settlements';
+import CuentaBancariaVendedorModal from '../../components/CuentaBancariaVendedorModal';
 import DialogoConfirmacion from '../../components/common/DialogoConfirmacion';
 import CampoNumero from '../../components/common/CampoNumero';
 import { hoyISO } from '../../utils/fecha';
@@ -58,6 +59,7 @@ export default function SettlementFormPage() {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
   const [confirmar, setConfirmar] = useState(false);
+  const [cuentaAbierta, setCuentaAbierta] = useState(false); // 18/11/2026 (fase 2b)
 
   useEffect(() => {
     getSettlementPreview(quotaId)
@@ -171,6 +173,22 @@ export default function SettlementFormPage() {
           <AlertTriangle size={18} className="shrink-0 mt-0.5" />
           <div>{datos.avisos.map((p) => <p key={p}>{p}</p>)}</div>
         </div>
+      )}
+
+      {/* 18/11/2026 (fase 2b): sin cuenta bancaria se puede liquidar, pero no pagar; el "+" la registra aquí mismo */}
+      {datos.cuenta_vendedor && !datos.cuenta_vendedor.tiene_cuenta && (
+        <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3 mb-4 flex items-center gap-3">
+          <AlertTriangle size={18} className="shrink-0" />
+          <p className="font-semibold flex-1">SIN CUENTA BANCARIA: regístrala antes de pagar.</p>
+          <button type="button" onClick={() => setCuentaAbierta(true)} title="Registrar cuenta bancaria" aria-label="Registrar cuenta bancaria"
+            className="flex items-center gap-1 text-white px-3 py-1.5 rounded-lg shadow-sm text-xs font-semibold bg-red-600 hover:bg-red-700">
+            <Plus size={14} /> Cuenta bancaria
+          </button>
+        </div>
+      )}
+      {cuentaAbierta && (
+        <CuentaBancariaVendedorModal tercero={quota.third_party} onClose={() => setCuentaAbierta(false)}
+          onGuardado={(c) => setDatos((d) => ({ ...d, cuenta_vendedor: c }))} />
       )}
 
       {/* 1. Fruta */}

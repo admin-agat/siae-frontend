@@ -273,6 +273,18 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 18/11/2026 — Fase 2b: ficha y cuenta bancaria del vendedor desde Liquidaciones
+Diseño en `docs/modulos/compra-fruta-grilla.md` §B6 y §B7. Peter aprobó las propuestas (P3, P7, P8, P9, P10 y P11).
+- **LIQUIDACIÓN → Retención de productores:**
+  - columna **CUENTA**: banco, tipo y `****1234`, o un **"+" rojo** para registrarla;
+  - botón **Ficha** (gris): completa con los datos del tercero la cédula/RUC (solo si falta), zona, teléfono, correo y dirección. Nombre, tipo y estado siguen siendo del ADMIN en Terceros;
+  - filtro **PENDIENTES (N)**: vendedores **con compras** sin cédula o sin cuenta (no los 274 productores de trazabilidad).
+- **Liquidar** y **Detalle de la liquidación**: aviso SIN CUENTA BANCARIA con el botón "+" y aviso SIN CÉDULA. Se puede liquidar. **Bloqueo del pago** (422) sin cuenta o sin cédula, sin excepción para efectivo o cruce: Peter decidió subirlo **apagado** (`config/liquidacion.php`, `bloquear_pago_sin_datos` = false) hasta que Liquidaciones cargue las cuentas; mientras tanto solo se avisa. Se enciende cambiando ese valor a true.
+- **Seguridad:** Liquidaciones solo **crea** la cuenta; después la ve enmascarada y cambiarla es de Contabilidad (P9). No hay validación previa de Contabilidad por ahora (P10). Las rutas nuevas nunca devuelven el número completo; la bitácora enmascara también `holder_id`.
+- **Contabilidad → Cuentas bancarias** ahora lista también productores y comercializadoras.
+- **Backend:** `AppSupportCuentaBancaria` (reglas compartidas con Contabilidad), `SellerProfileController` (`GET/POST /producer-bank-accounts/{id}`, `PUT /producer-profiles/{id}`), `/producer-contracts` con `cuenta` (solo con contratos_productores) y `vende`, `/accounting/banks` abierto a Liquidaciones, y el bloqueo en `SettlementController::pay`.
+- **Permiso nuevo** `ficha_vendedores` (LIQUIDACIÓN). Migración `2026_11_18_000001_permiso_ficha_vendedores`: se lo da a los perfiles que tienen Retención de productores. Sin tablas nuevas.
+
 ### 18/11/2026 — Fila elegida: textos de color y barras de avance
 - En las listas compactas, la fila elegida (verde) no pasaba a blanco los textos anidados de color (ej. "COMPLETO" y el % en Distribución en barcos) porque la propia fila contaba como "con fondo". La regla de `index.css` ahora mide la exclusión dentro de la celda: badges y botones con fondo propio conservan su color.
 - Las barras de avance en la fila elegida quedan con riel blanco translúcido y relleno blanco. Solo visual.

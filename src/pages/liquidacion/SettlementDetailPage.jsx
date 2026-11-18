@@ -11,8 +11,9 @@
 // anulan juntas. Se muestran las FALTANTES, las RECIBIDAS (lo que se paga) y la retención IR.
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Printer, Ban, CheckCircle, Undo2, Save } from 'lucide-react';
+import { ArrowLeft, Printer, Ban, CheckCircle, Undo2, Save, Plus } from 'lucide-react';
 import { getSettlement, paySettlement, unpaySettlement, annulSettlement, saveSettlementDocuments } from '../../api/settlements';
+import CuentaBancariaVendedorModal from '../../components/CuentaBancariaVendedorModal';
 import DialogoConfirmacion from '../../components/common/DialogoConfirmacion';
 import ToastFlotante from '../../components/common/ToastFlotante';
 import { useAuth } from '../../context/AuthContext';
@@ -35,6 +36,9 @@ export default function SettlementDetailPage() {
   const puedeAnular = puede(user, 'liquidar');
   const puedePagar = puede(user, 'pagos');
   const puedeDocumentos = puede(user, 'notas_credito', 'liquidar');
+  // 18/11/2026 (fase 2b): registrar la cuenta bancaria del vendedor ("+") = Retención de productores o Liquidar
+  const puedeCuenta = puede(user, 'contratos_productores', 'liquidar');
+  const [cuentaAbierta, setCuentaAbierta] = useState(false);
 
   const [liq, setLiq] = useState(null);
   const [cargando, setCargando] = useState(true);
@@ -373,6 +377,28 @@ export default function SettlementDetailPage() {
           Pagos
           {liq.status && pendiente > 0 && <span className="ml-2 text-xs font-normal text-amber-700 print:hidden">Pendiente: $ {formatoDinero(pendiente)}</span>}
         </h2>
+        {/* 18/11/2026 (fase 2b): sin cuenta bancaria o sin cédula/RUC el backend no deja registrar el pago */}
+        {liq.status && pendiente > 0 && (liq.cuenta_vendedor?.tiene_cuenta === false || !liq.third_party?.identification) && (
+          <div className="mx-4 my-2 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-3 py-2 flex flex-wrap items-center gap-3 print:hidden">
+            <div className="flex-1 font-semibold">
+              {liq.cuenta_vendedor?.tiene_cuenta === false && <p>SIN CUENTA BANCARIA: regístrala antes de pagar.</p>}
+              {!liq.third_party?.identification && <p>SIN CÉDULA NI RUC: complétala en LIQUIDACIÓN → Retención de productores (Ficha) antes de pagar.</p>}
+            </div>
+            {liq.cuenta_vendedor?.tiene_cuenta === false && puedeCuenta && (
+              <button type="button" onClick={() => setCuentaAbierta(true)} title="Registrar cuenta bancaria" aria-label="Registrar cuenta bancaria"
+                className="flex items-center gap-1 text-white px-3 py-1.5 rounded-lg shadow-sm text-xs font-semibold bg-red-600 hover:bg-red-700">
+                <Plus size={14} /> Cuenta bancaria
+              </button>
+            )}
+          </div>
+        )}
+        {liq.cuenta_vendedor?.tiene_cuenta && (
+          <p className="px-4 pt-2 text-xs text-gray-500 print:hidden">Cuenta: {liq.cuenta_vendedor.banco} · {liq.cuenta_vendedor.account_type} · <span className="font-mono">{liq.cuenta_vendedor.numero}</span></p>
+        )}
+        {cuentaAbierta && (
+          <CuentaBancariaVendedorModal tercero={liq.third_party} onClose={() => setCuentaAbierta(false)}
+            onGuardado={(c) => setLiq((l) => ({ ...l, cuenta_vendedor: c }))} />
+        )}
         {liq.payments.length === 0 ? <p className="px-4 py-3 text-sm text-gray-400">Sin pagos (neto cero).</p> : (
           <table className="w-full text-sm print:text-[10px]">
             <thead className="bg-gray-100 text-gray-700">
