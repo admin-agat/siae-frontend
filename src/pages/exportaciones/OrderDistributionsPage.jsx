@@ -81,7 +81,9 @@ export default function OrderDistributionsPage() {
         subtitulo="Logística reparte cada pedido semanal en los barcos de la semana"
       />
 
+      {/* 18/11/2026 (Peter): lista compacta como el Pedido semanal */}
       <TablaEstandar
+        compacta
         columnas={columnas}
         datos={pedidos}
         cargando={cargando}

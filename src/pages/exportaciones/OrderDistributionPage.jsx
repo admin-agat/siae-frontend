@@ -208,7 +208,11 @@ export default function OrderDistributionPage() {
 
   // ---------------- Vista ----------------
 
-  const inputClass = 'w-full bg-gray-100 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-primario';
+  // 18/11/2026 (Peter): barcos y hoja de reparto como la grilla de Compra de fruta (tipo SAP): celdas planas, línea
+  // gris fina, filas alternadas, la fila donde se trabaja en verde y la celda que se edita en amarillo
+  const tdGrilla = 'px-0.5 py-0 border border-gray-200 align-middle focus-within:bg-yellow-100 focus-within:text-gray-900';
+  const celda = 'w-full bg-transparent border-0 rounded-none px-1.5 py-0.5 text-sm text-inherit outline-none disabled:opacity-60 disabled:cursor-not-allowed';
+  const tdNumero = 'bg-gray-200 border border-gray-300 px-1 py-0.5 text-center text-sm font-bold text-gray-700 whitespace-nowrap cursor-pointer outline-none';
 
   if (cargando) return <div className="p-6 text-gray-400">Cargando distribución...</div>;
   if (!pedido) {
@@ -263,18 +267,18 @@ export default function OrderDistributionPage() {
       {/* 16/11/2026: se ven ~5 barcos y la tabla se desplaza por dentro (como las líneas del pedido semanal) */}
       <div className="bg-white rounded-xl shadow overflow-hidden mb-4">
        <div className="overflow-auto max-h-[21rem] scroll-ancho">
-        <table className="w-full text-sm min-w-[1000px]">
+        <table className="w-full text-sm min-w-[1000px] border-collapse">
           <thead className="bg-primario text-white sticky top-0 z-10">
             <tr>
-              <th className="text-left px-3 py-3 uppercase w-24">Barco</th>
-              <th className="text-left px-3 py-3 uppercase">Naviera</th>
-              <th className="text-left px-3 py-3 uppercase">Nombre del barco</th>
-              <th className="text-left px-3 py-3 uppercase">Viaje</th>
-              <th className="text-left px-3 py-3 uppercase">Puerto salida</th>
-              <th className="text-left px-3 py-3 uppercase">Destino</th>
-              <th className="text-left px-3 py-3 uppercase">Fecha salida</th>
-              <th className="text-left px-3 py-3 uppercase">Llegada (ETA)</th>
-              <th className="text-right px-3 py-3 uppercase">Cajas</th>
+              <th className="text-left px-3 py-2 uppercase text-xs w-24">Barco</th>
+              <th className="text-left px-3 py-2 uppercase text-xs">Naviera</th>
+              <th className="text-left px-3 py-2 uppercase text-xs">Nombre del barco</th>
+              <th className="text-left px-3 py-2 uppercase text-xs">Viaje</th>
+              <th className="text-left px-3 py-2 uppercase text-xs">Puerto salida</th>
+              <th className="text-left px-3 py-2 uppercase text-xs">Destino</th>
+              <th className="text-left px-3 py-2 uppercase text-xs">Fecha salida</th>
+              <th className="text-left px-3 py-2 uppercase text-xs">Llegada (ETA)</th>
+              <th className="text-right px-3 py-2 uppercase text-xs">Cajas</th>
               <th className="px-3 py-3 w-10"></th>
             </tr>
           </thead>
@@ -282,41 +286,41 @@ export default function OrderDistributionPage() {
             {barcos.length === 0 ? (
               <tr><td colSpan={10} className="text-center py-6 text-gray-400">Agrega los barcos que salen esta semana</td></tr>
             ) : barcos.map((b, i) => (
-              <tr key={b._key} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                <td className="px-3 py-2">
-                  <span className="font-semibold text-primario">#{i + 1}</span>
+              <tr key={b._key} className={`fila-grilla group text-gray-800 ${i % 2 === 0 ? 'bg-white' : 'bg-violet-50'} focus-within:bg-green-600 focus-within:text-white`}>
+                <td tabIndex={-1} title="Clic para marcar la fila" className={tdNumero}>
+                  <span className="hidden group-focus-within:inline text-primario mr-0.5" aria-hidden="true">▶</span><span className="font-semibold text-primario">#{i + 1}</span>
                   {b.code && <span className="block text-[10px] text-gray-400 font-mono">{b.code}</span>}
                 </td>
-                <td className="px-3 py-2 min-w-[140px]">
-                  <SelectBuscable value={b.shipping_line_id} onChange={(e) => cambiarBarco(b._key, 'shipping_line_id', e.target.value)} className={inputClass}>
+                <td className={`${tdGrilla} min-w-[140px]`}>
+                  <SelectBuscable value={b.shipping_line_id} onChange={(e) => cambiarBarco(b._key, 'shipping_line_id', e.target.value)} className={celda}>
                     <option value="">SELECCIONAR...</option>
                     {navieras.map((n) => <option key={n.id} value={String(n.id)}>{n.name}</option>)}
                   </SelectBuscable>
                 </td>
-                <td className="px-3 py-2 min-w-[180px]">
-                  <SelectBuscable value={b.vessel_id} onChange={(e) => cambiarBarco(b._key, 'vessel_id', e.target.value)} disabled={!b.shipping_line_id} className={`${inputClass} disabled:opacity-50`}>
+                <td className={`${tdGrilla} min-w-[180px]`}>
+                  <SelectBuscable value={b.vessel_id} onChange={(e) => cambiarBarco(b._key, 'vessel_id', e.target.value)} disabled={!b.shipping_line_id} className={`${celda} disabled:opacity-50`}>
                     <option value="">{b.shipping_line_id ? 'SELECCIONAR...' : 'ELIGE NAVIERA'}</option>
                     {buques.filter((v) => String(v.shipping_line_id) === b.shipping_line_id).map((v) => <option key={v.id} value={String(v.id)}>{v.name}</option>)}
                   </SelectBuscable>
                 </td>
-                <td className="px-3 py-2 min-w-[100px]">
-                  <input value={b.voyage} maxLength={20} placeholder="UNI1401" onChange={(e) => cambiarBarco(b._key, 'voyage', e.target.value.toUpperCase())} className={inputClass} />
+                <td className={`${tdGrilla} min-w-[100px]`}>
+                  <input value={b.voyage} maxLength={20} placeholder="UNI1401" onChange={(e) => cambiarBarco(b._key, 'voyage', e.target.value.toUpperCase())} className={celda} />
                 </td>
-                <td className="px-3 py-2 min-w-[140px]">
+                <td className={`${tdGrilla} min-w-[140px]`}>
                   {/* 16/11/2026: puerto de salida con un clic (barra), como en el pedido semanal */}
                   <BarraPuertos puertos={puertosSalida} value={b.departure_port_id} onChange={(v) => cambiarBarco(b._key, 'departure_port_id', v)}
-                    ariaLabel={`Barco ${i + 1}: puerto de salida`} className={inputClass} />
+                    ariaLabel={`Barco ${i + 1}: puerto de salida`} className={celda} compacta />
                 </td>
-                <td className="px-3 py-2 min-w-[140px]">
-                  <SelectBuscable value={b.destination_port_id} onChange={(e) => cambiarBarco(b._key, 'destination_port_id', e.target.value)} className={inputClass}>
+                <td className={`${tdGrilla} min-w-[140px]`}>
+                  <SelectBuscable value={b.destination_port_id} onChange={(e) => cambiarBarco(b._key, 'destination_port_id', e.target.value)} className={celda}>
                     <option value="">—</option>
                     {puertosDestino.map((p) => <option key={p.id} value={String(p.id)}>{p.name}</option>)}
                   </SelectBuscable>
                 </td>
-                <td className="px-3 py-2"><input type="date" value={b.departure_date} onChange={(e) => cambiarBarco(b._key, 'departure_date', e.target.value)} className={inputClass} /></td>
-                <td className="px-3 py-2"><input type="date" value={b.eta} min={b.departure_date || undefined} onChange={(e) => cambiarBarco(b._key, 'eta', e.target.value)} className={inputClass} /></td>
-                <td className="px-3 py-2 text-right font-semibold">{formatoCajas(totalBarco(b))}</td>
-                <td className="px-3 py-2">
+                <td className={`${tdGrilla} px-2`}><input type="date" value={b.departure_date} onChange={(e) => cambiarBarco(b._key, 'departure_date', e.target.value)} className={celda} /></td>
+                <td className={`${tdGrilla} px-2`}><input type="date" value={b.eta} min={b.departure_date || undefined} onChange={(e) => cambiarBarco(b._key, 'eta', e.target.value)} className={celda} /></td>
+                <td className={`${tdGrilla} px-2 text-right font-semibold`}>{formatoCajas(totalBarco(b))}</td>
+                <td className={`${tdGrilla} px-2`}>
                   <button type="button" onClick={() => quitarBarco(b._key)} title="Quitar barco" className="text-white p-1.5 rounded-lg shadow-sm transition bg-red-600 hover:bg-red-700">
                     <Trash2 size={16} />
                   </button>
@@ -338,25 +342,25 @@ export default function OrderDistributionPage() {
         // 16/11/2026: se ven ~5 líneas; el encabezado y el TOTAL quedan fijos mientras se desplaza
         <div className="bg-white rounded-xl shadow overflow-hidden mb-4">
          <div className="overflow-auto max-h-[31rem] scroll-ancho">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm border-collapse">
             <thead className="bg-primario text-white sticky top-0 z-10">
               <tr>
-                <th className="text-left px-3 py-3 uppercase">#</th>
-                <th className="text-left px-3 py-3 uppercase">Cliente</th>
-                <th className="text-left px-3 py-3 uppercase">Modalidad</th>
-                <th className="text-left px-3 py-3 uppercase">Puerto</th>
-                <th className="text-left px-3 py-3 uppercase">Tipo</th>
-                <th className="text-right px-3 py-3 uppercase">Pedido</th>
+                <th className="text-left px-3 py-2 uppercase text-xs">#</th>
+                <th className="text-left px-3 py-2 uppercase text-xs">Cliente</th>
+                <th className="text-left px-3 py-2 uppercase text-xs">Modalidad</th>
+                <th className="text-left px-3 py-2 uppercase text-xs">Puerto</th>
+                <th className="text-left px-3 py-2 uppercase text-xs">Tipo</th>
+                <th className="text-right px-3 py-2 uppercase text-xs">Pedido</th>
                 {barcos.map((b, i) => (
-                  <th key={b._key} className="text-center px-3 py-3 uppercase min-w-[130px]">
+                  <th key={b._key} className="text-center px-3 py-2 uppercase text-xs min-w-[130px]">
                     Barco #{i + 1}
                     <span className="block text-[10px] font-normal normal-case opacity-80">
                       {buques.find((v) => String(v.id) === b.vessel_id)?.name || 'sin barco'}{b.voyage ? ` · ${b.voyage}` : ''}
                     </span>
                   </th>
                 ))}
-                <th className="text-right px-3 py-3 uppercase">En barcos</th>
-                <th className="text-right px-3 py-3 uppercase">Pendiente</th>
+                <th className="text-right px-3 py-2 uppercase text-xs">En barcos</th>
+                <th className="text-right px-3 py-2 uppercase text-xs">Pendiente</th>
               </tr>
             </thead>
             <tbody>
@@ -364,28 +368,28 @@ export default function OrderDistributionPage() {
                 const asignado = asignadoLinea(l.id);
                 const pendiente = l.boxes - asignado;
                 return (
-                  <tr key={l.id} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                    <td className="px-3 py-2 text-gray-400">{i + 1}</td>
-                    <td className="px-3 py-2 font-medium">{l.customer?.third_party?.name}</td>
-                    <td className="px-3 py-2 text-xs">
+                  <tr key={l.id} className={`fila-grilla group text-gray-800 ${i % 2 === 0 ? 'bg-white' : 'bg-violet-50'} focus-within:bg-green-600 focus-within:text-white`}>
+                    <td tabIndex={-1} title="Clic para marcar la fila" className={tdNumero}><span className="hidden group-focus-within:inline text-primario mr-0.5" aria-hidden="true">▶</span>{i + 1}</td>
+                    <td className={`${tdGrilla} px-2 font-medium`}>{l.customer?.third_party?.name}</td>
+                    <td className={`${tdGrilla} px-2 text-xs`}>
                       {TIPOS_CARGA[l.cargo_type] || l.cargo_type}
                       {l.boxes_per_container && <span className="block text-gray-500">{l.containers_qty} × {formatoCajas(l.boxes_per_container)}</span>}
                     </td>
-                    <td className="px-3 py-2 text-xs">{l.departure_port?.name}</td>
-                    <td className="px-3 py-2 text-xs">{l.incoterm} · {l.negotiation_type}</td>
-                    <td className="px-3 py-2 text-right font-semibold">{formatoCajas(l.boxes)}</td>
+                    <td className={`${tdGrilla} px-2 text-xs`}>{l.departure_port?.name}</td>
+                    <td className={`${tdGrilla} px-2 text-xs`}>{l.incoterm} · {l.negotiation_type}</td>
+                    <td className={`${tdGrilla} px-2 text-right font-semibold`}>{formatoCajas(l.boxes)}</td>
                     {barcos.map((b) => {
                       const valor = b.asign[l.id] ?? '';
                       // Aviso (no bloquea): la línea sale de otro puerto que el barco
                       const otroPuerto = Number(valor) > 0 && b.departure_port_id && String(l.departure_port_id) !== b.departure_port_id;
                       const contenedores = l.boxes_per_container && Number(valor) ? Number(valor) / l.boxes_per_container : null;
                       return (
-                        <td key={b._key} className="px-2 py-2">
+                        <td key={b._key} className={tdGrilla}>
                           <div className="flex items-center gap-1">
                             <CampoNumero decimales={0} value={valor}
                               onChange={(e) => cambiarAsignacion(b._key, l.id, e.target.value)}
                               title={otroPuerto ? `La línea sale de ${l.departure_port?.name} y el barco de ${nombrePuerto(b.departure_port_id)}` : ''}
-                              className={`${inputClass} text-right ${otroPuerto ? 'ring-2 ring-amber-400' : ''}`}
+                              className={`${celda} text-right ${otroPuerto ? 'shadow-[inset_0_0_0_2px_#fbbf24]' : ''}`}
                             />
                             {pendiente > 0 && (
                               <button type="button" onClick={() => completarLinea(b._key, l)} title="Poner aquí todo lo pendiente" className="text-xs font-semibold text-primario hover:text-primario-hover px-1">
@@ -401,8 +405,8 @@ export default function OrderDistributionPage() {
                         </td>
                       );
                     })}
-                    <td className="px-3 py-2 text-right">{formatoCajas(asignado)}</td>
-                    <td className={`px-3 py-2 text-right font-semibold ${pendiente < 0 ? 'text-red-600' : pendiente === 0 ? 'text-green-700' : 'text-amber-700'}`}>
+                    <td className={`${tdGrilla} px-2 text-right`}>{formatoCajas(asignado)}</td>
+                    <td className={`${tdGrilla} px-2 text-right font-semibold ${pendiente < 0 ? 'text-red-600' : pendiente === 0 ? 'text-green-700' : 'text-amber-700'}`}>
                       {pendiente === 0 ? '✔' : formatoCajas(pendiente)}
                     </td>
                   </tr>

@@ -273,6 +273,15 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 18/11/2026 — Distribución en barcos con el estilo de las grillas
+- **Barcos de la semana y hoja de reparto**, con el mismo estilo de Compra de fruta y Pedido semanal:
+  - celdas planas con línea gris fina y filas alternadas blanco / lila;
+  - la fila donde se trabaja en verde con letra blanca y ▶; clic en el N° también la marca;
+  - la celda que se edita en amarillo;
+  - encabezados más bajos.
+- El aviso de "otro puerto" pasa a un borde ámbar dentro de la celda, y la barra de puertos va en versión compacta.
+- La lista de semanas usa la `TablaEstandar` compacta.
+
 ### 18/11/2026 — Lista de Pedido semanal compacta (TablaEstandar `compacta`)
 - `TablaEstandar` recibe la prop opcional **`compacta`**:
   - filas bajas con línea gris fina, alternadas blanco / lila, y amarillo claro al pasar el mouse;
