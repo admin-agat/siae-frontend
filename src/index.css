@@ -85,7 +85,17 @@ tr.fila-grilla:focus-within > td:not(:first-child):not(:focus-within) .bg-white 
 
 /* 18/11/2026: lista compacta (TablaEstandar compacta): en la fila elegida (verde) todo el texto pasa a blanco,
    también los de color (verde, naranja); los badges y botones con fondo propio conservan su color */
+/* 18/11/2026 (Peter): la exclusión se mide dentro de la celda; antes la propia fila (bg-green-600) contaba como
+   "con fondo" y los textos anidados (COMPLETO, 100%) no pasaban a blanco */
 tr.fila-elegida > td:not(:first-child),
-tr.fila-elegida > td:not(:first-child) :not([class*="bg-"]):not([class*="bg-"] *) {
+tr.fila-elegida > td:not(:first-child) *:not([class*="bg-"], tr.fila-elegida > td [class*="bg-"] *) {
   color: #fff !important;
+}
+/* 18/11/2026 (Peter): barras de avance en la fila elegida: riel blanco translúcido y relleno blanco, para que no
+   queden verde sobre verde */
+tr.fila-elegida > td [class*="rounded-full"][class*="overflow-hidden"] {
+  background-color: rgba(255, 255, 255, 0.3) !important;
+}
+tr.fila-elegida > td [class*="rounded-full"][class*="overflow-hidden"] > * {
+  background-color: #fff !important;
 }

@@ -273,6 +273,10 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 18/11/2026 — Fila elegida: textos de color y barras de avance
+- En las listas compactas, la fila elegida (verde) no pasaba a blanco los textos anidados de color (ej. "COMPLETO" y el % en Distribución en barcos) porque la propia fila contaba como "con fondo". La regla de `index.css` ahora mide la exclusión dentro de la celda: badges y botones con fondo propio conservan su color.
+- Las barras de avance en la fila elegida quedan con riel blanco translúcido y relleno blanco. Solo visual.
+
 ### 18/11/2026 — Botones de acciones con el estándar de color
 - Revisión del tester en todo el sistema: los íconos sueltos (sin fondo) de las columnas de acciones pasan a botones sólidos como `AccionesFila`: Ver azul, Editar/Corregir/Aprobar/Marcar pagado verde, Desactivar/Anular/Cancelar/Rechazar rojo, Descargar/Historial/Kárdex gris y Reactivar azul.
 - Pantallas: Productores y contratos, Parámetros de liquidación, Tarjas (historial), Contabilidad (órdenes y lotes de pago), Cuentas bancarias, Pedidos por departamento, Bodegas, Motivos, Insumos y categorías, Órdenes de compra, Historial de despachos, Transferencias pendientes (Ver), Movimientos (Kárdex), Marcas y recetas, Navieras y barcos, y la lista de comerciales de Compra de fruta.
