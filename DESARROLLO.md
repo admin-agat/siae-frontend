@@ -273,6 +273,9 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 18/11/2026 — Pedido semanal: columna Cliente angosta
+La columna Cliente queda fija en 115 px (alcanza para "JSC GRAND"). El nombre completo se ve al pasar el mouse.
+
 ### 18/11/2026 — Grillas con filas de color y la fila elegida en verde
 Peter mostró una grilla de ejemplo. Aplica en Compra de fruta y en las líneas del Pedido semanal:
 - Filas alternadas blanco / lila claro (`bg-violet-50`).

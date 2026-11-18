@@ -489,7 +489,7 @@ export default function CustomerOrderFormPage() {
           <thead className="bg-primario text-white sticky top-0 z-10">
             <tr>
               <th className="text-left px-2 py-2 uppercase text-xs w-8">#</th>
-              <th className="text-left px-2 py-2 uppercase text-xs">Cliente</th>
+              <th className="text-left px-2 py-2 uppercase text-xs w-[115px] max-w-[115px]">Cliente</th>
               <th className="text-left px-2 py-2 uppercase text-xs">Marca</th>
               <th className="text-left px-2 py-2 uppercase text-xs">Presentación</th>
               <th className="text-left px-2 py-2 uppercase text-xs">Modalidad</th>
@@ -511,8 +511,8 @@ export default function CustomerOrderFormPage() {
               return (
                 <tr key={l._key} className={`group text-gray-800 ${i % 2 === 0 ? 'bg-white' : 'bg-violet-50'} focus-within:bg-green-600 focus-within:text-white`}>
                   <td className="bg-gray-200 border border-gray-300 px-1 py-0.5 text-center text-sm font-bold text-gray-700 w-8 whitespace-nowrap"><span className="hidden group-focus-within:inline text-primario mr-0.5" aria-hidden="true">▶</span>{i + 1}</td>
-                  <td className={`${tdGrilla} min-w-[160px]`}>
-                    <SelectBuscable value={l.customer_id} onChange={(e) => cambiarLinea(l._key, 'customer_id', e.target.value)} className={celda}>
+                  <td className={`${tdGrilla} w-[115px] min-w-[115px] max-w-[115px]`}>{/* 18/11/2026 (Peter): columna angosta, basta con ver "JSC GRAND" */}
+                    <SelectBuscable value={l.customer_id} onChange={(e) => cambiarLinea(l._key, 'customer_id', e.target.value)} className={celda} title={clientes.find((c) => String(c.id) === l.customer_id)?.third_party?.name}>
                       <option value="">SELECCIONAR...</option>
                       {clientes.map((c) => (
                         <option key={c.id} value={String(c.id)}>{c.third_party?.name}</option>
