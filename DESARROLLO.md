@@ -273,6 +273,12 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 18/11/2026 — Compra de fruta: grilla más limpia
+Pedido de Peter:
+- **Comerciales:** solo el botón **+** para agregar (antes la lista "+ OTRO COMERCIAL"). La columna baja a 190 px.
+- **Retira materiales en:** muestra solo el nombre de la bodega (SAN JUAN, MACHALA…), sin la palabra "BODEGA".
+- **Sin valores calculados en la grilla:** sale la columna Total real · NC. El total real y las notas de crédito siguen en el resumen de arriba.
+
 ### 18/11/2026 — Compra de fruta: vendedor nuevo desde la celda (alta rápida, fase 2 sin migración)
 Pedido de Peter: así como "+ NUEVA FINCA", crear el vendedor o el productor real que no existe.
 - **Backend:** `POST /customer-orders/{id}/purchases/third-parties` (`PurchaseAllocationController::crearVendedor`), con la pantalla `compra_fruta` y un límite de 20 por minuto.

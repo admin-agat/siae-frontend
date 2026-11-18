@@ -81,7 +81,6 @@ const lunesSemana = (anio, semana) => {
 // Nota de crédito de una compra: cajas × (oficial − real); null si falta algún precio
 // 13/11/2026: nunca negativa (si el real pasa el oficial, la NC es 0); el bono no la toca
 const notaCredito = (c) => (c.official_price === '' || c.real_price === '' ? null : Math.max(0, n(c.boxes) * (n(c.official_price) - n(c.real_price))));
-const realPasaOficial = (c) => c.official_price !== '' && c.real_price !== '' && n(c.real_price) > n(c.official_price);
 
 const compraDesdeBackend = (c) => ({
   _key: `c-${c.id}`,
@@ -1301,21 +1300,19 @@ export default function PurchaseAllocationPage() {
                           {/* 13/11/2026: el P. oficial pasó al encabezado del bloque; Tipo · Pago → Negociación; columna Bono / extra */}
                           <th className={`${th} text-right`} title="Precio real pagado al productor. Debajo, OF. $ si esta compra tiene otro precio oficial que el del bloque">P. real</th>
                           <th className={th} title="CONTRATO o SPOT, forma de pago y contrato del vendedor">Negociación</th>
-                          <th className={`${th} text-right`} title="Arriba: cajas × (precio real + bono). Abajo: nota de crédito = cajas × (precio oficial − precio real), la entrega el vendedor">Total real · NC $</th>
                           <th className={th}>Bodega</th>
                           <th className="px-2 py-2 w-10"></th>
                         </tr>
                       </thead>
                       <tbody>
                         {b.purchases.length === 0 ? (
-                          <tr><td colSpan={13} className="text-center py-5 text-gray-400">Agrega la primera compra de este bloque</td></tr>
+                          <tr><td colSpan={12} className="text-center py-5 text-gray-400">Agrega la primera compra de este bloque</td></tr>
                         ) : b.purchases.map((c, j) => {
                           const fijo = Boolean(c.bloqueo);
                           const esComercial = tipoDe(c.third_party_id) === 'COMERCIALIZADORA';
                           const cambiar = (campo) => (e) => cambiarCompra(b._key, c._key, campo, e.target.value);
                           const mayus = (campo) => (e) => cambiarCompra(b._key, c._key, campo, e.target.value.toUpperCase());
                           const mag = precioMagDe(b, c);
-                          const nc = notaCredito(c);
                           const ofBloque = oficialBloque(b).precio; // 13/11/2026
                           const conDetalle = Boolean(detalle[c._key]); // 18/11/2026
                           const fondo = 'bg-white';
@@ -1379,7 +1376,7 @@ export default function PurchaseAllocationPage() {
                                 {/* 13/11/2026 (test de usabilidad): el código MAG va debajo de la finca (sale de ella; ya no es columna) */}
                                 {/* 18/11/2026 (filas más bajas): el código MAG se ve al pasar el mouse por la finca */}
                               </td>
-                              <td data-campo="comerciales" data-copiar="executive" className={`${tdGrilla} min-w-[250px]`}>
+                              <td data-campo="comerciales" data-copiar="executive" className={`${tdGrilla} min-w-[190px]`}>
                                 {/* 11/11/2026: uno o varios comerciales de la lista (los que ya tenía la compra se respetan) */}
                                 {(() => {
                                   const elegidos = listaComerciales(c.executive);
@@ -1399,8 +1396,10 @@ export default function PurchaseAllocationPage() {
                                         </div>
                                       )}
                                       {!c.liquidada && libres.length > 0 && (
-                                        <select value="" onChange={(ev) => ev.target.value && poner([...elegidos, ev.target.value])} aria-label="Agregar comercial" className={`${celdaCorta} flex-1 min-w-[100px] text-xs`}>
-                                          <option value="">{elegidos.length ? '+ OTRO COMERCIAL' : 'SELECCIONAR...'}</option>
+                                        <select value="" onChange={(ev) => ev.target.value && poner([...elegidos, ev.target.value])} aria-label="Agregar comercial" title="Agregar comercial"
+                                          className="w-8 shrink-0 appearance-none text-center rounded border border-primario/40 bg-white text-primario font-bold text-sm cursor-pointer hover:bg-primario-claro focus:bg-yellow-100 outline-none">
+                                          {/* 18/11/2026 (Peter): solo el botón + */}
+                                          <option value="">+</option>
                                           {libres.map((e) => <option key={e} value={e}>{e}</option>)}
                                         </select>
                                       )}
@@ -1430,7 +1429,7 @@ export default function PurchaseAllocationPage() {
                               <td data-campo="bodega" data-copiar="pickup_warehouse_id" className={`${tdGrilla} min-w-[150px]`}>
                                 <SelectBuscable value={c.pickup_warehouse_id} onChange={cambiar('pickup_warehouse_id')} disabled={fijo} abrirAlEnfocar={false} tabElige title={fijo ? `No se cambia: ${c.bloqueo}` : 'Bodega donde retira cartón y materiales'} className={`${celda} ${c.pickup_warehouse_id ? '' : (vacia ? '' : 'shadow-[inset_0_0_0_1px_#fbbf24]')}`}>
                                   <option value="">SELECCIONAR...</option>
-                                  {bodegas.filter((w) => w.status || String(w.id) === c.pickup_warehouse_id).map((w) => <option key={w.id} value={String(w.id)}>{w.name}</option>)}
+                                  {bodegas.filter((w) => w.status || String(w.id) === c.pickup_warehouse_id).map((w) => <option key={w.id} value={String(w.id)}>{w.name.replace(/^BODEGA\s+/i, '')}</option>)}
                                 </SelectBuscable>
                               </td>
                               {/* 12/11/2026: al entrar se selecciona lo escrito (se digita encima) y Enter baja a la compra siguiente */}
@@ -1550,16 +1549,7 @@ export default function PurchaseAllocationPage() {
                                   <span className="block text-xs font-semibold text-primario mt-1" title="El vendedor tiene contrato vigente en la semana de compra; esta compra va SPOT">TIENE CONTRATO</span>
                                 )}
                               </td>
-                              {/* 18/11/2026 (grilla): Total real arriba y nota de crédito abajo, en una sola columna */}
-                              <td className={`${tdGrilla} text-right whitespace-nowrap`}
-                                title={n(c.bonus_rate) ? `Fruta $ ${formatoDinero(n(c.boxes) * n(c.real_price))} · Bono $ ${formatoDinero(n(c.boxes) * n(c.bonus_rate))}` : undefined}>
-                                {vacia ? null : c.real_price === '' ? <span className="text-xs text-amber-600 font-semibold">SIN PRECIO</span> : <span className="font-semibold">$ {formatoDinero(n(c.boxes) * (n(c.real_price) + n(c.bonus_rate)))}</span>}
-                                <span className="block text-xs mt-0.5" title="Nota de crédito: cajas × (oficial − real), la entrega el vendedor">
-                                  {nc === null ? <span className="text-gray-400">NC —</span>
-                                    : realPasaOficial(c) ? <span className="font-semibold text-amber-700" title="El precio real es mayor al oficial: la nota de crédito queda en 0">NC $ 0,00 · REAL &gt; OFICIAL</span>
-                                      : <span className="text-gray-600">NC $ {formatoDinero(nc)}</span>}
-                                </span>
-                              </td>
+                              {/* 18/11/2026 (Peter): sin valores calculados en la grilla; Total real y NC quedan en el resumen de arriba */}
                               <td className={`${tdGrilla} min-w-[150px]`}>
                                 {vacia ? null : !c.id ? (
                                   <span className="text-xs text-gray-400" title="Primero guarda las compras">GUARDA PARA ENVIAR</span>
@@ -1611,7 +1601,7 @@ export default function PurchaseAllocationPage() {
                             {/* 18/11/2026 (grilla): detalle de la compra (⋯ o F2): transporte reconocido, bono / extra y notas */}
                             {conDetalle && (
                               <tr data-fila={`${c._key}-det`} data-detalle-compra className={`${fondo} border-b-2 border-primario/30`}>
-                                <td colSpan={13} className="px-3 py-2">
+                                <td colSpan={12} className="px-3 py-2">
                                   <div className="sticky left-3 flex flex-wrap items-start gap-6 w-fit">
                                     <div><p className={etiqueta}>Transporte</p>
                               <div className="px-2 py-1.5 min-w-[170px]">
