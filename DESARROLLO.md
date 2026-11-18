@@ -273,6 +273,17 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 18/11/2026 — Tarjas con el estilo de las grillas
+Es solo visual: el formato nuevo de tarjeta de embarque sigue esperando respuestas de Peter.
+- **Resumen por compra:** solo lectura, con celdas planas y filas alternadas.
+- **Tabla de tarjas:**
+  - celdas planas con filas alternadas blanco / lila;
+  - la fila donde se trabaja en verde con letra blanca y ▶; clic en el N° también la marca;
+  - la celda que se edita en amarillo;
+  - encabezados más bajos y la tabla baja de 1.400 a 1.250 px.
+- **Lista de semanas:** usa la `TablaEstandar` compacta.
+- El diálogo del motivo para quitar una tarja conserva el estilo de formulario.
+
 ### 18/11/2026 — Distribución en barcos: cliente, modalidad y tipo en una línea
 En la hoja de reparto, Cliente, Modalidad, Puerto y Tipo ya no se parten en dos o tres líneas: la columna toma el ancho del texto. Contenedores × cajas va en la misma línea que la modalidad (CONTENEDOR AL GRANEL · 3 × 1.200). Las filas quedan más bajas.
 

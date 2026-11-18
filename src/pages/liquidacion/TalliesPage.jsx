@@ -55,7 +55,9 @@ export default function TalliesPage() {
         subtitulo="Cajas que llegan a puerto por camión. Se pagan las recibidas: embarcadas − caídas − rechazadas − faltantes"
       />
 
+      {/* 18/11/2026 (Peter): lista compacta como el Pedido semanal */}
       <TablaEstandar
+        compacta
         columnas={columnas}
         datos={pedidos}
         cargando={cargando}

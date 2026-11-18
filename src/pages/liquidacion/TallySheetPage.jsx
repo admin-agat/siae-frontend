@@ -216,6 +216,12 @@ export default function TallySheetPage() {
   // ---------------- Vista ----------------
 
   const inputClass = 'w-full bg-gray-100 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-primario disabled:opacity-60';
+  // 18/11/2026 (Peter): resumen y tarjas como la grilla de Compra de fruta (tipo SAP): celdas planas, línea gris
+  // fina, filas alternadas, la fila donde se trabaja en verde y la celda que se edita en amarillo
+  const tdGrilla = 'px-0.5 py-0 border border-gray-200 align-middle focus-within:bg-yellow-100 focus-within:text-gray-900';
+  const celda = 'w-full bg-transparent border-0 rounded-none px-1.5 py-0.5 text-sm text-inherit outline-none disabled:opacity-60 disabled:cursor-not-allowed';
+  const tdNumero = 'bg-gray-200 border border-gray-300 px-1 py-0.5 text-center text-sm font-bold text-gray-700 whitespace-nowrap cursor-pointer outline-none';
+  const tdLectura = 'px-2 py-1 border border-gray-200 whitespace-nowrap';
 
   if (cargando) return <div className="p-6 text-gray-400">Cargando tarjas...</div>;
   if (!pedido) {
@@ -239,16 +245,16 @@ export default function TallySheetPage() {
 
       {/* Resumen por compra */}
       <div className="bg-white rounded-xl shadow overflow-x-auto mb-4">
-        <table className="w-full text-sm min-w-[900px]">
+        <table className="w-full text-sm min-w-[900px] border-collapse">
           <thead className="bg-primario text-white">
             <tr>
-              <th className="text-left px-3 py-3 uppercase">Productor — Marca (Cliente)</th>
-              <th className="text-right px-3 py-3 uppercase">Comprado</th>
-              <th className="text-right px-3 py-3 uppercase">Embarcadas</th>
-              <th className="text-right px-3 py-3 uppercase">Caídas</th>
-              <th className="text-right px-3 py-3 uppercase">Rechazadas</th>
-              <th className="text-right px-3 py-3 uppercase">Faltantes</th>
-              <th className="text-right px-3 py-3 uppercase">Recibidas (se pagan)</th>
+              <th className="text-left px-3 py-2 uppercase text-xs whitespace-nowrap">Productor — Marca (Cliente)</th>
+              <th className="text-right px-3 py-2 uppercase text-xs whitespace-nowrap">Comprado</th>
+              <th className="text-right px-3 py-2 uppercase text-xs whitespace-nowrap">Embarcadas</th>
+              <th className="text-right px-3 py-2 uppercase text-xs whitespace-nowrap">Caídas</th>
+              <th className="text-right px-3 py-2 uppercase text-xs whitespace-nowrap">Rechazadas</th>
+              <th className="text-right px-3 py-2 uppercase text-xs whitespace-nowrap">Faltantes</th>
+              <th className="text-right px-3 py-2 uppercase text-xs whitespace-nowrap">Recibidas (se pagan)</th>
             </tr>
           </thead>
           <tbody>
@@ -259,21 +265,21 @@ export default function TallySheetPage() {
               const emb = suma(lista, (t) => n(t.boxes_shipped));
               const rech = suma(lista, (t) => n(t.boxes_rejected));
               return (
-                <tr key={c.id} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                  <td className="px-3 py-2 font-medium">
+                <tr key={c.id} className={i % 2 === 0 ? 'bg-white' : 'bg-violet-50'}>
+                  <td className={`${tdLectura} font-medium`}>
                     {etiquetaCompra(c)}
                     {c.liquidada && <span className="ml-2 inline-flex items-center gap-1 text-[10px] text-gray-500"><Lock size={10} /> LIQUIDADO</span>}
                     <button type="button" onClick={() => setHistorial({ compraId: c.id })} title="Historial de las tarjas de esta compra" className="ml-2 inline-flex align-middle text-primario hover:text-primario-hover"><History size={15} /></button>
                   </td>
-                  <td className="px-3 py-2 text-right">{formatoCajas(c.boxes)}</td>
-                  <td className={`px-3 py-2 text-right ${emb > c.boxes ? 'text-amber-700 font-semibold' : ''}`} title={emb > c.boxes ? 'Llegó más de lo comprado' : ''}>{formatoCajas(emb)}</td>
-                  <td className="px-3 py-2 text-right">{formatoCajas(suma(lista, (t) => n(t.boxes_fallen)))}</td>
-                  <td className="px-3 py-2 text-right text-red-600">
+                  <td className={`${tdLectura} text-right`}>{formatoCajas(c.boxes)}</td>
+                  <td className={`${tdLectura} text-right ${emb > c.boxes ? 'text-amber-700 font-semibold' : ''}`} title={emb > c.boxes ? 'Llegó más de lo comprado' : ''}>{formatoCajas(emb)}</td>
+                  <td className={`${tdLectura} text-right`}>{formatoCajas(suma(lista, (t) => n(t.boxes_fallen)))}</td>
+                  <td className={`${tdLectura} text-right text-red-600`}>
                     {formatoCajas(rech)}
                     {emb > 0 && <span className="block text-[10px] text-gray-500">{((rech / emb) * 100).toFixed(1)} %</span>}
                   </td>
-                  <td className="px-3 py-2 text-right">{formatoCajas(suma(lista, (t) => n(t.boxes_missing)))}</td>
-                  <td className="px-3 py-2 text-right font-bold text-green-700">{formatoCajas(suma(lista, recibidas))}</td>
+                  <td className={`${tdLectura} text-right`}>{formatoCajas(suma(lista, (t) => n(t.boxes_missing)))}</td>
+                  <td className={`${tdLectura} text-right font-bold text-green-700`}>{formatoCajas(suma(lista, recibidas))}</td>
                 </tr>
               );
             })}
@@ -283,21 +289,21 @@ export default function TallySheetPage() {
 
       {/* Tarjas */}
       <div className="bg-white rounded-xl shadow overflow-x-auto mb-4">
-        <table className="w-full text-sm min-w-[1400px]">
+        <table className="w-full text-sm min-w-[1250px] border-collapse">
           <thead className="bg-primario text-white">
             <tr>
-              <th className="text-left px-3 py-3 uppercase">#</th>
-              <th className="text-left px-3 py-3 uppercase">Productor — Marca (Cliente)</th>
-              <th className="text-left px-3 py-3 uppercase">Barco</th>
-              <th className="text-left px-3 py-3 uppercase">Fecha</th>
-              <th className="text-left px-3 py-3 uppercase">N° tarja</th>
-              <th className="text-left px-3 py-3 uppercase">Placa</th>
-              <th className="text-left px-3 py-3 uppercase">Contenedor</th>
-              <th className="text-right px-3 py-3 uppercase">Embarcadas</th>
-              <th className="text-right px-3 py-3 uppercase">Caídas</th>
-              <th className="text-right px-3 py-3 uppercase">Rechazadas</th>
-              <th className="text-right px-3 py-3 uppercase">Faltantes</th>
-              <th className="text-right px-3 py-3 uppercase">Recibidas</th>
+              <th className="text-left px-3 py-2 uppercase text-xs whitespace-nowrap">#</th>
+              <th className="text-left px-3 py-2 uppercase text-xs whitespace-nowrap">Productor — Marca (Cliente)</th>
+              <th className="text-left px-3 py-2 uppercase text-xs whitespace-nowrap">Barco</th>
+              <th className="text-left px-3 py-2 uppercase text-xs whitespace-nowrap">Fecha</th>
+              <th className="text-left px-3 py-2 uppercase text-xs whitespace-nowrap">N° tarja</th>
+              <th className="text-left px-3 py-2 uppercase text-xs whitespace-nowrap">Placa</th>
+              <th className="text-left px-3 py-2 uppercase text-xs whitespace-nowrap">Contenedor</th>
+              <th className="text-right px-3 py-2 uppercase text-xs whitespace-nowrap">Embarcadas</th>
+              <th className="text-right px-3 py-2 uppercase text-xs whitespace-nowrap">Caídas</th>
+              <th className="text-right px-3 py-2 uppercase text-xs whitespace-nowrap">Rechazadas</th>
+              <th className="text-right px-3 py-2 uppercase text-xs whitespace-nowrap">Faltantes</th>
+              <th className="text-right px-3 py-2 uppercase text-xs whitespace-nowrap">Recibidas</th>
               <th className="px-3 py-3 w-20"></th>
             </tr>
           </thead>
@@ -307,10 +313,10 @@ export default function TallySheetPage() {
             ) : tarjas.map((t, i) => {
               const bloqueada = Boolean(t.id) && compraDe(t)?.liquidada;
               return (
-                <tr key={t._key} className={i % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                  <td className="px-3 py-2 text-gray-400">{i + 1}</td>
-                  <td className="px-3 py-2 min-w-[260px]">
-                    <SelectBuscable value={t.producer_quota_line_id} onChange={(e) => cambiar(t._key, 'producer_quota_line_id', e.target.value)} disabled={bloqueada} className={inputClass}>
+                <tr key={t._key} className={`fila-grilla group text-gray-800 ${i % 2 === 0 ? 'bg-white' : 'bg-violet-50'} focus-within:bg-green-600 focus-within:text-white`}>
+                  <td tabIndex={-1} title="Clic para marcar la fila" className={tdNumero}><span className="hidden group-focus-within:inline text-primario mr-0.5" aria-hidden="true">▶</span>{i + 1}</td>
+                  <td className={`${tdGrilla} min-w-[260px]`}>
+                    <SelectBuscable value={t.producer_quota_line_id} onChange={(e) => cambiar(t._key, 'producer_quota_line_id', e.target.value)} disabled={bloqueada} className={celda}>
                       <option value="">SELECCIONAR...</option>
                       {compras.filter((c) => !c.liquidada || String(c.id) === t.producer_quota_line_id).map((c) => (
                         <option key={c.id} value={String(c.id)}>{etiquetaCompra(c)}</option>
@@ -318,22 +324,22 @@ export default function TallySheetPage() {
                     </SelectBuscable>
                     {bloqueada && <span className="flex items-center gap-1 text-[10px] text-gray-500 mt-0.5"><Lock size={10} /> YA LIQUIDADO</span>}
                   </td>
-                  <td className="px-3 py-2 min-w-[150px]">
-                    <SelectBuscable value={t.shipment_id} onChange={(e) => cambiar(t._key, 'shipment_id', e.target.value)} disabled={bloqueada} className={inputClass}>
+                  <td className={`${tdGrilla} min-w-[150px]`}>
+                    <SelectBuscable value={t.shipment_id} onChange={(e) => cambiar(t._key, 'shipment_id', e.target.value)} disabled={bloqueada} className={celda}>
                       <option value="">—</option>
                       {barcos.map((b) => <option key={b.id} value={String(b.id)}>{b.vessel?.name || b.vessel_name || b.code}{b.voyage ? ` · ${b.voyage}` : ''}</option>)}
                     </SelectBuscable>
                   </td>
-                  <td className="px-3 py-2"><input type="date" value={t.date} onChange={(e) => cambiar(t._key, 'date', e.target.value)} disabled={bloqueada} className={inputClass} /></td>
-                  <td className="px-3 py-2 min-w-[90px]"><input value={t.number} maxLength={30} onChange={(e) => cambiar(t._key, 'number', e.target.value.toUpperCase())} disabled={bloqueada} className={inputClass} /></td>
-                  <td className="px-3 py-2 min-w-[90px]"><input value={t.truck_plate} maxLength={15} onChange={(e) => cambiar(t._key, 'truck_plate', e.target.value.toUpperCase())} disabled={bloqueada} placeholder="GBC-1234" className={inputClass} /></td>
-                  <td className="px-3 py-2 min-w-[120px]"><input value={t.container_number} maxLength={15} onChange={(e) => cambiar(t._key, 'container_number', e.target.value.toUpperCase())} disabled={bloqueada} placeholder="OTPU6756531" className={inputClass} /></td>
-                  <td className="px-3 py-2 min-w-[90px]"><CampoNumero decimales={0} value={t.boxes_shipped} onChange={(e) => cambiar(t._key, 'boxes_shipped', e.target.value)} disabled={bloqueada} className={`${inputClass} text-right`} /></td>
-                  <td className="px-3 py-2 min-w-[80px]"><CampoNumero decimales={0} value={t.boxes_fallen} onChange={(e) => cambiar(t._key, 'boxes_fallen', e.target.value)} disabled={bloqueada} className={`${inputClass} text-right`} /></td>
-                  <td className="px-3 py-2 min-w-[80px]"><CampoNumero decimales={0} value={t.boxes_rejected} onChange={(e) => cambiar(t._key, 'boxes_rejected', e.target.value)} disabled={bloqueada} className={`${inputClass} text-right text-red-600`} /></td>
-                  <td className="px-3 py-2 min-w-[80px]"><CampoNumero decimales={0} value={t.boxes_missing} onChange={(e) => cambiar(t._key, 'boxes_missing', e.target.value)} disabled={bloqueada} className={`${inputClass} text-right`} /></td>
-                  <td className={`px-3 py-2 text-right font-semibold ${recibidas(t) < 0 ? 'text-red-600' : 'text-green-700'}`}>{formatoCajas(recibidas(t))}</td>
-                  <td className="px-3 py-2">
+                  <td className={`${tdGrilla} px-1`}><input type="date" value={t.date} onChange={(e) => cambiar(t._key, 'date', e.target.value)} disabled={bloqueada} className={celda} /></td>
+                  <td className={`${tdGrilla} min-w-[90px]`}><input value={t.number} maxLength={30} onChange={(e) => cambiar(t._key, 'number', e.target.value.toUpperCase())} disabled={bloqueada} className={celda} /></td>
+                  <td className={`${tdGrilla} min-w-[90px]`}><input value={t.truck_plate} maxLength={15} onChange={(e) => cambiar(t._key, 'truck_plate', e.target.value.toUpperCase())} disabled={bloqueada} placeholder="GBC-1234" className={celda} /></td>
+                  <td className={`${tdGrilla} min-w-[120px]`}><input value={t.container_number} maxLength={15} onChange={(e) => cambiar(t._key, 'container_number', e.target.value.toUpperCase())} disabled={bloqueada} placeholder="OTPU6756531" className={celda} /></td>
+                  <td className={`${tdGrilla} min-w-[90px]`}><CampoNumero decimales={0} value={t.boxes_shipped} onChange={(e) => cambiar(t._key, 'boxes_shipped', e.target.value)} disabled={bloqueada} className={`${celda} text-right`} /></td>
+                  <td className={`${tdGrilla} min-w-[80px]`}><CampoNumero decimales={0} value={t.boxes_fallen} onChange={(e) => cambiar(t._key, 'boxes_fallen', e.target.value)} disabled={bloqueada} className={`${celda} text-right`} /></td>
+                  <td className={`${tdGrilla} min-w-[80px]`}><CampoNumero decimales={0} value={t.boxes_rejected} onChange={(e) => cambiar(t._key, 'boxes_rejected', e.target.value)} disabled={bloqueada} className={`${celda} text-right text-red-600`} /></td>
+                  <td className={`${tdGrilla} min-w-[80px]`}><CampoNumero decimales={0} value={t.boxes_missing} onChange={(e) => cambiar(t._key, 'boxes_missing', e.target.value)} disabled={bloqueada} className={`${celda} text-right`} /></td>
+                  <td className={`${tdGrilla} px-2 text-right font-semibold ${recibidas(t) < 0 ? 'text-red-600' : 'text-green-700'}`}>{formatoCajas(recibidas(t))}</td>
+                  <td className={`${tdGrilla} px-1`}>
                     <div className="flex gap-1.5">
                       {t.id && (
                         <button type="button" onClick={() => setHistorial({ tarjaId: t.id })} title="Historial de esta tarja" className="text-primario p-1.5 rounded-lg border border-primario/40 hover:bg-primario-claro transition">
