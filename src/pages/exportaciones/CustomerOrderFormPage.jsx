@@ -34,6 +34,9 @@ const INCOTERMS = ['FOB', 'CFR', 'CIF'];
 
 // 10/11/2026: las 4 modalidades con los nombres de Exportaciones y Logística (utils/modalidades.js)
 const TIPOS_CARGA = MODALIDADES_CARGA;
+// 18/11/2026 (Peter): ancho fijo de cada columna de las líneas (px), para que la tabla entre sin mover a la derecha
+const ANCHOS_PEDIDO = [32, 115, 130, 132, 130, 92, 72, 68, 155, 95, 92, 85, 100, 40];
+const ANCHO_TABLA_PEDIDO = ANCHOS_PEDIDO.reduce((s, x) => s + x, 0);
 
 const esContenedor = (tipo) => tipo?.endsWith('_CONTENEDOR');
 
@@ -486,11 +489,12 @@ export default function CustomerOrderFormPage() {
       <div className="bg-white rounded-xl shadow overflow-hidden mb-4">
        <div ref={tablaLineasRef} className="overflow-auto max-h-[19rem] scroll-ancho">
         {/* 18/11/2026 (Peter): columnas angostas para no tener que mover a la derecha */}
-        <table className="w-full text-sm min-w-[1100px] border-collapse">
+        <table className="table-fixed text-sm border-collapse" style={{ width: ANCHO_TABLA_PEDIDO }}>
+          <colgroup>{ANCHOS_PEDIDO.map((w, k) => <col key={k} style={{ width: w }} />)}</colgroup>
           <thead className="bg-primario text-white sticky top-0 z-10">
             <tr>
               <th className="text-left px-2 py-2 uppercase text-xs w-8">#</th>
-              <th className="text-left px-2 py-2 uppercase text-xs w-[115px] max-w-[115px]">Cliente</th>
+              <th className="text-left px-2 py-2 uppercase text-xs">Cliente</th>
               <th className="text-left px-2 py-2 uppercase text-xs">Marca</th>
               <th className="text-left px-2 py-2 uppercase text-xs">Presentación</th>
               <th className="text-left px-2 py-2 uppercase text-xs">Modalidad</th>
@@ -511,8 +515,9 @@ export default function CustomerOrderFormPage() {
               const contenedor = esContenedor(l.cargo_type);
               return (
                 <tr key={l._key} className={`group text-gray-800 ${i % 2 === 0 ? 'bg-white' : 'bg-violet-50'} focus-within:bg-green-600 focus-within:text-white`}>
-                  <td className="bg-gray-200 border border-gray-300 px-1 py-0.5 text-center text-sm font-bold text-gray-700 w-8 whitespace-nowrap"><span className="hidden group-focus-within:inline text-primario mr-0.5" aria-hidden="true">▶</span>{i + 1}</td>
-                  <td className={`${tdGrilla} w-[115px] min-w-[115px] max-w-[115px]`}>{/* 18/11/2026 (Peter): columna angosta, basta con ver "JSC GRAND" */}
+                  {/* 18/11/2026 (Peter): clic en el N° marca la fila en verde */}
+                  <td tabIndex={-1} title="Clic para marcar la fila" className="cursor-pointer outline-none bg-gray-200 border border-gray-300 px-0.5 py-0.5 text-center text-sm font-bold text-gray-700 whitespace-nowrap"><span className="hidden group-focus-within:inline text-primario mr-0.5" aria-hidden="true">▶</span>{i + 1}</td>
+                  <td className={`${tdGrilla} overflow-hidden`}>{/* 18/11/2026 (Peter): columna angosta, basta con ver "JSC GRAND" */}
                     <SelectBuscable value={l.customer_id} onChange={(e) => cambiarLinea(l._key, 'customer_id', e.target.value)} className={celda} title={clientes.find((c) => String(c.id) === l.customer_id)?.third_party?.name}>
                       <option value="">SELECCIONAR...</option>
                       {clientes.map((c) => (
@@ -520,13 +525,13 @@ export default function CustomerOrderFormPage() {
                       ))}
                     </SelectBuscable>
                   </td>
-                  <td className={`${tdGrilla} min-w-[130px]`}>
+                  <td className={`${tdGrilla} overflow-hidden`}>
                     <SelectBuscable value={l.brand_id} onChange={(e) => cambiarLinea(l._key, 'brand_id', e.target.value)} className={celda} disabled={!l.customer_id}>
                       <option value="">{l.customer_id && marcasDe(l.customer_id).length === 0 ? 'SIN MARCAS' : 'SELECCIONAR...'}</option>
                       {marcasDe(l.customer_id).map((m) => <option key={m.id} value={String(m.id)}>{m.name}</option>)}
                     </SelectBuscable>
                   </td>
-                  <td className={`${tdGrilla} min-w-[125px]`}>
+                  <td className={`${tdGrilla} overflow-hidden`}>
                     {/* 14/11/2026: un clic para CONVENCIONAL/PACKED (como CONTRATO/SPOT en Compra de fruta), sin abrir lista */}
                     <div className="inline-flex rounded-lg border border-primario/30 overflow-hidden text-xs font-semibold" role="group" aria-label={`Línea ${i + 1}: presentación`}>
                       {PRESENTACIONES.map((p) => (
@@ -538,12 +543,12 @@ export default function CustomerOrderFormPage() {
                       ))}
                     </div>
                   </td>
-                  <td className={`${tdGrilla} min-w-[135px]`}>
+                  <td className={`${tdGrilla} overflow-hidden`}>
                     <SelectBuscable value={l.cargo_type} onChange={(e) => cambiarLinea(l._key, 'cargo_type', e.target.value)} className={celda}>
                       {TIPOS_CARGA.map((t) => <option key={t.valor} value={t.valor}>{t.etiqueta}</option>)}
                     </SelectBuscable>
                   </td>
-                  <td className={`${tdGrilla} min-w-[100px]`}>
+                  <td className={`${tdGrilla} overflow-hidden`}>
                     {contenedor ? (
                       <div className="flex items-center gap-0.5">{/* 18/11/2026 (Peter): 3 × 1200 en poco espacio */}
                         <CampoNumero decimales={0} value={l.containers_qty} onChange={(e) => cambiarLinea(l._key, 'containers_qty', e.target.value)} placeholder="9" className={`${celda.replace('w-full ', '')} w-9 text-right`} />
@@ -552,7 +557,7 @@ export default function CustomerOrderFormPage() {
                       </div>
                     ) : <span className="text-gray-300">—</span>}
                   </td>
-                  <td className={`${tdGrilla} min-w-[75px]`}>
+                  <td className={`${tdGrilla} overflow-hidden`}>
                     {/* En contenedor las cajas se calculan solas */}
                     <CampoNumero decimales={0} value={l.boxes}
                       onChange={(e) => cambiarLinea(l._key, 'boxes', e.target.value)}
@@ -561,23 +566,23 @@ export default function CustomerOrderFormPage() {
                       className={`${celda} ${contenedor ? 'text-gray-500' : ''}`}
                     />
                   </td>
-                  <td className={`${tdGrilla} min-w-[65px]`}>
+                  <td className={`${tdGrilla} overflow-hidden`}>
                     <SelectBuscable value={l.incoterm} onChange={(e) => cambiarLinea(l._key, 'incoterm', e.target.value)} className={celda}>
                       {INCOTERMS.map((x) => <option key={x} value={x}>{x}</option>)}
                     </SelectBuscable>
                   </td>
-                  <td className={`${tdGrilla} min-w-[120px]`}>
+                  <td className={`${tdGrilla} overflow-hidden`}>
                     {/* 16/11/2026: puerto de salida con un clic (barra), como la presentación */}
                     <BarraPuertos puertos={puertos} value={l.departure_port_id} onChange={(v) => cambiarLinea(l._key, 'departure_port_id', v)}
                       ariaLabel={`Línea ${i + 1}: puerto de salida`} className={celda} compacta />
                   </td>
-                  <td className={`${tdGrilla} min-w-[95px]`}>
+                  <td className={`${tdGrilla} overflow-hidden`}>
                     <SelectBuscable value={l.negotiation_type} onChange={(e) => cambiarLinea(l._key, 'negotiation_type', e.target.value)} className={celda}>
                       <option value="CONTRATO">CONTRATO</option>
                       <option value="SPOT">SPOT</option>
                     </SelectBuscable>
                   </td>
-                  <td className={`${tdGrilla} min-w-[95px]`}>
+                  <td className={`${tdGrilla} overflow-hidden`}>
                     {l.negotiation_type === 'SPOT' ? (
                       <CampoNumero decimales={2} value={l.box_price} onChange={(e) => cambiarLinea(l._key, 'box_price', e.target.value)} placeholder="Pendiente" className={celda} />
                     ) : origen === 'SIN_CONTRATO' ? (
@@ -594,10 +599,10 @@ export default function CustomerOrderFormPage() {
                       </span>
                     )}
                   </td>
-                  <td className={`${tdGrilla} min-w-[90px]`}>
+                  <td className={`${tdGrilla} overflow-hidden`}>
                     <input value={l.order_number} onChange={(e) => cambiarLinea(l._key, 'order_number', e.target.value.toUpperCase())} placeholder="Después" className={celda} />
                   </td>
-                  <td className={`${tdGrilla} min-w-[120px]`}>
+                  <td className={`${tdGrilla} overflow-hidden`}>
                     <input value={l.notes} onChange={(e) => cambiarLinea(l._key, 'notes', e.target.value.toUpperCase())} placeholder="Ej: CINTA AZUL" className={celda} />
                   </td>
                   <td className={`${tdGrilla}`}>

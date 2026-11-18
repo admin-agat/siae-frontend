@@ -273,6 +273,15 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 18/11/2026 — Grillas: clic en el N° marca la fila en verde
+En Compra de fruta y en el Pedido semanal, el N° de cada fila recibe el foco con un clic (`tabIndex={-1}`). Así, al tocar el número, la fila se pinta de verde con ▶ igual que al editar una celda.
+
+### 18/11/2026 — Pedido semanal: anchos fijos de columna
+Con `w-full` las columnas se seguían estirando (Peter mostró espacio sobrante en Presentación, Modalidad y Cont. × cajas).
+- La tabla pasa a `table-fixed` con un `colgroup` de anchos fijos (`ANCHOS_PEDIDO`, 1.338 px en total) y mide lo justo.
+- Lo que no entra en una celda se recorta.
+- En la barra compacta de puertos, "PUERTO BOLÍVAR" se lee "PTO. BOLÍVAR".
+
 ### 18/11/2026 — Pedido semanal: columnas angostas para no mover a la derecha
 - **Contenedores × cajas:** dos casillas chicas (9 × 1200), la columna baja de 150 a 100 px.
 - **Columnas más angostas:**

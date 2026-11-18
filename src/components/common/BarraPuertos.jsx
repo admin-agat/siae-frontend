@@ -27,7 +27,7 @@ export default function BarraPuertos({ puertos, value, onChange, disabled = fals
           <button key={p.id} type="button" disabled={disabled} onClick={() => !elegido && onChange(String(p.id))}
             aria-pressed={elegido}
             className={`${compacta ? 'px-1.5 py-1' : 'px-2.5 py-2'} whitespace-nowrap ${elegido ? 'bg-primario text-white' : 'bg-white text-primario hover:bg-primario-claro'} disabled:opacity-60`}>
-            {p.name}
+            {compacta ? p.name.replace(/^PUERTO\s+/i, 'PTO. ') : p.name /* 18/11/2026: PTO. BOLÍVAR en la grilla */}
           </button>
         );
       })}
