@@ -273,6 +273,13 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 18/11/2026 — Grillas con filas de color y la fila elegida en verde
+Peter mostró una grilla de ejemplo. Aplica en Compra de fruta y en las líneas del Pedido semanal:
+- Filas alternadas blanco / lila claro (`bg-violet-50`).
+- La fila donde se trabaja se pinta de **verde con letra blanca** (`focus-within` en la fila) y el N° muestra ▶.
+- La celda que se edita sigue en amarillo, con letra oscura.
+- Las celdas heredan el color de letra de la fila (`text-inherit`).
+
 ### 18/11/2026 — Pedido semanal más compacto, con la grilla como Compra de fruta
 - **Cabecera** (semana, año, total, fecha, comentario): menos relleno y etiquetas más chicas.
 - **Líneas del pedido**:

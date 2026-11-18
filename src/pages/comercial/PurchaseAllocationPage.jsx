@@ -974,8 +974,8 @@ export default function PurchaseAllocationPage() {
   const th = 'text-left px-2 py-2 uppercase text-xs whitespace-nowrap';
   // 18/11/2026 (Peter, grilla tipo SAP): en la tabla de compras las celdas son planas, con línea gris fina y la
   // celda activa en amarillo (excepción al estándar de inputs redondeados, solo en esta grilla)
-  const tdGrilla = 'px-0.5 py-0 border border-gray-200 align-middle focus-within:bg-yellow-100';
-  const celda = 'w-full bg-transparent border-0 rounded-none px-1.5 py-0.5 text-sm text-gray-800 outline-none disabled:opacity-60 disabled:cursor-not-allowed';
+  const tdGrilla = 'px-0.5 py-0 border border-gray-200 align-middle focus-within:bg-yellow-100 focus-within:text-gray-900';
+  const celda = 'w-full bg-transparent border-0 rounded-none px-1.5 py-0.5 text-sm text-inherit outline-none disabled:opacity-60 disabled:cursor-not-allowed';
   const celdaCorta = celda.replace('w-full ', '');
   const etiqueta = 'block text-xs font-semibold text-gray-600 uppercase mb-1';
 
@@ -1307,15 +1307,16 @@ export default function PurchaseAllocationPage() {
                           const mag = precioMagDe(b, c);
                           const ofBloque = oficialBloque(b).precio; // 13/11/2026
                           const conDetalle = Boolean(detalle[c._key]); // 18/11/2026
-                          const fondo = 'bg-white';
+                          // 18/11/2026 (Peter): filas alternadas blanco / lila y la fila donde se trabaja en verde (como la grilla de ejemplo)
+                          const fondo = j % 2 === 0 ? 'bg-white' : 'bg-violet-50';
                           const vacia = esVacia(c); // 18/11/2026: fila lista para escribir (no se guarda si queda así)
                           return (
                             <Fragment key={c._key}>
                             <tr data-fila={c._key}
-                              className={filaMarcada === c._key ? 'bg-red-50 outline outline-2 -outline-offset-2 outline-red-500' : fondo}>
+                              className={`group text-gray-800 ${filaMarcada === c._key ? 'bg-red-50 outline outline-2 -outline-offset-2 outline-red-500' : `${fondo} focus-within:bg-green-600 focus-within:text-white`}`}>
                               {/* 18/11/2026: N° de la compra, ⋯ abre el detalle (F2) y las letras avisan qué tiene adentro */}
                               <td className="sticky left-0 z-10 bg-gray-200 border border-gray-300 w-16 min-w-[64px] px-1 py-0.5 text-center align-middle whitespace-nowrap">
-                                <span className={`text-sm font-bold ${vacia ? 'text-gray-400' : 'text-gray-700'}`}>{j + 1}</span>
+                                <span className="hidden group-focus-within:inline text-primario mr-0.5" aria-hidden="true">▶</span><span className={`text-sm font-bold ${vacia ? 'text-gray-400' : 'text-gray-700'}`}>{j + 1}</span>
                                 <button type="button" tabIndex={-1} onClick={() => setDetalle((p) => ({ ...p, [c._key]: !conDetalle }))} aria-expanded={conDetalle}
                                   title="Transporte, bono y notas de la compra (F2)" aria-label={`Detalle de la compra ${j + 1}`}
                                   className={`ml-1 rounded px-1 text-xs font-bold leading-4 ${conDetalle ? 'bg-primario text-white' : 'text-primario hover:bg-primario-claro'}`}>⋯</button>

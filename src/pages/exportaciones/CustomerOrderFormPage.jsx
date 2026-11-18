@@ -411,8 +411,8 @@ export default function CustomerOrderFormPage() {
   const labelClass = 'block text-xs font-semibold text-gray-600 uppercase mb-1';
   // 18/11/2026 (Peter): las líneas se ven como la grilla de Compra de fruta (tipo SAP): celdas planas, línea gris
   // fina y la celda activa en amarillo
-  const tdGrilla = 'px-0.5 py-0 border border-gray-200 align-middle focus-within:bg-yellow-100';
-  const celda = 'w-full bg-transparent border-0 rounded-none px-1.5 py-0.5 text-sm text-gray-800 outline-none disabled:opacity-60 disabled:cursor-not-allowed';
+  const tdGrilla = 'px-0.5 py-0 border border-gray-200 align-middle focus-within:bg-yellow-100 focus-within:text-gray-900';
+  const celda = 'w-full bg-transparent border-0 rounded-none px-1.5 py-0.5 text-sm text-inherit outline-none disabled:opacity-60 disabled:cursor-not-allowed';
 
   if (cargando) {
     return <div className="p-6 text-gray-400">Cargando pedido...</div>;
@@ -509,8 +509,8 @@ export default function CustomerOrderFormPage() {
               const { precio, origen } = precioLinea(l);
               const contenedor = esContenedor(l.cargo_type);
               return (
-                <tr key={l._key} className="bg-white">
-                  <td className="bg-gray-200 border border-gray-300 px-1 py-0.5 text-center text-sm font-bold text-gray-700 w-8">{i + 1}</td>
+                <tr key={l._key} className={`group text-gray-800 ${i % 2 === 0 ? 'bg-white' : 'bg-violet-50'} focus-within:bg-green-600 focus-within:text-white`}>
+                  <td className="bg-gray-200 border border-gray-300 px-1 py-0.5 text-center text-sm font-bold text-gray-700 w-8 whitespace-nowrap"><span className="hidden group-focus-within:inline text-primario mr-0.5" aria-hidden="true">▶</span>{i + 1}</td>
                   <td className={`${tdGrilla} min-w-[160px]`}>
                     <SelectBuscable value={l.customer_id} onChange={(e) => cambiarLinea(l._key, 'customer_id', e.target.value)} className={celda}>
                       <option value="">SELECCIONAR...</option>
