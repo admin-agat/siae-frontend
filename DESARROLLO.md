@@ -273,6 +273,9 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 18/11/2026 — Pedido semanal: NORMAL y BANDA en lugar de CONVENCIONAL y PACKED
+En el formulario y en la vista del pedido, la presentación se lee **NORMAL / BANDA**. Es solo el texto: en la base y en el resto de pantallas sigue CONVENCIONAL / PACKED, y los contratos y precios no cambian. Se agregó `ETIQUETA_PEDIDO` en `src/utils/presentaciones.js`; `marcaConPresentacion` recibe las etiquetas como parámetro opcional.
+
 ### 18/11/2026 — Compra de fruta: grilla más limpia
 Pedido de Peter:
 - **Comerciales:** solo el botón **+** para agregar (antes la lista "+ OTRO COMERCIAL"). La columna baja a 190 px.
