@@ -273,6 +273,9 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 18/11/2026 — Fila elegida con todo el texto en blanco en las listas compactas
+- En la fila elegida (verde) de las listas compactas, todo el texto pasa a blanco, también los números de color (verde de EN BARCOS, naranja de POR COMPRAR). Los badges y botones con fondo propio conservan su color.
+
 ### 18/11/2026 — Lista de Compra de fruta compacta
 - La lista de semanas de Compra de fruta usa la `TablaEstandar` compacta, como el Pedido semanal: filas bajas y alternadas, columna **#** y fila elegida en verde.
 - La tabla de vendedores que faltan por completar contrato (en el aviso amarillo) también lleva columna **#** y filas alternadas.

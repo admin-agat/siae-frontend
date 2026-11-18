@@ -83,8 +83,9 @@ tr.fila-grilla:focus-within > td:not(:first-child):not(:focus-within) .bg-white 
   background-color: rgba(255, 255, 255, 0.15) !important;
 }
 
-/* 18/11/2026: lista compacta (TablaEstandar compacta): en la fila elegida (verde) los textos grises pasan a blanco */
-tr.fila-elegida > td:not(:first-child) [class*="text-gray"],
-tr.fila-elegida > td:not(:first-child)[class*="text-gray"] {
+/* 18/11/2026: lista compacta (TablaEstandar compacta): en la fila elegida (verde) todo el texto pasa a blanco,
+   también los de color (verde, naranja); los badges y botones con fondo propio conservan su color */
+tr.fila-elegida > td:not(:first-child),
+tr.fila-elegida > td:not(:first-child) :not([class*="bg-"]):not([class*="bg-"] *) {
   color: #fff !important;
 }
