@@ -120,7 +120,7 @@ export default function DividirCompraModal({
       if (!f.farm_id) return `FILA ${i + 1}: FALTA LA FINCA.`;
       if (!n(f.boxes)) return `FILA ${i + 1}: FALTAN LAS CAJAS.`;
       if (b.presentation === 'PACKED' && String(b.id) !== String(bloque.id) && f.real_price === '') {
-        return `FILA ${i + 1}: LA FRUTA PACKED SE COMPRA SIEMPRE SPOT: ESCRIBE EL PRECIO REAL.`;
+        return `FILA ${i + 1}: LA FRUTA CON BANDA SE COMPRA SIEMPRE SPOT: ESCRIBE EL PRECIO REAL.`;
       }
     }
     if (!filas.some((f) => String(f.purchase_block_id) === String(bloque.id))) {
@@ -224,7 +224,7 @@ export default function DividirCompraModal({
                 {esComercializadora && <th className="px-1 py-1 min-w-[180px]">Productor</th>}
                 <th className="px-1 py-1 min-w-[160px]">Finca</th>
                 <th className="px-1 py-1 w-20">Cajas</th>
-                <th className="px-1 py-1 w-20" title="Vacío = el de la compra. Obligatorio en filas PACKED de otro bloque">P. real</th>
+                <th className="px-1 py-1 w-20" title="Vacío = el de la compra. Obligatorio en filas con BANDA de otro bloque">P. real</th>
                 <th className="px-1 py-1 min-w-[150px]">Notas</th>
                 <th />
               </tr>

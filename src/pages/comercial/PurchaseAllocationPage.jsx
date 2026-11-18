@@ -39,7 +39,7 @@ import { useAvisoSalida } from '../../components/common/AvisoSalida';
 import ToastFlotante from '../../components/common/ToastFlotante';
 import SelectBuscable from '../../components/common/SelectBuscable';
 import ModalShell from '../../components/common/ModalShell';
-import { PRESENTACIONES, marcaConPresentacion } from '../../utils/presentaciones';
+import { PRESENTACIONES, ETIQUETA_PRESENTACION, marcaConPresentacion } from '../../utils/presentaciones';
 import CampoNumero from '../../components/common/CampoNumero';
 import { ETIQUETA_MODALIDAD, MODALIDAD_POR_DEFECTO } from '../../utils/modalidades';
 
@@ -78,9 +78,6 @@ const lunesSemana = (anio, semana) => {
   d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7) + (semana - 1) * 7);
   return d.toISOString().slice(0, 10);
 };
-// Nota de crédito de una compra: cajas × (oficial − real); null si falta algún precio
-// 13/11/2026: nunca negativa (si el real pasa el oficial, la NC es 0); el bono no la toca
-const notaCredito = (c) => (c.official_price === '' || c.real_price === '' ? null : Math.max(0, n(c.boxes) * (n(c.official_price) - n(c.real_price))));
 
 const compraDesdeBackend = (c) => ({
   _key: `c-${c.id}`,
@@ -351,10 +348,6 @@ export default function PurchaseAllocationPage() {
   const todas = bloques.flatMap((b) => b.purchases);
   const totalPedido = clientes.reduce((s, c) => s + c.pedido, 0);
   const totalComprado = todas.reduce((s, c) => s + n(c.boxes), 0);
-  // 13/11/2026: incluye el bono / extra (pago aparte, pero es costo de la fruta)
-  const totalReal = todas.reduce((s, c) => s + n(c.boxes) * (n(c.real_price) + n(c.bonus_rate)), 0);
-  const totalTransporte = todas.reduce((s, c) => s + n(c.transport_deduction), 0);
-  const totalNotaCredito = todas.reduce((s, c) => s + (notaCredito(c) || 0), 0);
   const hayExceso = clientes.some((c) => compradoCliente(c.id) > c.pedido);
   const avance = totalPedido ? Math.min(100, (totalComprado / totalPedido) * 100) : 0;
 
@@ -765,7 +758,7 @@ export default function PurchaseAllocationPage() {
         if (n(c.bonus_rate) > 5) faltan.push(`BLOQUE ${i + 1}, COMPRA ${j + 1}: EL BONO DEBE SER MAYOR A 0 Y HASTA $ 5,00 POR CAJA.`);
         if (n(c.bonus_rate) && c.bonus_reason === 'OTRO' && !c.bonus_detail.trim()) faltan.push(`BLOQUE ${i + 1}, COMPRA ${j + 1}: ESCRIBE EL DETALLE DEL BONO (MOTIVO OTRO).`);
         if (n(c.bonus_rate) && c.bonus_reason === 'CINTA' && b.presentation !== 'PACKED' && !c.liquidada) {
-          faltan.push(`BLOQUE ${i + 1}, COMPRA ${j + 1}: EL BONO POR CINTA SOLO VA EN BLOQUES PACKED.`);
+          faltan.push(`BLOQUE ${i + 1}, COMPRA ${j + 1}: EL BONO POR CINTA SOLO VA EN BLOQUES CON BANDA.`);
         }
         if (c.reconoce_transporte && !n(c.transport_recognized_rate)) {
           faltan.push(`BLOQUE ${i + 1}, COMPRA ${j + 1}: ESCRIBE CUÁNTO SE LE RECONOCE DE TRANSPORTE POR CAJA.`);
@@ -1019,9 +1012,8 @@ export default function PurchaseAllocationPage() {
       <div className={`rounded-xl border px-4 py-3 ${hayExceso ? 'bg-amber-50 border-amber-300' : avance >= 100 ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
         <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
           <span className="text-gray-700">
-            Comprado <strong>{formatoCajas(totalComprado)}</strong> de <strong>{formatoCajas(totalPedido)}</strong> cajas · Total real <strong>$ {formatoDinero(totalReal)}</strong>
-            {totalTransporte > 0 && <> · Transporte a descontar <strong>$ {formatoDinero(totalTransporte)}</strong></>}
-            {totalNotaCredito !== 0 && <> · Notas de crédito a recibir <strong>$ {formatoDinero(totalNotaCredito)}</strong></>}
+            Comprado <strong>{formatoCajas(totalComprado)}</strong> de <strong>{formatoCajas(totalPedido)}</strong> cajas
+            {/* 18/11/2026 (Peter): sin montos (total real, transporte, notas de crédito): a los departamentos solo les interesan las cajas */}
           </span>
           <span className={`font-semibold ${hayExceso ? 'text-amber-800' : avance >= 100 ? 'text-green-700' : 'text-amber-700'}`}>
             {hayExceso ? '⚠ HAY CLIENTES CON MÁS CAJAS QUE LAS PEDIDAS (SE PERMITE: SE COMPLETA CON SPOT)'
@@ -1259,7 +1251,7 @@ export default function PurchaseAllocationPage() {
                     <div>
                       <label className={etiqueta}>Presentación *</label>
                       <SelectBuscable value={b.presentation} onChange={(e) => cambiarBloque(b._key, 'presentation', e.target.value)} className={inputClass}>
-                        {PRESENTACIONES.map((p) => <option key={p} value={p}>{p}</option>)}
+                        {PRESENTACIONES.map((p) => <option key={p} value={p}>{ETIQUETA_PRESENTACION[p]}</option>)}
                       </SelectBuscable>
                     </div>
                     <div>
@@ -1460,7 +1452,7 @@ export default function PurchaseAllocationPage() {
                                 {/* 13/11/2026: un clic para CONTRATO/SPOT y la forma de pago como insignia (se cambia con un clic) */}
                                 <div className="flex items-center gap-1">
                                   {b.presentation === 'PACKED' ? (
-                                    <span className="text-xs font-semibold text-gray-500" title="La fruta packed se compra siempre SPOT">SPOT</span>
+                                    <span className="text-xs font-semibold text-gray-500" title="La fruta con banda se compra siempre SPOT">SPOT</span>
                                   ) : (
                                     <div className="inline-flex rounded-lg border border-primario/30 overflow-hidden text-xs font-semibold" role="group" aria-label={`Compra ${j + 1}: tipo`}>
                                       {['CONTRATO', 'SPOT'].map((t) => (
@@ -1736,7 +1728,6 @@ export default function PurchaseAllocationPage() {
             <span className={`ml-2 font-semibold ${hayExceso ? 'text-amber-800' : avance >= 100 ? 'text-green-700' : 'text-amber-700'}`}>
               {hayExceso ? '· HAY CAJAS DE MÁS' : avance >= 100 ? '· ✔ COMPLETA' : `· FALTAN ${formatoCajas(totalPedido - totalComprado)}`}
             </span>
-            <span className="ml-2">· Total real <strong>$ {formatoDinero(totalReal)}</strong></span>
             {hayCambios() && <span className="ml-2 text-xs font-semibold text-amber-700">· CAMBIOS SIN GUARDAR</span>}
           </span>
           <div className="flex gap-3">

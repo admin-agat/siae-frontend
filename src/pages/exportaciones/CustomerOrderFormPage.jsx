@@ -25,7 +25,7 @@ import ToastFlotante from '../../components/common/ToastFlotante';
 import { getMensajeExito, getMensajeError } from '../../utils/toastMessages';
 import SelectBuscable from '../../components/common/SelectBuscable';
 import BarraPuertos from '../../components/common/BarraPuertos';
-import { PRESENTACIONES, ETIQUETA_PEDIDO } from '../../utils/presentaciones';
+import { PRESENTACIONES, ETIQUETA_PRESENTACION } from '../../utils/presentaciones';
 import CampoNumero from '../../components/common/CampoNumero';
 import { hoyISO } from '../../utils/fecha';
 import { MODALIDADES_CARGA } from '../../utils/modalidades';
@@ -527,7 +527,7 @@ export default function CustomerOrderFormPage() {
                         <button key={p} type="button" onClick={() => l.presentation !== p && cambiarLinea(l._key, 'presentation', p)}
                           aria-pressed={l.presentation === p}
                           className={`px-2.5 py-2 ${l.presentation === p ? 'bg-primario text-white' : 'bg-white text-primario hover:bg-primario-claro'}`}>
-                          {ETIQUETA_PEDIDO[p] /* 18/11/2026: NORMAL / BANDA */}
+                          {ETIQUETA_PRESENTACION[p] /* 18/11/2026: NORMAL / BANDA */}
                         </button>
                       ))}
                     </div>

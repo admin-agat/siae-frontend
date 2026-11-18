@@ -273,6 +273,16 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 18/11/2026 — NORMAL y BANDA en todo el sistema; Compra de fruta sin montos
+- **NORMAL / BANDA** en todas las pantallas, no solo en el pedido:
+  - en Compra de fruta, el bloque y la lista de presentación;
+  - en Contratos de clientes;
+  - en los textos "MARCA BANDA".
+  - También en los mensajes del backend: "LA FRUTA CON BANDA SE COMPRA SIEMPRE SPOT", "BLOQUES CON BANDA", "(NORMAL O BANDA)".
+
+  En la base sigue CONVENCIONAL / PACKED. `ETIQUETA_PEDIDO` pasa a llamarse `ETIQUETA_PRESENTACION`, y `marcaConPresentacion` ya pone BANDA. Se actualizaron los textos esperados en 3 pruebas.
+- **Compra de fruta sin montos**, a pedido de Peter, para todos los departamentos: el resumen de arriba y la barra de guardar muestran solo cajas (comprado, faltan). Se quitaron el total real, el transporte a descontar y las notas de crédito.
+
 ### 18/11/2026 — Pedido semanal: NORMAL y BANDA en lugar de CONVENCIONAL y PACKED
 En el formulario y en la vista del pedido, la presentación se lee **NORMAL / BANDA**. Es solo el texto: en la base y en el resto de pantallas sigue CONVENCIONAL / PACKED, y los contratos y precios no cambian. Se agregó `ETIQUETA_PEDIDO` en `src/utils/presentaciones.js`; `marcaConPresentacion` recibe las etiquetas como parámetro opcional.
 

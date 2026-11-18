@@ -9,7 +9,7 @@ import { getCustomers } from '../api/customers';
 import { getMensajeExito, getMensajeError } from '../utils/toastMessages';
 import ModalShell from './common/ModalShell';
 import SelectBuscable from './common/SelectBuscable';
-import { PRESENTACIONES } from '../utils/presentaciones';
+import { PRESENTACIONES, ETIQUETA_PRESENTACION } from '../utils/presentaciones';
 
 // Incoterms permitidos (vacío = aplica a cualquiera)
 const INCOTERMS = ['FOB', 'CFR', 'CIF'];
@@ -250,7 +250,7 @@ export default function CustomerContractModal({ contract, onClose, onGuardado })
                                             {marcasCliente.map((m) => <option key={m.id} value={String(m.id)}>{m.name}</option>)}
                                         </SelectBuscable>
                                         <SelectBuscable value={p.presentation} onChange={(e) => cambiarPrecio(i, 'presentation', e.target.value)} className={inputClass}>
-                                            {PRESENTACIONES.map((pr) => <option key={pr} value={pr}>{pr}</option>)}
+                                            {PRESENTACIONES.map((pr) => <option key={pr} value={pr}>{ETIQUETA_PRESENTACION[pr]}</option>)}
                                         </SelectBuscable>
                                         <input type="text" inputMode="decimal" value={p.box_price} onChange={(e) => cambiarPrecio(i, 'box_price', e.target.value)}
                                             placeholder="7.50" className={inputClass} />

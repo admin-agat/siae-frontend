@@ -13,7 +13,7 @@ import { X, Pencil, Printer } from 'lucide-react';
 import { getCustomerOrder } from '../api/customerOrders';
 import { useAuth } from '../context/AuthContext';
 import EstadoBadge from './common/EstadoBadge';
-import { marcaConPresentacion, ETIQUETA_PEDIDO } from '../utils/presentaciones';
+import { marcaConPresentacion } from '../utils/presentaciones';
 import { ETIQUETA_MODALIDAD } from '../utils/modalidades';
 
 // 10/11/2026: las 4 modalidades con los nombres de Exportaciones y Logística (utils/modalidades.js)
@@ -112,7 +112,7 @@ export default function CustomerOrderViewModal({ pedidoId, onClose, onEditar, im
                         {lineas.map((l, i) => (
                             <tr key={l.id}>
                                 <td className={td}>{i + 1}</td>
-                                <td className={td}>{l.customer?.third_party?.name}{l.brand && ` · ${marcaConPresentacion(l.brand.name, l.presentation, ETIQUETA_PEDIDO)}`}</td>
+                                <td className={td}>{l.customer?.third_party?.name}{l.brand && ` · ${marcaConPresentacion(l.brand.name, l.presentation)}`}</td>
                                 <td className={td}>{carga(l)}</td>
                                 <td className={`${td} text-right font-semibold whitespace-nowrap`}>{formatoCajas(l.boxes)}</td>
                                 <td className={`${td} whitespace-nowrap`}>{l.departure_port?.name}</td>
@@ -252,7 +252,7 @@ export default function CustomerOrderViewModal({ pedidoId, onClose, onEditar, im
                                                 <td className="px-3 py-2 text-gray-400">{i + 1}</td>
                                                 <td className="px-3 py-2 font-medium">
                                                     <span className="whitespace-nowrap">{l.customer?.third_party?.name}</span>
-                                                    {l.brand && <span className="block text-xs font-normal text-gray-500">{marcaConPresentacion(l.brand.name, l.presentation, ETIQUETA_PEDIDO)}</span>}
+                                                    {l.brand && <span className="block text-xs font-normal text-gray-500">{marcaConPresentacion(l.brand.name, l.presentation)}</span>}
                                                     {l.order_number && <span className="block text-xs font-normal text-gray-500">N° pedido: {l.order_number}</span>}
                                                     {l.notes && <span className="block text-xs font-normal text-gray-500 italic max-w-xs">{l.notes}</span>}
                                                 </td>
