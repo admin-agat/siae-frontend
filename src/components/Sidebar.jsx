@@ -250,7 +250,7 @@ export default function Sidebar() {
     return (
         <>
             {/* Barra angosta: solo iconos */}
-            <div className="w-16 h-screen sticky top-0 z-40 flex flex-col items-center bg-white shrink-0" style={{ borderRight: "1px solid #e5e7eb" }}>
+            <div className="w-16 h-screen sticky top-0 z-50 flex flex-col items-center bg-white shrink-0" style={{ borderRight: "1px solid #e5e7eb" }}>
                 <button
                     type="button"
                     onClick={() => setPanel((actual) => (actual === TODO ? null : TODO))}
@@ -291,8 +291,9 @@ export default function Sidebar() {
             {/* Lista de opciones encima del contenido (clic afuera o Esc la cierra) */}
             {panel && (
                 <>
-                    <div className="fixed inset-0 z-30 bg-black/20" onClick={() => setPanel(null)} />
-                    <div className="fixed top-0 left-16 z-40 h-screen w-72 flex flex-col bg-white shadow-2xl" style={{ borderRight: "1px solid #e5e7eb" }}>
+                    {/* 19/11/2026 (Peter): por encima de las barras fijas de abajo (z-40, ej. Guardar compras), que se veían sobre el menú */}
+                    <div className="fixed inset-0 z-[45] bg-black/20" onClick={() => setPanel(null)} />
+                    <div className="fixed top-0 left-16 z-50 h-screen w-72 flex flex-col bg-white shadow-2xl" style={{ borderRight: "1px solid #e5e7eb" }}>
                         <div className="h-14 px-4 flex items-center justify-between shrink-0" style={{ borderBottom: "1px solid #e5e7eb" }}>
                             <span className="font-bold text-primario flex items-center gap-2">
                                 {!grupoPanel && <img src="/icono-64.png" alt="" className="w-6 h-6" />}

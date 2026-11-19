@@ -273,6 +273,17 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 19/11/2026 — Menú lateral por encima de las barras fijas
+- Pedido de Peter: con el menú abierto, la barra de abajo de Compra de fruta (Cancelar / Guardar compras) se veía encima del menú, porque ambos usaban la capa z-40.
+- `Sidebar.jsx`: el fondo oscuro pasa a z-[45] y la lista de opciones y la barra de íconos a z-50. Vale para todas las pantallas con barra fija abajo.
+
+### 19/11/2026 — Carga del SEGUIMIENTO DE COMPRAS WK41-44 en producción
+- Aprobada por Peter tras la simulación. Script `docs/datos/etl-2026-11-18/carga_wk41_47.php` (mismo endpoint que Compra de fruta), respaldo previo `siae_20261119_1854_antes_carga_wk41_44.dump` (+ dist y .env).
+- Cargado: pedidos #47-#50 (WK41-44), 768 compras · 524.277 cajas; 15 productores nuevos sin cédula (Reporte de Comercial) y 44 fincas. Verificado en la base por semana de compra (WK41-45).
+- No se tocaron: pedido #46 (WK40, compras CONTRATO sin contrato del 10/11) ni #1 (WK45, compras a mano de Comercial y liquidaciones pagadas; una compra CONTRATO de ASCUPOESPE sin contrato impide guardarlo entero).
+- WK46: sus barcos (CS STRATOS, FRIO STAR, COOL SPIRIT, CROWN TOPAZ) no están en el pedido #51; WK41: falta CROWN RUBY. Logística debe crearlos y se vuelve a correr (el script salta lo ya cargado).
+- Pendientes para Comercial: `docs/datos/seguimiento-pendientes-wk41-46-2026-11-19.csv` (vendedores que no existen, productor real de compras a comercializadoras, precios fuera de contrato o con texto).
+
 ### 19/11/2026 — Contratos con el estilo de las grillas
 - Pedido de Peter: los listados de contratos (clientes y productores) ya tenían el formato SAP por `TablaEstandar`; faltaban los formularios.
 - Contrato de cliente (`CustomerContractModal.jsx`): los precios por marca + presentación pasan a una grilla como la de Compra de fruta (#, celdas planas, línea fina, filas alternadas, fila en verde y celda en verde claro). "+ Agregar precio" pasa a botón sólido.
