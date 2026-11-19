@@ -59,6 +59,9 @@ export const PAGINAS = {
   DepartmentOrdersPage: () => import("../pages/compras/DepartmentOrdersPage"),
   AccountingOrdersPage: () => import("../pages/contabilidad/AccountingOrdersPage"),
   BankAccountsPage: () => import("../pages/contabilidad/BankAccountsPage"),
+  // 19/11/2026 (fase 1b-1): tablero de aprobación de Liquidaciones y Cuentas por pagar de Contabilidad
+  SettlementPaymentsBoardPage: () => import("../pages/liquidacion/SettlementPaymentsBoardPage"),
+  BankPaymentsPage: () => import("../pages/contabilidad/BankPaymentsPage"),
 };
 
 let precargadas = false;

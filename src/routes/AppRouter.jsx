@@ -64,6 +64,7 @@ const SettlementsPage = lazy(PAGINAS.SettlementsPage);
 const SettlementFormPage = lazy(PAGINAS.SettlementFormPage);
 const SettlementDetailPage = lazy(PAGINAS.SettlementDetailPage);
 const SettlementHistoryPage = lazy(PAGINAS.SettlementHistoryPage);
+const SettlementPaymentsBoardPage = lazy(PAGINAS.SettlementPaymentsBoardPage); // 19/11/2026 (fase 1b-1)
 // 06/11/2026: parámetros de la semana + tabla de retención, contratos y retención de productores
 const SettlementParametersPage = lazy(PAGINAS.SettlementParametersPage);
 const ProducerContractsPage = lazy(PAGINAS.ProducerContractsPage);
@@ -80,6 +81,7 @@ const PurchaseOrdersPage = lazy(PAGINAS.PurchaseOrdersPage);
 // 05/11/2026: OC por departamento, aprobación y pago (Contabilidad), cuentas bancarias de proveedores
 const DepartmentOrdersPage = lazy(PAGINAS.DepartmentOrdersPage);
 const AccountingOrdersPage = lazy(PAGINAS.AccountingOrdersPage);
+const BankPaymentsPage = lazy(PAGINAS.BankPaymentsPage); // 19/11/2026 (fase 1b-1)
 const BankAccountsPage = lazy(PAGINAS.BankAccountsPage);
 
 // Componente que protege rutas privadas
@@ -198,6 +200,8 @@ export default function AppRouter() {
           <Route path="/liquidacion/anticipos" element={P('anticipos', <ProducerAdvancesPage />)} />
           <Route path="/liquidacion/notas-credito" element={P('notas_credito', <CreditNotesPage />)} />
           <Route path="/liquidacion/pagos" element={P('pagos', <SettlementHistoryPage />)} />
+          {/* 19/11/2026 (fase 1b-1): aprueba el jefe (excepción por persona); pagos y lectura solo ven */}
+          <Route path="/liquidacion/tablero-pagos" element={P(['aprobar_pagos_liquidacion', 'pagos', 'tablero_pagos_lectura'], <SettlementPaymentsBoardPage />)} />
           <Route path="/liquidacion/cupo/:quotaId" element={P('liquidar', <SettlementFormPage />)} />
           <Route path="/liquidacion/:id" element={P(LIQ, <SettlementDetailPage />)} />
           <Route path="navieras" element={P('navieras', <ShippingLinesPage />)} />
@@ -232,6 +236,7 @@ export default function AppRouter() {
 
           <Route path="/compras/ordenes" element={P('oc_departamento', <DepartmentOrdersPage />)} />
           <Route path="/contabilidad/ordenes" element={P('aprobar_oc', <AccountingOrdersPage />)} />
+          <Route path="/contabilidad/pagos-banco" element={P('pagos_banco', <BankPaymentsPage />)} />
           <Route path="/contabilidad/cuentas" element={P('cuentas_bancarias', <BankAccountsPage />)} />
 
         </Route>

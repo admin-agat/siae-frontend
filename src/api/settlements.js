@@ -34,3 +34,10 @@ export const unpaySettlement = (id, installment) => axios.patch(`/settlements/${
 export const annulSettlement = (id, reason) => axios.patch(`/settlements/${id}/annul`, { reason });
 // N° de factura y de nota de crédito del vendedor (30/10/2026)
 export const saveSettlementDocuments = (id, data) => axios.patch(`/settlements/${id}/documents`, data);
+
+// ---- 19/11/2026 (fase 1b-1): Tablero de anticipos y pagos (aprueba solo el jefe de Liquidaciones) ----
+// params: { anio, semana, negociacion, dia, estado, orden, vendedor }
+export const getPaymentsBoard = (params = {}) => axios.get("/settlement-payables/board", { params });
+// items: [{ tipo: 'anticipo', id }]
+export const approvePayables = (items) => axios.patch("/settlement-payables/approve", { items });
+export const rejectPayable = (tipo, id, reason) => axios.patch(`/settlement-payables/${tipo}/${id}/reject`, { reason });

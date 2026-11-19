@@ -3,14 +3,17 @@
 Fecha: 17/11/2026 · Autor: arquitecto (siae-architect)
 **Estado:**
 - **FASE 0: EN PRODUCCIÓN** (17/11, migración `2026_11_17_000001_liquidacion_fase0`).
-- **FASE 1a (tarjas en el puerto) y FASE 1b (anticipos, aprobación y pagos al banco): LISTAS PARA PROGRAMAR.** Peter aprobó las recomendaciones el 17/11 (sección 11). Lo nuevo de tarjas (3.5) espera su OK final en los puntos de la sección 12.
+- **FASE 1a (tarjas en el puerto): PROGRAMADA el 17/11** (migraciones `2026_11_17_000002_tipo_tarjador` y `2026_11_17_000003_tarjas_historial`; falta la vista de celular). Ver `DESARROLLO.md`.
+- **FASE 1b (anticipos, aprobación y pagos al banco): AÚN NO PROGRAMADA.** Peter aprobó las recomendaciones el 17/11 (sección 11).
+- **CAMBIOS DEL 19/11 (sección 13): DISEÑO, ESPERA APROBACIÓN DE PETER.** **A)** el anticipo 80 % nace en Compra de fruta con un botón **PAGAR** por compra SPOT, sobre las **cajas compradas** (reemplaza "se calcula al guardar la tarja"). **B)** **material sobrante** después de la tarja: la analista comercial decide DESCONTAR / DEVOLVER / PENDIENTE, y Liquidar queda bloqueado hasta que decida. Donde este documento diga otra cosa, **manda la sección 13**.
 
 Pedido de Peter (17/11/2026): que el sistema calcule las cuotas a pagar de cada liquidación (CONTRATO 100 %, SPOT 80/20), que Liquidaciones las acepte con un check en un listado, que lo aceptado le llegue a Contabilidad para pagar por el banco, y saber cómo se manejan las **cuentas contables**. Ese mismo día agregó dos temas de tarjas: el **historial de cada tarja** y que las llene **una persona en el puerto desde el celular**.
 
 > **En un minuto**
 > - **Nada de pantallas paralelas.** Se reutilizan los pagos que ya tiene cada liquidación, los anticipos, los lotes al banco y el TXT del Pichincha. Las cuentas bancarias siguen cifradas y en su misma tabla.
 > - **Tres momentos, una sola cola.** El sistema calcula la cuota. El jefe de Liquidaciones la **acepta** con un check, o la **devuelve** con un motivo. Contabilidad la **paga** en un lote al banco, o a mano con su comprobante.
-> - **SPOT:** el 80 % se paga en la semana de la compra como un **anticipo automático por negociación**, sobre las cajas EMBARCADAS. La LQ SPOT lo descuenta y paga el saldo (20 %).
+> - **SPOT:** el 80 % se paga en la **semana de corte**. ⚠️ *19/11 (sección 13.A):* ya no es automático desde la tarja: Comercial pulsa **PAGAR** en cada compra SPOT ya enviada a bodega; monto = **cajas compradas** × precio pactado × 80 %. La LQ SPOT lo descuenta y paga el saldo (20 %).
+> - **Material sobrante (19/11, sección 13.B):** lo retirado que no llegó en la tarja lo reparte la analista comercial en DESCONTAR, DEVOLVER o PENDIENTE; sin esa decisión no se liquida.
 > - **CONTRATO:** un solo pago del 100 % al liquidar, en la semana siguiente a la de compra o una más, según el contrato.
 > - **Anticipos y préstamos manuales** también pasan por aprobación y por el TXT (P14).
 > - **Tarjas (fase 1a, va primero):** tipo base nuevo **TARJADOR** que solo ve Tarjas y no ve precios; pantalla para celular con **"Guardar camión"**; **historial de cada tarja** de punta a punta; las tarjas ya no se borran (baja lógica con motivo).
@@ -26,7 +29,7 @@ Pedido de Peter (17/11/2026): que el sistema calcule las cuotas a pagar de cada 
 |---|---|---|---|
 | 1 | Semana de compra **N** | Comercial / Logística | Se compra la fruta y llega al puerto. |
 | 2 | Semana N, en el puerto | **Tarjador** (celular) | Registra cada **camión**: embarcadas, caídas, rechazadas y faltantes. Cada cambio queda en el historial de la tarja. |
-| 3 | Semana N, al guardar cada camión | **Sistema** | Para cada compra **SPOT** calcula o ajusta el **anticipo del 80 %**: cajas embarcadas × precio pactado × 80 %. Lo deja **POR APROBAR**. |
+| 3 | Semana N, ~~al guardar cada camión~~ **con la compra ya enviada a bodega** | ~~Sistema~~ **Comercial (botón PAGAR)** | ⚠️ *Reemplazado el 19/11 (13.A):* Comercial pulsa **PAGAR** en la compra **SPOT** y el sistema crea la orden del **80 %** = cajas **compradas** × precio pactado × 80 %, POR APROBAR, para la **semana de corte**. |
 | 4 | Semana N | Jefe de Liquidaciones | En **Tablero de anticipos y pagos** marca con un check los anticipos correctos (y los anticipos o préstamos manuales) y pulsa **Aprobar**, o devuelve uno con su motivo. |
 | 5 | Cuando toca | Contabilidad (quien **prepara**) | En **CONTABILIDAD → Pagos al banco** ve juntas las OC aprobadas y las órdenes de Liquidaciones aprobadas. Marca las que va a pagar y **genera el TXT del Pichincha**. |
 | 6 | Al confirmar el banco | Contabilidad (quien **confirma**) | Marca el lote como **PAGADO**. Si el banco rechazó alguna línea, la marca **FALLIDA** con el motivo, y esa orden vuelve a "por pagar". |
@@ -48,7 +51,7 @@ Pedido de Peter (17/11/2026): que el sistema calcule las cuotas a pagar de cada 
 | Anticipos manuales | — | Se entregan por fuera y se descuentan | Pasan por aprobación y TXT (P14) |
 
 ⚠️ **Reglas de negocio que cambian (señalado como pide `CLAUDE.md`):**
-1. **Liquidación — anticipo del 80 %:** hoy el 80 % SPOT se paga **después** de liquidar; pasa a pagarse **antes**, como orden propia por negociación. Confirmado con el Excel real WK41 y el "REPORTE DE ANTICIPOS WK 40" (P1, P5).
+1. **Liquidación — anticipo del 80 %:** hoy el 80 % SPOT se paga **después** de liquidar; pasa a pagarse **antes**, como orden propia por negociación. Confirmado con el Excel real WK41 y el "REPORTE DE ANTICIPOS WK 40" (P1, P5). ⚠️ **19/11 (13.A):** la base cambia de EMBARCADAS a **CAJAS COMPRADAS**, y la orden la pide **Comercial** con PAGAR, no la tarja.
 2. **Liquidación — CONTRATO con 80/20:** hoy una compra CONTRATO marcada 80_20 se paga 80/20. Desde la fase 1, toda LQ CONTRATO paga 100 % en una cuota (P17: "el anticipo 80 % es solo SPOT"). Ver 3.1.
 3. **Liquidación — saldo negativo:** hoy, si los descuentos superan la fruta, la LQ no se graba. Desde la fase 1, si el exceso viene del 80 % ya pagado, se graba y el exceso queda como **SALDO A FAVOR DE AGAT** (P4). Si viene de anticipos manuales elegidos de más, sigue el error de hoy.
 4. **Órdenes de compra:** el **único aprobador** de OC no cambia (`aprobar_oc`). Lo que cambia es dónde se arman los lotes al banco: pasan de "Aprobación y pago de OC" a **"Pagos al banco"**, con permisos propios (5.5). Andrea no pierde nada: la migración le da las pantallas nuevas a su perfil.
@@ -66,12 +69,12 @@ Pedido de Peter (17/11/2026): que el sistema calcule las cuotas a pagar de cada 
 
 | Origen | Orden | Cuándo se crea | Monto | Semana programada |
 |---|---|---|---|---|
-| Compra **SPOT** con `payment_scheme = 80_20` | **ANTICIPO 80 %**, una por negociación (compra) | Al guardar un camión de esa compra (servicio `Anticipo80`) | **Σ EMBARCADAS de sus tarjas activas × PRECIO PACTADO × 0,80**, sin descuentos | N (semana del cupo) |
+| Compra **SPOT** con `payment_scheme = 80_20` | **ANTICIPO 80 %**, una por negociación (compra) | ⚠️ *19/11 (13.A):* cuando **Comercial pulsa PAGAR** (compra ya enviada a bodega) | ⚠️ *19/11:* **CAJAS COMPRADAS × PRECIO PACTADO × 0,80**, sin descuentos | Semana ISO del **día de corte** |
 | LQ **SPOT** | **SALDO SPOT** (cuota única de la LQ) | Al liquidar | neto de la LQ − anticipos 80 % descontados | N+1 |
 | LQ **CONTRATO n** | **PAGO ÚNICO 100 %** | Al liquidar | neto de la LQ | N+1 + `payment_week_offset` (0 o 1) |
 | Liquidaciones (pantalla `anticipos`) | **ANTICIPO / PRÉSTAMO MANUAL** (P14) | Al registrarlo | el monto escrito | La semana en curso, editable antes de aprobar |
 
-- **Fórmula del 80 %: CONFIRMADA** (P1 y P5): cajas EMBARCADAS de la tarja × precio pactado (`real_price` de la compra) × 0,80. Ejemplo inventado: 1.000 × $7,00 × 0,80 = **$5.600,00**.
+- **Fórmula del 80 %:** ~~cajas EMBARCADAS de la tarja~~ ⚠️ *19/11 (13.A):* **cajas compradas** (`quantity_cajas`) × precio pactado (`real_price` de la compra) × 0,80. Ejemplo inventado: 1.000 × $7,00 × 0,80 = **$5.600,00**. Los puntos de abajo sobre tarjas (recalcular por camión, SIN TARJA, EMBARCADAS como fuente) **ya no aplican al 80 %**; siguen valiendo para la LQ.
 - **Una orden por negociación** (una compra = un vendedor, una marca y un precio). Si una compra embarca en varios días, la **misma** orden se recalcula mientras esté POR APROBAR (supuesto de P22, ver 11).
 - **Solo SPOT** (P17): si una compra CONTRATO quedó marcada 80_20, no genera 80 %; en su LQ se paga al 100 %. Para evitar la confusión, `PurchaseAllocationController` guarda `payment_scheme = '100'` en toda compra CONTRATO nueva o editada (validación en el backend; no se migran datos).
 - **SPOT al 100 %** (`payment_scheme = 100`): no genera 80 %; su fruta va completa en la cuota SALDO SPOT.
@@ -125,9 +128,7 @@ Lo que quedó programado (`DESARROLLO.md`, entrada del 17/11):
 | Al liquidar, el 80 % está **POR APROBAR, APROBADO sin lote o RECHAZADO** | La LQ lo **ANULA** (`approval_status = ANULADA`, `status = false`) y paga todo en su cuota. Se bloquea con `lockForUpdate` para que Contabilidad no lo meta en un lote en ese mismo instante. |
 | Al liquidar, el 80 % está **EN BANCO o PAGADO** | Se descuenta completo. Si después el banco lo rechaza, Contabilidad lo marca FALLIDO y vuelve a "por pagar" (no se anula: ya está descontado). |
 | Anticipo **manual** sin salir al banco | **No se ofrece** para descontar: solo cuentan los ANTERIOR, EN BANCO o PAGADOS (`ProducerAdvance::saldo()`). |
-| Cambian las **EMBARCADAS** con el 80 % POR APROBAR | Se recalcula solo. |
-| Cambian las **EMBARCADAS** con el 80 % **APROBADO** (sin lote) | Solo lo puede hacer quien tiene la pantalla `liquidar` (el tarjador recibe "LA COMPRA YA TIENE ANTICIPO APROBADO: PIDE A LIQUIDACIONES QUE CORRIJA LA TARJA"). Al guardar, el 80 % se recalcula, vuelve a **POR APROBAR** y se avisa al aprobador en la campanita. |
-| Cambian las **EMBARCADAS** con el 80 % **EN BANCO o PAGADO** | Solo `liquidar`. El 80 % no cambia; el tablero avisa "TARJA CAMBIADA DESPUÉS DE PAGAR EL 80 %" y la diferencia se arregla sola en la LQ. |
+| ~~Cambian las EMBARCADAS con el 80 % POR APROBAR / APROBADO / EN BANCO~~ | ⚠️ **Reemplazado el 19/11 (13.A.5):** el 80 % ya no depende de la tarja. **Se quita el candado de EMBARCADAS para el tarjador**: corrige todas las cifras hasta que se liquide el cupo. Lo que mueve el 80 % son las **cajas y el precio de la compra** (Comercial), con las reglas de 13.A.5. |
 | Caídas, rechazadas o faltantes | No mueven el 80 %: el tarjador las corrige hasta que se liquide el cupo. |
 | La compra ya tuvo una LQ (aunque esté anulada) | No se crea un 80 % nuevo: todo se paga en la LQ. |
 | Se anula la liquidación | Exige que **ninguna cuota** esté APROBADA, EN BANCO o PAGADA (primero se rechaza la cuota o se anula el lote). Sus cuotas pasan a ANULADA, su SALDO a favor se desactiva y los 80 % descontados recuperan su saldo. Las tarjas del cupo se desbloquean (y queda en su historial). |
@@ -155,7 +156,7 @@ Lo que quedó programado (`DESARROLLO.md`, entrada del 17/11):
    - En la hoja de tarjas: icono **Historial** (`History`) en cada camión y en cada compra del resumen. Abre un `ModalShell` con una línea de tiempo: **CREADA** por X el 05/11 10:32 (500 / 10 / 20 / 0) → **EDITADA**: RECHAZADAS 15 → 20 → **QUITADA**: motivo → **LIQUIDADA** en LQ-####.
    - En el detalle de la liquidación (`SettlementDetailPage`): enlace "Historial de tarjas" por compra.
    - Botón "Ver quitadas" en la hoja de tarjas para mostrarlas en gris.
-4. **Bloqueo:** **sí**, la tarja queda bloqueada al liquidar el cupo (ya existe: "YA FUE LIQUIDADO"; se extiende a quitar y reactivar). La única forma de cambiarla es **anular la LQ** (Liquidaciones), y eso queda en el historial. Además, desde la fase 1b, las EMBARCADAS se bloquean para el tarjador cuando el 80 % ya está aprobado (3.4).
+4. **Bloqueo:** **sí**, la tarja queda bloqueada al liquidar el cupo (ya existe: "YA FUE LIQUIDADO"; se extiende a quitar y reactivar). La única forma de cambiarla es **anular la LQ** (Liquidaciones), y eso queda en el historial. ~~Además, desde la fase 1b, las EMBARCADAS se bloquean para el tarjador cuando el 80 % ya está aprobado (3.4).~~ *19/11 (13.A.5): ese candado ya no hace falta.*
 
 #### B) Quién llena las tarjas: tipo base **TARJADOR** (recomendado)
 
@@ -175,7 +176,7 @@ Lo que quedó programado (`DESARROLLO.md`, entrada del 17/11):
 | `tarjas` está en el grupo `$lectura` de `routes/api.php`: con solo esa pantalla se leen **tarifas portuarias con precios** (`port-tariff-items`, `price-history`), clientes, embarques y líneas de embarque | Se **saca `tarjas` de `$lectura`** y del middleware de `GET /customer-orders`. Liquidaciones no pierde nada: tiene otras pantallas del grupo. |
 | El listado de semanas (`TalliesPage`) usa `GET /customer-orders` | Endpoint propio `GET /tallies/weeks` (`pantalla:tarjas`): semana, año, cajas compradas, cajas con tarja y camiones; sin dinero. |
 
-El tarjador **no ve** precios, montos, anticipos ni el estado de pago. Solo ve "LIQUIDADO" (candado) y, en la fase 1b, el mensaje del 3.4 si quiere cambiar embarcadas con el 80 % aprobado.
+El tarjador **no ve** precios, montos, anticipos ni el estado de pago. Solo ve "LIQUIDADO" (candado). *(19/11: se quita el mensaje del 80 % aprobado; ver 13.A.5.)*
 
 #### C) Hoja de tarjas para celular (`src/pages/liquidacion/TallySheetPage.jsx`)
 
@@ -576,7 +577,7 @@ return new class extends Migration
 
 ### 7.3 Migración FASE 1b
 
-`database/migrations/2026_11_18_000002_pagos_liquidaciones.php` (revisada: ya **no** crea la retención, que vino en la fase 0).
+`database/migrations/2026_11_18_000002_pagos_liquidaciones.php` (revisada: ya **no** crea la retención, que vino en la fase 0). ⚠️ *19/11:* ese nombre **ya está usado** por `2026_11_18_000002_verificacion_cuentas_bancarias`; la fecha final es la del día en que se programe. Los cambios del 19/11 a esta migración están en **13.A.4**.
 
 ```php
 <?php
@@ -813,7 +814,7 @@ return new class extends Migration
 | **`BankPaymentBatchItem`** *(nuevo, `Auditable`)* | todas sus columnas | `'account_number' => 'encrypted'`, `'holder_id' => 'encrypted'`, `'amount' => 'decimal:2'`, `'paid_at' => 'date:Y-m-d'`; `$hidden = ['account_number', 'holder_id']`; agregar `holder_id` a `$auditarEnmascarar` del trait. |
 | `BankPaymentBatch` | — | relación `items()` |
 
-**Servicio nuevo `App\Services\Anticipo80`:** `recalcular(int $producerQuotaLineId)`, llamado dentro de la misma transacción al guardar o quitar un camión, y al cambiar `real_price` o `payment_scheme` de la compra. Reglas en 3.1 y 3.4. Avisa en la campanita (`Notificaciones`) a quien tiene `aprobar_pagos_liquidacion` cuando hay órdenes nuevas o que volvieron a POR APROBAR.
+**Servicio nuevo `App\Services\Anticipo80`:** ⚠️ *19/11 (13.A.6):* ya **no** se llama al guardar o quitar un camión. Tiene `crear(ProducerQuotaLine, User)` (botón PAGAR) y `recalcular(ProducerQuotaLine)` (al cambiar las cajas o el `real_price` de la compra en Compra de fruta). Reglas en 3.1 y 3.4. Avisa en la campanita (`Notificaciones`) a quien tiene `aprobar_pagos_liquidacion` cuando hay órdenes nuevas o que volvieron a POR APROBAR.
 
 **`SettlementController@store`** (fase 1b):
 - En la LQ SPOT, por cada compra con 80 % activo: EN BANCO o PAGADA → se descuenta (fila en `settlement_advances` y suma en `advance_80_amount`); si no → ANULADA.
@@ -960,7 +961,7 @@ Orden en producción: simulación → respaldo de la base, del `dist` y de los `
 |---|---|---|
 | **0** | Faltantes y recibidas, LQ por contrato y SPOT, retención IR, R1–R3 | ✅ **En producción** (17/11) |
 | **1a** | Tipo TARJADOR, cierre de fugas de `tarjas`, tarjas con baja lógica, guardado por camión, vista celular, historial | OK de Peter a la sección 12 (puntos 1 a 3) |
-| **1b** | Migración 7.3, `Anticipo80`, LQ que descuenta el 80 % y deja una cuota programada, anticipos manuales con aprobación, Tablero de anticipos y pagos, Pagos al banco con líneas, fallidas, pago manual y reverso, cuentas de productores | Fase 1a en producción |
+| **1b** | Migración 7.3, `Anticipo80`, LQ que descuenta el 80 % y deja una cuota programada, anticipos manuales con aprobación, Tablero de anticipos y pagos, Pagos al banco con líneas, fallidas, pago manual y reverso, cuentas de productores. ⚠️ *19/11: se parte en 1b-1 y 1b-2, y se agrega 1c (material sobrante); ver 13.C.* | Fase 1a en producción |
 | **2** | Cuentas de AGAT de origen (P9), comprobantes, exportable PAGOS Y RETENCIONES, bloqueo por cuenta cambiada (P11) | TXT real (R6) |
 | **2b** | Pago a otra persona con carta (`payee_third_party_id`, P8) | Diseño aparte |
 | **3** | Plan de cuentas y asientos sugeridos (sección 6) | Preguntas 24 a 30 de Contabilidad |
@@ -1018,7 +1019,7 @@ Orden en producción: simulación → respaldo de la base, del `dist` y de los `
 ## 12. Lo que todavía necesita respuesta de Peter (lista corta)
 
 1. **Tipo base TARJADOR** (recomendado) en lugar de un perfil LIQUIDACIONES restringido. ¿OK?
-2. **Candado de EMBARCADAS** cuando el 80 % ya está aprobado: solo Liquidaciones las cambia; el tarjador sigue con caídas, rechazadas y faltantes hasta la liquidación. ¿OK?
+2. ~~**Candado de EMBARCADAS** cuando el 80 % ya está aprobado~~ → **ya no aplica** (19/11, 13.A.5): el 80 % sale de las cajas compradas.
 3. **¿Qué semanas ve el tarjador?** *Recomiendo:* solo las que tienen compras sin liquidar (las liquidadas, en solo lectura). ¿Hace falta limitarlo a **su puerto**, como el bodeguero con su bodega?
 4. **Padding en celular:** cambiar `<main>` de `Layout.jsx` a `p-3 md:p-6` (en escritorio no cambia nada). ¿OK?
 5. **Sin señal en el puerto:** ¿basta con no perder lo escrito y reintentar, o necesitan trabajar **sin internet** toda la jornada? Lo segundo es otro alcance (modo sin conexión).
@@ -1026,3 +1027,599 @@ Orden en producción: simulación → respaldo de la base, del `dist` y de los `
 7. **¿Bloquear que la misma persona genere el TXT y lo confirme como pagado?** *Recomiendo:* no, porque el portal del Pichincha ya pide el token de quien sube.
 8. **Comercial:** P22 y P23 quedan como supuestos; confirmar cuando puedan.
 9. **Contabilidad:** TXT real del Pichincha (R6), cuentas de vendedores (R4) y códigos de banco (R5), antes de pagar con dinero real.
+
+---
+
+## 13. Cambios del 19/11/2026 — **DISEÑO APROBADO POR PETER (19/11/2026)**: preguntas 13.D resueltas; falta programar
+
+Peter decidió dos cambios el 19/11, antes de programar la fase 1b:
+- **A)** El anticipo del 80 % nace en **Compra de fruta**, con un botón **PAGAR** por compra SPOT.
+- **B)** El **material sobrante** después de la tarja lo decide la **analista comercial**.
+
+Esta sección manda sobre las secciones 1 a 12 donde digan otra cosa; allí quedó marcado lo reemplazado.
+
+**Respuestas de Peter (19/11), ya incorporadas:**
+- PAGAR se habilita con la compra **enviada a bodega**, y lo pulsa **solo la ASISTENTE comercial** (permiso por persona).
+- La fruta **siempre llega**: Liquidar sigue exigiendo tarja.
+- El sobrante lo decide **solo la ANALISTA comercial** (permiso por persona).
+- DEVOLVER puede ser **parcial**: la bodega registra lo devuelto **por insumo** y lo que no regresa se **descuenta automáticamente**. Las cajas se cuentan por el **cartón**.
+- PENDIENTE vencido (14 días desde la decisión) y DEVOLVER no recibido **bloquean al productor**: no se liquida su 20 % ni se pulsa PAGAR en sus compras nuevas. Avisan en rojo al **COORDINADOR DE COMPRAS** (pantalla nueva por persona), que puede pasarlo a DESCONTAR para destrabar.
+- Fases 1b-1 → 1c → 1b-2.
+
+> **Nombres de las cajas (ojo):** desde el 18/11, **solo en la pantalla de Tarjas**, el total del camión se llama RECIBIDAS y lo que se paga se llama EMBARCADAS (`DESARROLLO.md`). En la base, `tally_sheets.boxes_shipped` sigue siendo **el total del camión**. En este anexo, **TARJA TOTAL** = Σ `boxes_shipped` de las tarjas activas = buenas + caídas + rechazadas + faltantes. Es justo lo que Peter suma para el sobrante.
+
+### 13.0 Reglas de negocio que se tocan (señalado como pide `CLAUDE.md`)
+
+| Regla | Antes (diseño 17/11) | Ahora (19/11) |
+|---|---|---|
+| **Liquidación — anticipo 80 %** | Lo calcula el sistema al guardar cada camión, sobre las EMBARCADAS de la tarja (P1) | **Comercial pulsa PAGAR** en la compra SPOT ya enviada a bodega. La base son las **CAJAS COMPRADAS**, y se paga en la **semana de corte** |
+| **Liquidación — "solo compras embarcadas"** | Se cumplía también en el 80 % (sin tarja no había 80 %) | El 80 % sale **antes** de la tarja. La LQ sigue pagando **solo lo recibido** y descuenta el 80 % completo. Si sobra, queda SALDO A FAVOR DE AGAT (regla 3 de la sección 2, P4) |
+| **Liquidación — materiales** | Se cobra todo lo retirado menos lo devuelto | El sobrante (retirado − tarja total) lo **decide** la analista: DESCONTAR (como hoy), DEVOLVER o PENDIENTE. **Sin decisión no se liquida.** Lo que no regresa de un DEVOLVER se descuenta solo |
+| **Bloqueo del productor (nuevo)** | No existía | Si debe material (DEVOLVER sin cerrar, o PENDIENTE vencido), **no se liquida ninguna de sus LQ** (el 20 %) y **no se pulsa PAGAR** en sus compras nuevas hasta que devuelva o el coordinador de compras lo pase a DESCONTAR |
+| **Costo promedio** | El despacho congela el costo | Sin cambio. Lo PENDIENTE viaja a la semana siguiente **con el costo congelado de su despacho** |
+| **Contrato / SPOT, flete, OC** | — | **Sin cambio.** CONTRATO sigue al 100 % en la LQ, sin PAGAR. Las OC conservan su único aprobador |
+| **Semana de compra** | — | Sin cambio. El 80 % va al cupo de la compra y se programa en la semana ISO de su `cut_date` |
+
+---
+
+### 13.A Anticipo 80 % desde Compra de fruta
+
+#### 13.A.1 Proceso paso a paso
+
+| # | Quién | Qué pasa |
+|---|---|---|
+| 1 | Comercial | Guarda la compra SPOT (forma de pago 80/20) y la **envía a bodega** (ya existe). |
+| 2 | **Asistente comercial** (permiso `pagar_anticipo_80`) | En la grilla de Compra de fruta, esa compra muestra el botón **PAGAR** (verde, icono `HandCoins`). Al pulsarlo, un `DialogoConfirmacion` dice: "VAS A PEDIR EL ANTICIPO 80 % DE <VENDEDOR> — <MARCA>: 1.000 CAJAS × $7,00 × 80 % = $5.600,00, SEMANA DE PAGO WK45". Si el vendedor está **BLOQUEADO** por material (13.B.10), el botón sale gris con el motivo. |
+| 3 | Sistema | Crea **una orden de pago por compra** (`ORD-AAAA-NNNNN`), POR APROBAR, y avisa en la campanita a quien tiene `aprobar_pagos_liquidacion`. La compra muestra el estado de la orden en lugar del botón: POR APROBAR / APROBADA / EN BANCO / PAGADA / DEVUELTA. |
+| 4 | Jefe de Liquidaciones | En el **Tablero de anticipos y pagos** (4.0) marca con un check las órdenes correctas y pulsa **Aprobar**, o devuelve una con su motivo (vuelve a Comercial, que puede pedirla de nuevo). |
+| 5 | Contabilidad | En **CONTABILIDAD → Cuentas por pagar**, pestaña **ANTICIPOS DE PRODUCTORES**, ve las aprobadas con el banco, el tipo y la cuenta enmascarada `****1234` del vendedor, y el estado PENDIENTE / VERIFICADA de la cuenta (existe desde el 18/11). Elige cuáles pagar y genera el **TXT del Pichincha** cuando Andrea decida: **una línea por orden** (P20). |
+| 6 | Contabilidad (`confirmar_pagos`) | Marca el lote PAGADO, o PAGADO_PARCIAL con las líneas FALLIDAS (5.3). |
+| 7 | Liquidaciones, semana siguiente | Liquida el cupo. La **LQ SPOT** paga lo **RECIBIDO**, descuenta materiales (con la decisión de 13.B), anticipos y préstamos, retención y **el 80 % ya pagado**, y deja la cuota **SALDO SPOT**. Si la tarja vino por debajo de lo comprado, avisa, y lo pagado de más queda como **SALDO A FAVOR DE AGAT**. |
+
+- **Solo SPOT con 80/20.** CONTRATO se paga al 100 % en la LQ, y SPOT al 100 % (`payment_scheme = '100'`) también: ninguno de los dos muestra PAGAR.
+- **Monto** = `quantity_cajas` × `real_price` × 0,80, redondeado a 2 decimales. Se congela en la orden (`boxes`, `unit_price`, `amount`), siguiendo la convención de valores congelados.
+- **Semana de pago** = semana ISO del `cut_date` de la compra (`scheduled_week` / `scheduled_year`). No se edita al aprobar.
+
+#### 13.A.2 Qué ya existe y se reutiliza
+
+| Pieza | Dónde | Uso |
+|---|---|---|
+| Envío a bodega | `producer_quota_lines.sent_to_warehouse_at`; `PurchaseAllocationController::enviarABodega` / `quitarEnvio`; botón por línea en `PurchaseAllocationPage.jsx` (~1559-1574) | Condición para PAGAR. El botón PAGAR va junto a "✔ ENVIADA". |
+| Orden del 80 % | `producer_advances` con `origin = 'SPOT_80'`, índice único por compra (7.3) | Igual. Cambia la base (cajas compradas) y quién la crea (`created_by` = Comercial). |
+| Aprobación | Tablero 4.0, `aprobar_pagos_liquidacion`, regla "no aprueba lo que él creó" | Igual. Como la crea Comercial, el jefe de Liquidaciones sí puede aprobarla. |
+| Cuenta del vendedor | `third_party_bank_accounts` cifrada, `verified_at`/`verified_by` (18/11), `CuentaBancaria::enmascarada` | Para el TXT, la cuenta debe estar **VERIFICADA**. |
+| TXT Pichincha | `PichinchaPagos` + `AccountingController::preview/generate/batchFile/batchPaid/batchCancel` | Se generaliza a "órdenes pagables" (OC o anticipo) con `bank_payment_batch_items` (7.3), sin cambiar el formato del archivo. |
+| LQ SPOT | `SettlementController@store` + `pagos()` | Se cambia como dice 7.4: descuenta el 80 % y deja una sola cuota. |
+
+#### 13.A.3 Casos borde
+
+| Caso | Qué hace el sistema |
+|---|---|
+| **Compra partida** (Dividir compra, 13/11) | La orden **se queda en la compra original**, con su monto congelado. Las filas que salen de la división muestran "80 % EN ORD-… (COMPRA DIVIDIDA)" y **no** tienen PAGAR: el vendedor es el mismo, y la LQ SPOT descuenta el 80 % del cupo completo. Si la orden estaba POR APROBAR, no se recalcula al dividir (las cajas solo se repartieron). |
+| **Cambian las cajas o el precio** con la orden POR APROBAR | La orden se recalcula sola y sigue POR APROBAR. |
+| Ídem con la orden **APROBADA** (sin lote) | Se recalcula, **vuelve a POR APROBAR** y se avisa al aprobador. Se usa `lockForUpdate` para que Contabilidad no la meta en un lote en ese momento. |
+| Ídem con la orden **EN BANCO o PAGADA** | El cambio **se permite** (la fruta real manda), pero antes un `DialogoConfirmacion` dice "EL 80 % YA SE PAGÓ SOBRE 1.000 CAJAS: LA DIFERENCIA SE AJUSTA EN LA LIQUIDACIÓN". La orden no cambia. El tablero marca "COMPRA CAMBIADA DESPUÉS DE PAGAR EL 80 %". |
+| Cambiar **SPOT → CONTRATO** o **80/20 → 100**, el **día de corte** o el **vendedor** con la orden activa | No se permite (422) mientras la orden esté APROBADA, EN BANCO o PAGADA. Con la orden POR APROBAR, se puede cambiar y la orden se **anula** sola (CONTRATO o 100 %) o se recalcula (día de corte). |
+| **Tarja por debajo de las cajas compradas** | Tablero y Liquidar avisan: "TARJA (900) MENOR QUE LO COMPRADO (1.000): EL 80 % SE PAGÓ DE MÁS". La LQ descuenta el 80 % completo; si el neto queda negativo, cuota 0 y **SALDO A FAVOR DE AGAT** (3.4, P4), que sale preseleccionado en la siguiente LQ del vendedor. |
+| **Cupo liquidado** | No hay PAGAR (422: "EL CUPO DE <VENDEDOR> WK45 YA FUE LIQUIDADO: TODO SE PAGA EN LA LIQUIDACIÓN"). Tampoco si la compra ya tuvo una LQ, aunque esté anulada (regla de 3.4). |
+| Al liquidar, la orden está **POR APROBAR, APROBADA sin lote o DEVUELTA** | La LQ la **anula** y paga todo en su cuota (regla de 3.4, sin cambio). |
+| **Compra anulada** (quitar la compra o quitar el envío) | Con la orden POR APROBAR, al quitar se **anula** sola (queda en la bitácora). Con la orden APROBADA, EN BANCO o PAGADA, **no se quita** (422, mensaje en 13.A.5). Peter (19/11): **la fruta siempre llega**, así que no se diseña "liquidar con 0 recibidas" y Liquidar sigue exigiendo tarja. |
+| **Vendedor BLOQUEADO por material** (13.B.10) | No hay PAGAR en sus compras nuevas (422, mensaje en 13.A.5). Las órdenes que ya existían (pedidas, aprobadas o en el banco) **siguen su curso** (pregunta 13.D-N2). |
+| **Cuenta del vendedor PENDIENTE o sin cuenta** | PAGAR **sí** se puede, con un aviso ámbar en el diálogo. En Cuentas por pagar, la fila sale "NO SE PUEDE PAGAR: CUENTA PENDIENTE DE VERIFICAR" / "SIN CUENTA BANCARIA" y no entra al TXT. |
+| **Dos clics o dos personas** a la vez en PAGAR | El índice único parcial (una orden SPOT_80 activa por compra) y `lockForUpdate` sobre la compra. La segunda recibe "LA COMPRA YA TIENE ANTICIPO 80 % (ORD-…)". |
+
+#### 13.A.4 Cambios a la migración 1b (7.3) — no es una migración aparte
+
+La 1b todavía no se programa, así que sus cambios van **dentro** de 7.3. Esa migración toma la fecha del día en que se programe; el nombre `2026_11_18_000002` ya está usado. Se reemplaza el bloque 4 de `producer_advances` así (solo lo que cambia lleva el comentario del 19/11):
+
+```php
+        // 4) Anticipos: 80 % pedido por Comercial (SPOT_80), saldo a favor y manuales, con aprobación y pago
+        Schema::table('producer_advances', function (Blueprint $table) {
+            $table->foreignId('producer_quota_id')->nullable()->constrained('producer_quotas');
+            $table->foreignId('producer_quota_line_id')->nullable()->constrained('producer_quota_lines'); // compra del 80 %
+            $table->foreignId('source_settlement_id')->nullable()->constrained('settlements');           // LQ que dejó el SALDO
+            $table->string('payment_order_code', 20)->nullable()->unique();
+            $table->string('origin', 10)->default('MANUAL');      // MANUAL | SPOT_80 | SALDO
+            // 19/11/2026: el 80 % se calcula con las CAJAS COMPRADAS (no con la tarja) y el precio pactado,
+            // congelados al pulsar PAGAR. Se recalculan solo mientras la orden no salga al banco (13.A.3).
+            $table->integer('boxes')->nullable();                 // cajas compradas al pedir el 80 %
+            $table->decimal('unit_price', 12, 4)->nullable();     // precio pactado (real_price) al pedir el 80 %
+            $table->smallInteger('scheduled_week')->nullable();   // 19/11/2026: semana ISO del día de corte
+            $table->smallInteger('scheduled_year')->nullable();
+            $table->string('approval_status', 15)->default('POR_APROBAR');
+            $table->foreignId('approved_by')->nullable()->constrained('users');
+            $table->timestamp('approved_at')->nullable();
+            $table->text('rejection_reason')->nullable();
+            $table->string('payment_status', 10)->nullable();     // null | EN_BANCO | PAGADA | FALLIDA
+            $table->string('payment_method', 15)->nullable();     // LOTE_BANCO | TRANSFERENCIA | CHEQUE | CRUCE
+            $table->date('paid_at')->nullable();
+            $table->string('payment_reference', 60)->nullable();
+            $table->foreignId('paid_by')->nullable()->constrained('users');
+            $table->string('voucher_path', 255)->nullable();
+            $table->index(['approval_status', 'payment_status']);
+        });
+        DB::table('producer_advances')->update(['approval_status' => 'ANTERIOR', 'payment_status' => 'PAGADA']);
+        DB::statement("ALTER TABLE producer_advances ADD CONSTRAINT pa_origin_check CHECK (origin IN ('MANUAL','SPOT_80','SALDO'))");
+        DB::statement("ALTER TABLE producer_advances ADD CONSTRAINT pa_approval_status_check CHECK (approval_status IN ('POR_APROBAR','APROBADA','RECHAZADA','ANULADA','ANTERIOR'))");
+        DB::statement("ALTER TABLE producer_advances ADD CONSTRAINT pa_payment_status_check CHECK (payment_status IS NULL OR payment_status IN ('EN_BANCO','PAGADA','FALLIDA'))");
+        DB::statement("ALTER TABLE producer_advances ADD CONSTRAINT pa_payment_method_check CHECK (payment_method IS NULL OR payment_method IN ('LOTE_BANCO','TRANSFERENCIA','CHEQUE','CRUCE'))");
+        // 19/11/2026: el 80 % siempre lleva compra, cupo, cajas, precio y semana de pago
+        DB::statement("ALTER TABLE producer_advances ADD CONSTRAINT pa_spot80_check CHECK (origin <> 'SPOT_80' OR (producer_quota_id IS NOT NULL AND producer_quota_line_id IS NOT NULL
+            AND boxes > 0 AND unit_price > 0 AND scheduled_week IS NOT NULL AND scheduled_year IS NOT NULL))");
+        DB::statement("ALTER TABLE producer_advances ADD CONSTRAINT pa_saldo_check CHECK (origin <> 'SALDO' OR source_settlement_id IS NOT NULL)");
+        DB::statement("ALTER TABLE producer_advances ADD CONSTRAINT pa_pago_aprobado_check CHECK (payment_status IS NULL OR approval_status IN ('APROBADA','ANTERIOR'))");
+        DB::statement("CREATE UNIQUE INDEX producer_advances_spot80_activo_unique ON producer_advances (producer_quota_line_id) WHERE origin = 'SPOT_80' AND status");
+        Schema::table('producer_quota_lines', fn (Blueprint $table) => $table->index('cut_date'));
+```
+
+El bloque 8 (perfiles) **no cambia**: `pagar_anticipo_80` **no va en ningún perfil**; el ADMIN se lo da a la asistente comercial como excepción por persona (Peter, 19/11).
+
+**`down()`:** se agrega `'unit_price'` a la lista de `dropColumn` de `producer_advances`. El resto del `down()` de 7.3 no cambia.
+
+**Modelo `ProducerAdvance`:** `$fillable` + `unit_price`. `$casts` + `'unit_price' => 'decimal:4'`. El resto queda como en 7.4.
+
+#### 13.A.5 Validaciones del backend (mensajes)
+
+**`POST /customer-orders/{id}/purchases/{lineId}/advance-80`** (botón PAGAR), dentro de una transacción con `lockForUpdate` sobre la compra y su cupo:
+
+| Regla | Mensaje (422) |
+|---|---|
+| CONTRATO o SPOT al 100 % | "SOLO LAS COMPRAS SPOT CON PAGO 80/20 TIENEN ANTICIPO: LAS DE CONTRATO Y LAS SPOT AL 100 % SE PAGAN EN LA LIQUIDACIÓN." |
+| No está enviada a bodega | "PRIMERO ENVÍA LA COMPRA A BODEGA: EL 80 % SE PIDE CUANDO EL VENDEDOR YA PUEDE RETIRAR EL MATERIAL." |
+| Sin `real_price` | "FALTA EL PRECIO REAL DE LA COMPRA: SIN ÉL NO SE CALCULA EL 80 %." |
+| Sin `cut_date` | "FALTA EL DÍA DE CORTE DE LA COMPRA: EL 80 % SE PAGA EN ESA SEMANA." |
+| Cajas en 0 | "LA COMPRA NO TIENE CAJAS." |
+| Cupo LIQUIDADO, o la compra ya tuvo una LQ | "EL CUPO DE <VENDEDOR> WK<N> YA FUE LIQUIDADO: TODO SE PAGA EN LA LIQUIDACIÓN." |
+| Ya tiene una orden activa | "LA COMPRA YA TIENE ANTICIPO 80 % (<ORD-…>): ESTÁ <ESTADO>." |
+| Fila salida de una división cuyo origen tiene 80 % | "ESTA COMPRA SALIÓ DE DIVIDIR <ORD-…>: SU 80 % YA ESTÁ EN ESA ORDEN." |
+| La compra tiene cambios sin guardar (versión distinta) | "GUARDA LA SEMANA ANTES DE PEDIR EL 80 %." (se usa la `version` que ya existe) |
+| Vendedor BLOQUEADO por material (13.B.10) | "<VENDEDOR> ESTÁ BLOQUEADO: DEBE DEVOLVER <Q> <INSUMO>, <Q> <INSUMO> DE WK<N> (<VENCIÓ EL dd/mm \| DEVOLUCIÓN SIN RECIBIR>). LA BODEGA <BODEGA> DEBE REGISTRAR LA DEVOLUCIÓN O EL COORDINADOR DE COMPRAS PASARLO A DESCONTAR." |
+
+**`PATCH /customer-orders/{id}/purchases/{lineId}/advance-80/cancel`** `{reason}`: Comercial retira su pedido **solo** mientras esté POR APROBAR o DEVUELTA. Sin motivo: "ESCRIBE EL MOTIVO PARA RETIRAR EL PEDIDO DEL 80 %." Si ya fue aprobada: "EL 80 % YA FUE APROBADO: PIDE A LIQUIDACIONES QUE LO DEVUELVA."
+
+**`PurchaseAllocationController@update`** (guardar la semana) **y `quitarEnvio`**, si la compra tiene una orden SPOT_80 activa:
+
+| Cambio | Orden POR APROBAR / DEVUELTA | Orden APROBADA (sin lote) | Orden EN BANCO / PAGADA |
+|---|---|---|---|
+| Cajas o precio real | Recalcula | Recalcula y vuelve a POR APROBAR, con aviso al aprobador | Se permite; la orden no cambia; aviso en el tablero |
+| SPOT → CONTRATO, 80/20 → 100 | Anula la orden | 422: "LA COMPRA TIENE ANTICIPO 80 % APROBADO (<ORD-…>): NO SE PUEDE CAMBIAR LA NEGOCIACIÓN NI LA FORMA DE PAGO. PIDE A LIQUIDACIONES QUE LO DEVUELVA." | 422: "EL 80 % DE ESTA COMPRA YA SE PAGÓ (<ORD-…>): NO SE PUEDE CAMBIAR LA NEGOCIACIÓN NI LA FORMA DE PAGO." |
+| Día de corte | Recalcula la semana de pago | 422 (mismo texto, "LA FECHA DE CORTE") | 422 |
+| Quitar la compra o quitar el envío | Anula la orden | 422: "LA COMPRA TIENE ANTICIPO 80 % (<ORD-…>): NO SE PUEDE QUITAR. PIDE A LIQUIDACIONES QUE LO DEVUELVA." | 422: "EL 80 % DE ESTA COMPRA YA SE PAGÓ: LA COMPRA SE QUEDA PARA RECUPERARLO EN LA LIQUIDACIÓN." |
+
+**Tarjas (`TallySheetController`):** se quita el candado de EMBARCADAS de 3.4. El tarjador corrige todo hasta que se liquide el cupo, como hoy. No se agrega ninguna validación nueva en Tarjas.
+
+#### 13.A.6 Código (lo programa la sesión principal)
+
+| Archivo | Cambio |
+|---|---|
+| `app/Services/Anticipo80.php` (nuevo) | `crear()`, `recalcular()` y `anular()`, con las reglas de 13.A.3 y 13.A.5. Avisa con `Notificaciones`. **No** lee tarjas. |
+| `PurchaseAllocationController` | Rutas `advance80` y `cancelAdvance80`. En `update()` y `quitarEnvio()`, la tabla de 13.A.5. `cargar()` devuelve por compra `anticipo80: {code, estado, amount}` **solo** si el usuario tiene `pagar_anticipo_80` o `aprobar_pagos_liquidacion` (Compra de fruta no muestra montos desde el 18/11; el monto sale solo en el diálogo de PAGAR). |
+| `PurchaseAllocationPage.jsx` | Botón PAGAR o el `EstadoBadge` de la orden, junto a "✔ ENVIADA". `DialogoConfirmacion` con el cálculo. Toasts con `toastMessages.js`. |
+| `SettlementController` | Lo de 7.4 (descontar el 80 %, cuota única SALDO SPOT, anular el que no salió). `preview` agrega el aviso "TARJA MENOR QUE LO COMPRADO". |
+| `TallySheetController` | Nada (no se agrega el candado). |
+| `AccountingController` + `PichinchaPagos` | `PichinchaPagos` recibe un "pagable" (OC o anticipo: beneficiario, valor, referencia y cuenta). `problemas()` agrega, para anticipos: "LA CUENTA DEL VENDEDOR ESTÁ PENDIENTE: VERIFÍCALA EN CUENTAS BANCARIAS." Referencia del TXT: `ANT80 <ORD-…> WK<n>` (40 caracteres). |
+| `BankPaymentsPage.jsx` (5.1) | Se llama **"Cuentas por pagar"**. La primera pestaña es **ANTICIPOS DE PRODUCTORES**: aprobados, semana de pago, vendedor, banco, `****1234`, estado de la cuenta y monto. Casillas → Revisar → Generar TXT. |
+
+#### 13.A.7 Permisos
+
+| Acción | Pantalla (`config/pantallas.php`) | Tipo base por defecto | El backend valida |
+|---|---|---|---|
+| Ver el estado del 80 % en la grilla | `compra_fruta` *(existe)* | COMERCIAL | Sin montos, salvo con `pagar_anticipo_80` |
+| **PAGAR** y retirar el pedido | **`pagar_anticipo_80`** *(nueva; sección COMERCIAL; `roles` vacío; `solo` COMERCIAL)* | **Ninguno**: excepción por persona para la **asistente comercial** | Middleware `pantalla:pagar_anticipo_80`, las reglas de 13.A.5 y el bloqueo de 13.B.10 |
+| Aprobar o devolver | `aprobar_pagos_liquidacion` *(4.3)* | Ninguno: excepción por persona (jefe de Liquidaciones) | No aprueba lo que él creó; solo POR APROBAR |
+| Preparar el TXT | `pagos_banco` *(5.5; menú "Cuentas por pagar")* | CONTABILIDAD | Solo APROBADAS, sin lote vivo y con la cuenta VERIFICADA |
+| Confirmar pagado o fallido | `confirmar_pagos` *(5.5)* | CONTABILIDAD | — |
+| Ver la cuenta completa | `cuentas_bancarias` *(existe)* | CONTABILIDAD | Fuera de esa pantalla, siempre `****1234` |
+
+El TARJADOR y el BODEGUERO no ven nada de esto (lista blanca / sin pantalla).
+
+#### 13.A.8 Ejemplo con números inventados (tarja por debajo de lo comprado)
+
+Compra SPOT de 1.000 cajas a $7,00, oficial $7,50, retención 1 %, materiales $400. La tarja trae **700** en total, de las que 20 son rechazadas: **680 recibidas**.
+
+| Concepto | Valor |
+|---|---|
+| Semana de corte: **80 %** = 1.000 × 7,00 × 0,80 | **5.600,00** |
+| Fruta en la LQ = 680 × 7,00 | 4.760,00 |
+| − Materiales (con la decisión de 13.B) | −400,00 |
+| − Retención (1 % de 680 × 7,50) | −51,00 |
+| = Neto antes del 80 % | 4.309,00 |
+| − 80 % ya pagado | −5.600,00 |
+| **Cuota SALDO SPOT** | **0,00** |
+| **SALDO A FAVOR DE AGAT** (se descuenta en la siguiente LQ del vendedor) | **1.291,00** |
+
+---
+
+### 13.B Material sobrante después de la tarja
+
+#### 13.B.1 Proceso paso a paso
+
+| # | Quién | Qué pasa |
+|---|---|---|
+| 1 | Bodega | Despacha el material de la compra (receta por marca; ya existe). El costo queda congelado en el despacho. |
+| 2 | Tarjador | Registra los camiones en el puerto (ya existe). |
+| 3 | Sistema | Calcula el **sobrante** por **vendedor × semana × marca**: **SOBRANTE = cajas de material retirado + cajas traídas de un PENDIENTE − TARJA TOTAL**. Ejemplo: retira 800; tarja 780 buenas + 20 rechazadas = 800 → sobrante **0**. Retira 800; tarja 700 + 20 = 720 → sobrante **80**. |
+| 4 | **Analista comercial** | En **COMERCIAL → Material sobrante** ve la semana con los sobrantes SIN DECIDIR. Reparte cada uno entre **DESCONTAR**, **DEVOLVER** y **PENDIENTE** (ej. 30 + 50 = 80). La suma debe dar el total. |
+| 5a | — DESCONTAR | Se cobra en la liquidación al costo congelado del despacho (como hoy). |
+| 5b | — DEVOLVER | La bodega de retiro recibe un aviso en la campanita. Registra la **devolución que ya existe** (Nuevo movimiento → DEVOLUCIÓN), que ahora viene **enlazada** al sobrante, con las cantidades **por insumo** ya puestas, que corrige con lo que de verdad llega. Al guardar marca "ES LA ÚLTIMA DEVOLUCIÓN DE ESTE SOBRANTE" (marcado por defecto): **lo que no regresó se descuenta solo** en la liquidación. Ejemplo: sobran 50, regresan 30 porque 20 se mojaron → se descuentan 20. Lo devuelto no se cobra. |
+| 5c | — PENDIENTE | Queda un **saldo de material a favor** del vendedor. En su **próximo despacho**, la pantalla lo muestra con su fecha de vencimiento ("A FAVOR: 50 CAJAS DE WK45, VENCE EL dd/mm") y recomienda **entregar menos**. Si a los **14 días desde la decisión** no lo usó, **NO se descuenta solo**: el productor queda **BLOQUEADO** (13.B.10) hasta que lo devuelva. |
+| 6 | Liquidaciones | **Liquidar queda bloqueado** mientras haya un sobrante sin decidir ("MATERIAL SOBRANTE SIN DECIDIR"), o un DEVOLVER que la bodega todavía no cerró. |
+| 7 | **Coordinador de compras** | Ve en rojo, con un contador en el menú como el de "Por despachar", a cada productor **BLOQUEADO** y lo que debe. Si el material no va a volver, lo pasa a **DESCONTAR** con un motivo, y el productor se destraba. |
+
+- **Aplica a todo el material de la receta** de esa marca (BOM): por cada insumo, cantidad = cajas × `ratio_per_box`, redondeada como en el despacho.
+- **Solo cupos con compras de Comercial** (los cupos manuales sin compra no tienen tarja).
+- **Sobrante 0 o negativo** (la tarja trae más que lo retirado): no hay nada que decidir. Si es negativo, sale un aviso informativo: "LA TARJA (820) PASA EL MATERIAL RETIRADO (800)".
+
+#### 13.B.2 Qué ya existe y se reutiliza
+
+| Pieza | Dónde | Uso |
+|---|---|---|
+| Despacho por cupo × marca × bodega | `inventory_movements` (EGRESO, motivo 4, `producer_quota_id`, `brand_id`) + `inventory_movement_lines` (`quantity`, `unit_cost` congelado, `total`) | Cantidad retirada por insumo y su costo |
+| Receta por marca | `material_recipes` (`brand` = código, `ratio_per_box`, `status`) | Convertir cajas ↔ cantidad por insumo |
+| Devolución ligada al cupo | `inventory_movements` (DEVOLUCION, motivo 7, `producer_quota_id`); `InventoryMovementController::validarDevolucionCupo` y `returnableQuotas` | DEVOLVER se registra aquí, con un enlace nuevo a la decisión |
+| Materiales en la LQ | `SettlementController::materiales()` (retirado − devuelto, solo categorías `chargeable_to_producer`) + `settlement_materials` | Se agregan las columnas de PENDIENTE, traído y vencido |
+| Cálculo del despacho | `MaterialDispatchController::calcularMateriales()` (fórmula − ya despachado) | Se resta además el saldo a favor vigente |
+| Costo promedio | `CostoPromedio::recalcular` | Sin cambio. Lo PENDIENTE no es un movimiento de stock: el material ya salió de la bodega |
+| Campanita | `Notificaciones` / `user_notifications` | Avisos a la bodega (DEVOLVER) y a la analista (sobrante nuevo o que cambió) |
+
+**Hoy no existe** nada de "material a favor" entre semanas: hoy todo lo no devuelto se cobra, que equivale a DESCONTAR todo.
+
+#### 13.B.3 Cajas ↔ insumos (aprobado por Peter el 19/11: se cuenta por el cartón)
+
+El despacho **no guarda cajas**: guarda la cantidad de cada insumo (lo verifiqué en `MaterialDispatchController::store` y en la tabla `inventory_movements`). Por eso el sistema **habla en cajas** con la analista y **cobra y devuelve por insumo**.
+
+**1) De insumos a cajas (cuántas cajas retiró):**
+- **TIENE**, por insumo = retirado − devuelto sin enlazar + traído de un PENDIENTE.
+- **CAJAS RETIRADAS** = el **menor** de TIENE ÷ `ratio_per_box` (sin decimales) entre los insumos de la receta en la categoría **CARTÓN** con `ratio_per_box = 1` (tapa y fondo). Una caja necesita tapa **y** fondo.
+- Si la receta no tiene cartón, se usa el insumo con el mayor `ratio_per_box`.
+- **SOBRANTE (cajas)** = CAJAS RETIRADAS − TARJA TOTAL.
+
+**2) Del sobrante a cada insumo:**
+- **Sobrante del insumo** = TIENE − redondeo(TARJA TOTAL × ratio), sin bajar de 0. Es el mismo redondeo del despacho: LIBRAS con 2 decimales y lo demás entero hacia arriba.
+- Lo retirado **por encima** de la receta (ej. 20 fundas de más) entra aquí, en el sobrante del insumo, y va a DESCONTAR si la analista no lo reparte.
+
+**3) De la decisión en cajas a cada insumo:**
+- DEVOLVER del insumo = redondeo **hacia abajo** de (cajas a devolver × ratio), sin pasar el sobrante del insumo. PENDIENTE, igual.
+- DESCONTAR se queda con el resto, así la suma por insumo da exacto.
+
+**4) De lo devuelto por insumo de vuelta a cajas (solo para mostrar):**
+- CAJAS DEVUELTAS = el menor de (devuelto ÷ ratio) entre tapa y fondo.
+- **El cobro siempre es por insumo:** lo que falta = DEVOLVER del insumo − devuelto del insumo. Al cerrar la devolución, eso pasa a descontar (`return_shortfall_qty`).
+
+**Ejemplo (receta inventada: fondo 1, tapa 1, funda 1, químico 0,0002 frascos por caja):**
+
+| | Fondo | Tapa | Funda | Químico |
+|---|---|---|---|---|
+| Retirado (800 cajas) | 800 | 800 | 800 | 1 (0,16 → 1) |
+| Tarja total 720 × ratio | 720 | 720 | 720 | 1 (0,144 → 1) |
+| **Sobrante** (80 cajas) | 80 | 80 | 80 | 0 |
+| Decisión: 50 DEVOLVER + 30 DESCONTAR | 50 / 30 | 50 / 30 | 50 / 30 | — |
+| La bodega recibe | 30 | 30 | 25 | — |
+| **Se descuenta** = DESCONTAR + lo que no regresó | 30 + 20 = 50 | 30 + 20 = 50 | 30 + 25 = 55 | 0 |
+
+En pantalla: "DEVUELTAS 30 CAJAS" (el menor entre tapa y fondo); la funda se cobra por unidad.
+
+#### 13.B.4 Tablas y columnas (nuevas y cambiadas)
+
+| Tabla | Cambio | Tipo / regla | Para qué |
+|---|---|---|---|
+| **`material_surplus_decisions`** *(nueva)* | `producer_quota_id` FK, `brand_id` FK, `warehouse_id` FK null (bodega de retiro, a la que se devuelve) | — | Una decisión por cupo × marca |
+| | `boxes_withdrawn`, `boxes_carried_in`, `boxes_tallied`, `boxes_surplus` | integer; CHECK `boxes_surplus > 0` | **Foto** de las cifras al decidir. Si al liquidar no coinciden con las de ese momento, hay que volver a decidir |
+| | `boxes_deduct`, `boxes_return`, `boxes_pending` | integer ≥ 0; CHECK suma = `boxes_surplus` | La decisión |
+| | `notes` varchar(255) null, `decided_by` FK users, `decided_at` timestamp | — | Quién y cuándo |
+| | `return_closed_at` timestamp null, `return_closed_by` FK users null | — | Cuándo se cerró el DEVOLVER (la bodega con "última devolución", o el coordinador). Sin DEVOLVER, queda nulo |
+| | `status` boolean, `deactivation_reason` varchar(255) null; CHECK `status OR deactivation_reason IS NOT NULL` | — | Baja lógica al rehacerla |
+| | índice único parcial `(producer_quota_id, brand_id) WHERE status` | — | Una decisión activa por cupo y marca |
+| **`material_surplus_lines`** *(nueva)* | `material_surplus_decision_id` FK, `supply_id` FK; único `(decision, supply)` | — | Detalle por insumo de la receta |
+| | `surplus_qty`, `deduct_qty`, `return_qty`, `pending_qty` | decimal(12,2) ≥ 0; CHECK suma = `surplus_qty` | Cantidades (la misma escala que `inventory_movement_lines.quantity`) |
+| | `unit_cost` | **decimal(14,6)** | Costo congelado: valor ÷ cantidad retirada en ese cupo. Va a 6 decimales, como `inventory_movement_lines.unit_cost`, y no a (12,4): así no se pierden fracciones del promedio |
+| | `expires_on` | date null; CHECK `pending_qty = 0 OR expires_on IS NOT NULL` | Vence lo PENDIENTE (decisión + 14 días). Al vencer, **bloquea** (no cobra) |
+| | `return_shortfall_qty` | decimal(12,2) ≥ 0; CHECK ≤ `return_qty` | DEVOLVER que no regresó: lo graba la bodega al cerrar la devolución, o el coordinador al pasarlo a DESCONTAR. Se cobra en la LQ **de ese cupo** |
+| | `pending_charged_qty` | decimal(12,2) ≥ 0; CHECK ≤ `pending_qty` | PENDIENTE que el coordinador pasó a DESCONTAR. Se cobra en la **siguiente LQ** del vendedor |
+| | `charged_settlement_id` | FK settlements null | La LQ que cobró `pending_charged_qty` |
+| | `forced_by` FK users, `forced_at` timestamp, `forced_reason` varchar(255) | null; CHECK `forced_at IS NULL OR forced_reason IS NOT NULL` | Quién pasó a DESCONTAR, cuándo y por qué |
+| **`material_credit_uses`** *(nueva)* | `material_surplus_line_id` FK, `inventory_movement_id` FK (el despacho que lo usó), `producer_quota_id` FK (el cupo que lo usa), `quantity` decimal(12,2) > 0, `status` boolean | índice `(material_surplus_line_id) WHERE status` | El PENDIENTE que se usó en otro despacho. Si se anula ese despacho, el uso pasa a `status = false` y el saldo vuelve |
+| `inventory_movements` | + `material_surplus_decision_id` | FK null; CHECK `material_surplus_decision_id IS NULL OR type = 'DEVOLUCION'` | Enlaza la devolución con el sobrante (DEVOLVER) |
+| `settlement_materials` | + `carried_in_qty`, `pending_qty`, `late_charge_qty` | decimal(12,2) default 0, ≥ 0 | En la LQ: lo traído de un PENDIENTE (se cobra aquí), lo dejado PENDIENTE (no se cobra aquí) y el PENDIENTE de otra semana que el coordinador pasó a DESCONTAR (se cobra aquí) |
+| | + `material_surplus_line_id` | FK null | Solo en la fila de un `late_charge_qty` de otra semana |
+
+**Cobrado en la LQ, por insumo** = retirado − devuelto + traído − pendiente + `late_charge_qty`. Lo que no regresó de un DEVOLVER ya está dentro, porque no se devolvió. El valor de cada parte va a su propio costo congelado; `unit_cost` de la fila = valor ÷ cobrado.
+
+**Saldo de un PENDIENTE**, por insumo = `pending_qty` − usos activos − devuelto enlazado aplicado al pendiente − `pending_charged_qty`.
+- **Vigente** si `expires_on` ≥ hoy: el despacho lo usa.
+- **Vencido** si `expires_on` < hoy y el saldo es > 0: **bloquea** al productor y **ya no** lo usa un despacho (pregunta 13.D-N1).
+
+**DEVOLVER abierto** = la decisión tiene `boxes_return` > 0 y `return_closed_at` nulo. Desde el día de la decisión bloquea solo la **liquidación de esa semana**; a los **14 días** sin cerrar bloquea al productor completo, igual que el PENDIENTE vencido (Peter, 19/11/2026, 13.D-N3).
+
+El bloqueo **se calcula en el momento** (servicio `BloqueoMaterial::de($thirdPartyId)`), sin una columna de estado que se desincronice. Una tarea diaria (`material:vencimientos`, en `routes/console.php`) solo avisa en la campanita el día que algo vence.
+
+#### 13.B.5 Migración propuesta
+
+`database/migrations/2026_11_XX_000001_material_sobrante.php` (fecha del día en que se programe; va **después** de la 1b si se suben juntas).
+
+```php
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+
+// 19/11/2026: MATERIAL SOBRANTE DESPUÉS DE LA TARJA (docs/modulos/pagos-liquidaciones.md, 13.B).
+//   Sobrante = cajas de material retirado (+ traído de un PENDIENTE) − tarja total, por cupo × marca.
+//   La analista comercial lo reparte en DESCONTAR (se cobra en la LQ), DEVOLVER (devolución enlazada a bodega)
+//   y PENDIENTE (saldo de material a favor para el próximo despacho; a los 14 días sin usar, BLOQUEA al productor hasta que devuelva o el coordinador lo pase a DESCONTAR).
+//   Liquidar se bloquea mientras haya un sobrante sin decidir.
+return new class extends Migration
+{
+    public function up(): void
+    {
+        // 1) Decisión por cupo × marca, con la foto de las cifras con que se decidió
+        Schema::create('material_surplus_decisions', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('producer_quota_id')->constrained('producer_quotas');
+            $table->foreignId('brand_id')->constrained('brands');
+            $table->foreignId('warehouse_id')->nullable()->constrained('warehouses'); // bodega de retiro (a la que se devuelve)
+            $table->integer('boxes_withdrawn');                 // cajas de material retirado (13.B.3)
+            $table->integer('boxes_carried_in')->default(0);    // cajas traídas de un PENDIENTE anterior
+            $table->integer('boxes_tallied');                   // tarja total (Σ boxes_shipped de tarjas activas)
+            $table->integer('boxes_surplus');                   // retiradas + traídas − tarja
+            $table->integer('boxes_deduct')->default(0);        // DESCONTAR
+            $table->integer('boxes_return')->default(0);        // DEVOLVER
+            $table->integer('boxes_pending')->default(0);       // PENDIENTE
+            $table->string('notes', 255)->nullable();
+            $table->foreignId('decided_by')->nullable()->constrained('users');
+            $table->timestamp('decided_at')->nullable();
+            // 19/11/2026: DEVOLVER cerrado (la bodega con "última devolución" o el coordinador); abierto = bloquea al productor
+            $table->timestamp('return_closed_at')->nullable();
+            $table->foreignId('return_closed_by')->nullable()->constrained('users');
+            $table->boolean('status')->default(true);
+            $table->string('deactivation_reason', 255)->nullable();
+            $table->timestamps();
+            $table->index('producer_quota_id');
+        });
+        DB::statement('ALTER TABLE material_surplus_decisions ADD CONSTRAINT msd_cajas_check CHECK (boxes_withdrawn >= 0 AND boxes_carried_in >= 0
+            AND boxes_tallied >= 0 AND boxes_surplus > 0 AND boxes_deduct >= 0 AND boxes_return >= 0 AND boxes_pending >= 0)');
+        DB::statement('ALTER TABLE material_surplus_decisions ADD CONSTRAINT msd_suma_check CHECK (boxes_deduct + boxes_return + boxes_pending = boxes_surplus)');
+        DB::statement('ALTER TABLE material_surplus_decisions ADD CONSTRAINT msd_motivo_check CHECK (status OR deactivation_reason IS NOT NULL)');
+        DB::statement('CREATE UNIQUE INDEX msd_cupo_marca_activa_unique ON material_surplus_decisions (producer_quota_id, brand_id) WHERE status');
+
+        // 2) Detalle por insumo de la receta, con el costo congelado del despacho
+        Schema::create('material_surplus_lines', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('material_surplus_decision_id')->constrained('material_surplus_decisions');
+            $table->foreignId('supply_id')->constrained('supplies');
+            $table->decimal('surplus_qty', 12, 2);
+            $table->decimal('deduct_qty', 12, 2)->default(0);
+            $table->decimal('return_qty', 12, 2)->default(0);
+            $table->decimal('pending_qty', 12, 2)->default(0);
+            $table->decimal('unit_cost', 14, 6)->default(0);    // 6 decimales, como inventory_movement_lines.unit_cost
+            $table->date('expires_on')->nullable();             // vence el PENDIENTE (decisión + 14 días): al vencer BLOQUEA, no cobra
+            // 19/11/2026 (Peter): DEVOLVER parcial → lo que no regresa se descuenta solo (al cerrar la devolución)
+            $table->decimal('return_shortfall_qty', 12, 2)->default(0);
+            // 19/11/2026 (Peter): PENDIENTE vencido o DEVOLVER sin recibir → el coordinador de compras lo pasa a DESCONTAR
+            $table->decimal('pending_charged_qty', 12, 2)->default(0);
+            $table->foreignId('charged_settlement_id')->nullable()->constrained('settlements'); // LQ que cobró pending_charged_qty
+            $table->foreignId('forced_by')->nullable()->constrained('users');
+            $table->timestamp('forced_at')->nullable();
+            $table->string('forced_reason', 255)->nullable();
+            $table->timestamps();
+            $table->unique(['material_surplus_decision_id', 'supply_id']);
+            $table->index('supply_id');
+        });
+        DB::statement('ALTER TABLE material_surplus_lines ADD CONSTRAINT msl_cantidades_check CHECK (surplus_qty > 0 AND deduct_qty >= 0 AND return_qty >= 0 AND pending_qty >= 0)');
+        DB::statement('ALTER TABLE material_surplus_lines ADD CONSTRAINT msl_suma_check CHECK (deduct_qty + return_qty + pending_qty = surplus_qty)');
+        DB::statement('ALTER TABLE material_surplus_lines ADD CONSTRAINT msl_vence_check CHECK (pending_qty = 0 OR expires_on IS NOT NULL)');
+        DB::statement('ALTER TABLE material_surplus_lines ADD CONSTRAINT msl_faltante_check CHECK (return_shortfall_qty >= 0 AND return_shortfall_qty <= return_qty)');
+        DB::statement('ALTER TABLE material_surplus_lines ADD CONSTRAINT msl_cobro_pendiente_check CHECK (pending_charged_qty >= 0 AND pending_charged_qty <= pending_qty)');
+        DB::statement('ALTER TABLE material_surplus_lines ADD CONSTRAINT msl_forzado_check CHECK (forced_at IS NULL OR forced_reason IS NOT NULL)');
+
+        // 3) Uso del PENDIENTE en un despacho posterior (si se anula el despacho, status = false y el saldo vuelve)
+        Schema::create('material_credit_uses', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('material_surplus_line_id')->constrained('material_surplus_lines');
+            $table->foreignId('inventory_movement_id')->constrained('inventory_movements'); // despacho que lo usó
+            $table->foreignId('producer_quota_id')->constrained('producer_quotas');         // cupo donde se cobra
+            $table->decimal('quantity', 12, 2);
+            $table->boolean('status')->default(true);
+            $table->timestamps();
+            $table->index('inventory_movement_id');
+            $table->index('producer_quota_id');
+        });
+        DB::statement('ALTER TABLE material_credit_uses ADD CONSTRAINT mcu_cantidad_check CHECK (quantity > 0)');
+        DB::statement('CREATE INDEX mcu_linea_activa_idx ON material_credit_uses (material_surplus_line_id) WHERE status');
+
+        // 4) Devolución enlazada al sobrante (DEVOLVER)
+        Schema::table('inventory_movements', function (Blueprint $table) {
+            $table->foreignId('material_surplus_decision_id')->nullable()->constrained('material_surplus_decisions');
+            $table->index('material_surplus_decision_id');
+        });
+        DB::statement("ALTER TABLE inventory_movements ADD CONSTRAINT im_sobrante_devolucion_check CHECK (material_surplus_decision_id IS NULL OR type = 'DEVOLUCION')");
+
+        // 5) Materiales de la LQ: traído de un PENDIENTE, dejado PENDIENTE y PENDIENTE pasado a DESCONTAR por el coordinador
+        Schema::table('settlement_materials', function (Blueprint $table) {
+            $table->decimal('carried_in_qty', 12, 2)->default(0);
+            $table->decimal('pending_qty', 12, 2)->default(0);
+            $table->decimal('late_charge_qty', 12, 2)->default(0);
+            $table->foreignId('material_surplus_line_id')->nullable()->constrained('material_surplus_lines'); // fila de un cobro de otra semana
+        });
+        DB::statement('ALTER TABLE settlement_materials ADD CONSTRAINT sm_sobrante_check CHECK (carried_in_qty >= 0 AND pending_qty >= 0 AND late_charge_qty >= 0)');
+
+        // 6) Pantallas nuevas (material_sobrante = analista, coordinador_compras = coordinador): NO van en ningún
+        //    perfil. Peter (19/11): se dan por excepción por persona.
+    }
+
+    public function down(): void
+    {
+        // Si ya hay decisiones, la LQ las usó para cobrar: revertir descuadraría lo cobrado. Se detiene.
+        if (DB::table('material_surplus_decisions')->exists()) {
+            throw new RuntimeException('HAY DECISIONES DE MATERIAL SOBRANTE: NO SE PUEDE REVERTIR SIN DESCUADRAR LAS LIQUIDACIONES. REVÍSALAS ANTES.');
+        }
+        DB::statement('ALTER TABLE settlement_materials DROP CONSTRAINT IF EXISTS sm_sobrante_check');
+        Schema::table('settlement_materials', function (Blueprint $table) {
+            $table->dropConstrainedForeignId('material_surplus_line_id');
+            $table->dropColumn(['carried_in_qty', 'pending_qty', 'late_charge_qty']);
+        });
+        DB::statement('ALTER TABLE inventory_movements DROP CONSTRAINT IF EXISTS im_sobrante_devolucion_check');
+        Schema::table('inventory_movements', function (Blueprint $table) {
+            $table->dropIndex(['material_surplus_decision_id']);
+            $table->dropConstrainedForeignId('material_surplus_decision_id');
+        });
+        Schema::dropIfExists('material_credit_uses');
+        Schema::dropIfExists('material_surplus_lines');
+        Schema::dropIfExists('material_surplus_decisions');
+    }
+};
+```
+
+**Modelos** (todos con `use \App\Models\Concerns\Auditable;`):
+
+| Modelo | `$fillable` | `$casts` / notas |
+|---|---|---|
+| `MaterialSurplusDecision` *(nuevo)* | todas sus columnas menos `id` y los timestamps | `boxes_*` → `integer`, `status` → `boolean`, `decided_at` → `datetime`. Relaciones `quota()`, `brand()`, `warehouse()`, `lines()`, `returns()` (`InventoryMovement` por `material_surplus_decision_id`) |
+| `MaterialSurplusLine` *(nuevo)* | ídem | `*_qty` → `decimal:2`, `unit_cost` → `decimal:6`, `expires_on` → `date:Y-m-d`, `forced_at` → `datetime`. Métodos `saldoPendiente()`, `vencido()` y `faltaDevolver()` |
+| `MaterialCreditUse` *(nuevo)* | ídem | `quantity` → `decimal:2`, `status` → `boolean` |
+| `InventoryMovement` | + `material_surplus_decision_id` | — |
+| `SettlementMaterial` | + `carried_in_qty`, `pending_qty`, `late_charge_qty`, `material_surplus_line_id` | `decimal:2` en las tres cantidades |
+| `MaterialSurplusDecision` | + `return_closed_at`, `return_closed_by` | `return_closed_at` → `datetime` |
+
+**Servicio nuevo `App\Services\BloqueoMaterial`:** `de(int $thirdPartyId): array` devuelve lo que el productor debe: decisión, WK, bodega, insumo, cantidad, motivo (VENCIDO o DEVOLUCIÓN SIN RECIBIR) y la fecha. Vacío = no está bloqueado. Lo usan PAGAR, `SettlementController::calcular()`, la grilla de Compra de fruta, el despacho (solo aviso) y el contador del coordinador.
+
+#### 13.B.6 Endpoints, pantallas y permisos
+
+| Método y ruta | Middleware | Qué hace |
+|---|---|---|
+| `GET /material-surplus?anio=&semana=&estado=` | `pantalla:material_sobrante,liquidar` | Una fila por cupo × marca con material retirado: vendedor, marca, bodega, retiradas, traídas, tarja total, sobrante, decisión y estado (SIN DECIDIR / DECIDIDO / DEVOLUCIÓN PENDIENTE / CAMBIÓ / SIN SOBRANTE / LIQUIDADO). Valores en $ solo con `ver_costos`. |
+| `GET /material-surplus/{quotaId}/{brandId}` | ídem | Detalle por insumo (retirado, devuelto, traído, tarja × ratio, sobrante, propuesta de reparto) |
+| `PUT /material-surplus/{quotaId}/{brandId}` `{boxes_deduct, boxes_return, boxes_pending, notes}` | `pantalla:material_sobrante` | Guarda o rehace la decisión: la anterior queda `status = false` con el motivo "REHECHA". Avisa a la bodega si hay DEVOLVER. |
+| `GET /material-dispatch/calculate` *(existe)* | `pantalla:despacho` | Devuelve además `a_favor` por insumo, y `valor_recomendado` = fórmula − ya despachado − a favor |
+| `POST /material-dispatch` *(existe)* | `pantalla:despacho` | Registra los `material_credit_uses`: uso = mín(saldo, máx(0, fórmula − ya despachado − entregado ahora)), primero lo que vence antes |
+| `PATCH /material-dispatch/{id}/deactivate` *(existe)* | igual | Pone sus usos en `status = false` (el saldo vuelve) |
+| `GET /inventory-movements/returnable-quotas/{id}` *(existe)* | igual que hoy | Agrega lo que falta devolver: los DEVOLVER abiertos y los PENDIENTES vencidos (decisión, marca, cantidad por insumo) |
+| `POST /inventory-movements` *(existe)* | igual que hoy | Acepta `material_surplus_decision_id` (solo DEVOLUCION) y `close_surplus_return` (boolean, por defecto true). Lo devuelto va primero al DEVOLVER y luego al PENDIENTE. Al cerrar, graba `return_shortfall_qty` por insumo y `return_closed_at` |
+| `GET /material-surplus/blocked` · `GET /material-surplus/blocked/count` | `pantalla:coordinador_compras` | Productores BLOQUEADOS con lo que deben (para la pantalla y el contador rojo del menú, como `material-dispatch/pending-count`) |
+| `PATCH /material-surplus/lines/{id}/force-deduct` `{reason}` | `pantalla:coordinador_compras` | Pasa a DESCONTAR lo que falta: el DEVOLVER abierto → `return_shortfall_qty`, y cierra; el PENDIENTE vencido → `pending_charged_qty`. Con motivo; queda en la bitácora |
+
+| Pantalla | Clave | Sección | Tipo base por defecto | `solo` |
+|---|---|---|---|---|
+| **Material sobrante** (nueva, `src/pages/comercial/MaterialSurplusPage.jsx`, ruta `/comercial/material-sobrante`) | **`material_sobrante`** | COMERCIAL | **Ninguno**: excepción por persona para la **analista comercial** (Peter, 19/11) | COMERCIAL |
+| Liquidar (ve la lista, no decide) | `liquidar` *(existe)* | LIQUIDACIÓN | LIQUIDACIONES | — |
+| Devolución enlazada | `nuevo_movimiento` *(existe)* | INVENTARIO | Inventario + BODEGUERO (**solo su bodega**: `puedeBodega`) | — |
+| Despacho con saldo a favor | `despacho` *(existe)* | INVENTARIO | Inventario + BODEGUERO | — |
+| **Material por devolver** (nueva, `src/pages/comercial/MaterialBlockedPage.jsx`, ruta `/comercial/material-por-devolver`, con contador rojo en el menú) | **`coordinador_compras`** | COMERCIAL | **Ninguno**: excepción por persona para el **coordinador de compras** | — (sin `solo`, por si el coordinador no es de tipo base COMERCIAL) |
+
+**La pantalla Material sobrante:**
+- Usa `EncabezadoPagina` y `TablaEstandar` compacta, con los filtros AÑO / SEMANA / ESTADO (por defecto SIN DECIDIR).
+- Al elegir una fila se abre un `ModalShell` con tres `CampoNumero decimales={0}` (DESCONTAR, DEVOLVER y PENDIENTE), el total en vivo ("FALTAN 20 CAJAS" en rojo) y la tabla por insumo.
+- Botones Guardar (verde) y Cancelar (rojo, texto blanco). Los datos van en MAYÚSCULAS.
+- Liquidar enlaza a esta pantalla desde el aviso de bloqueo.
+
+**La pantalla Material por devolver (coordinador de compras):**
+- Lista en rojo a cada productor BLOQUEADO: WK, marca, bodega, insumo, cantidad que debe, motivo (VENCIDO EL dd/mm / DEVOLUCIÓN SIN RECIBIR desde el dd/mm) y los días de atraso.
+- Acción **"Pasar a descontar"** (botón rojo): `DialogoConfirmacion` con motivo obligatorio y el resumen "SE DESCONTARÁN 20 FONDOS, 20 TAPAS… EN <LA LQ DE WK45 | LA PRÓXIMA LIQUIDACIÓN>".
+- El contador del menú cuenta los productores bloqueados. Se recalcula como el de "Por despachar".
+
+#### 13.B.7 Validaciones del backend (mensajes)
+
+| Dónde | Regla | Mensaje (422) |
+|---|---|---|
+| Guardar la decisión | La suma no da el sobrante | "LA SUMA (DESCONTAR + DEVOLVER + PENDIENTE) DEBE SER <N> CAJAS: HOY SUMA <M>." |
+| | Números negativos o con decimales | "LAS CAJAS VAN EN NÚMEROS ENTEROS Y NO NEGATIVOS." |
+| | No hay sobrante | "<MARCA> NO TIENE MATERIAL SOBRANTE EN WK<N>: NO HAY NADA QUE DECIDIR." |
+| | El cupo ya está LIQUIDADO | "EL CUPO YA FUE LIQUIDADO: EL SOBRANTE NO SE PUEDE CAMBIAR." |
+| | Bajar el PENDIENTE por debajo de lo ya usado | "NO SE PUEDE: <Q> <INSUMO> DEL PENDIENTE YA SE USARON EN EL DESPACHO DE WK<N>." |
+| | Bajar DEVOLVER por debajo de lo ya devuelto | "LA BODEGA YA RECIBIÓ <N> CAJAS DEVUELTAS: DEVOLVER NO PUEDE SER MENOS." |
+| | Las cifras cambiaron mientras decidía (otra tarja o despacho) | "EL SOBRANTE CAMBIÓ MIENTRAS DECIDÍAS (AHORA ES <N>): RECARGA Y VUELVE A REPARTIRLO." (409) |
+| Devolución enlazada | Devuelve más de lo decidido de un insumo | "LA DEVOLUCIÓN PASA LO DECIDIDO: SE DECIDIÓ DEVOLVER <Q> <INSUMO>." |
+| | La decisión es de otro vendedor o de otro cupo | "ESTA DEVOLUCIÓN ES DE OTRO CUPO: ELIGE LA SEMANA CORRECTA." |
+| **Liquidar** (`calcular()` → `problemas`) | Sobrante sin decidir | "MATERIAL SOBRANTE SIN DECIDIR: <MARCA> <N> CAJAS. LA ANALISTA COMERCIAL DEBE DECIDIRLO EN COMERCIAL → MATERIAL SOBRANTE." |
+| | La foto no coincide (tarja, despacho o devolución cambió) | "EL MATERIAL SOBRANTE DE <MARCA> CAMBIÓ DESPUÉS DE DECIDIRLO (ERA <A>, AHORA <B>): LA ANALISTA COMERCIAL DEBE VOLVER A REPARTIRLO." |
+| | **Productor BLOQUEADO** (DEVOLVER abierto en cualquier cupo, o PENDIENTE vencido): frena **todas** sus LQ, incluida la del cupo del sobrante | "<VENDEDOR> ESTÁ BLOQUEADO: DEBE DEVOLVER <Q> <INSUMO>, <Q> <INSUMO> DE WK<N> (<VENCIÓ EL dd/mm \| DEVOLUCIÓN SIN RECIBIR>). LA BODEGA <BODEGA> DEBE REGISTRAR LA DEVOLUCIÓN O EL COORDINADOR DE COMPRAS PASARLO A DESCONTAR." |
+| PAGAR (13.A.5) | Productor BLOQUEADO | El mismo mensaje |
+| Pasar a descontar | Sin motivo | "ESCRIBE EL MOTIVO PARA PASAR A DESCONTAR." |
+| | No hay nada pendiente | "ESTE MATERIAL YA SE DEVOLVIÓ O YA SE DESCONTÓ: RECARGA LA PANTALLA." |
+| | El PENDIENTE no venció | "EL PENDIENTE VENCE EL dd/mm: TODAVÍA SE PUEDE USAR EN EL PRÓXIMO DESPACHO." |
+| Despacho | Sin error nuevo; solo informa | Aviso ámbar: "<VENDEDOR> TIENE MATERIAL A FAVOR DE WK<N> (VENCE EL dd/mm): SE RECOMIENDA ENTREGAR MENOS." Si está BLOQUEADO, aviso **rojo** con lo que debe; el despacho no se frena (pregunta 13.D-N4). |
+
+Al guardar una tarja, un despacho o una devolución que cambia el sobrante de una marca ya decidida, se avisa a la analista en la campanita ("EL SOBRANTE DE <VENDEDOR> — <MARCA> WK<N> CAMBIÓ"). No se bloquea la tarja.
+
+#### 13.B.8 Casos borde
+
+| Caso | Qué hace el sistema |
+|---|---|
+| **Devolución parcial** (sobran 50, regresan 30 porque 20 se mojaron) | La bodega registra lo devuelto **por insumo** y deja marcada "última devolución". Lo que no regresó se graba en `return_shortfall_qty` y **se descuenta solo** en la LQ de ese cupo; el productor se destraba. Si desmarca "última", el DEVOLVER sigue abierto (llegan más después) y el productor sigue bloqueado. |
+| Devolución parcial **por insumo** (llegan 30 fondos y 25 fundas) | Se cobra lo que falta de cada insumo (13.B.3, ejemplo); la pantalla muestra "DEVUELTAS 30 CAJAS". |
+| DEVOLVER que **nunca llega** | El productor queda BLOQUEADO desde la decisión. El coordinador lo pasa a DESCONTAR: graba el faltante, cierra el DEVOLVER y se cobra en la LQ de ese cupo. |
+| La bodega recibe material del vendedor **sin enlazarlo** | Cuenta como hoy (resta del cobro) y **baja el sobrante**. Si ya había decisión, la foto deja de coincidir y la analista vuelve a decidir. |
+| **PENDIENTE que vence** (14 días desde la decisión, con saldo) | **No se cobra solo.** El productor queda **BLOQUEADO**: no se liquida su 20 % ni se pulsa PAGAR. Se destraba si la bodega recibe la devolución enlazada (va al PENDIENTE) o si el coordinador lo pasa a DESCONTAR. Esto último se cobra en la **siguiente LQ** del vendedor (fila "MATERIAL PENDIENTE DE WK<N> PASADO A DESCONTAR", al costo congelado) y marca `charged_settlement_id`. Si esa LQ se anula, se desmarca y vuelve a cobrarse en la siguiente; **no** vuelve a bloquear. |
+| PENDIENTE pasado a DESCONTAR **sin otra LQ** del vendedor | Queda en Material por devolver como "POR COBRAR EN LA PRÓXIMA LIQUIDACIÓN", con el valor (solo con `ver_costos`). No bloquea. |
+| Vence **mientras se liquida** | `SettlementController@store` vuelve a revisar el bloqueo dentro de la transacción. Si vence en ese instante, la LQ no se graba y sale el mensaje del bloqueo. |
+| PENDIENTE usado **en parte** | Lo usado se cobra en el cupo nuevo (traído); el resto sigue vigente hasta su vencimiento. |
+| Se **anula el despacho** que usó el PENDIENTE | Sus usos pasan a `status = false` y el saldo vuelve. Si ya venció, el productor queda BLOQUEADO por ese saldo. |
+| **Compra partida** (Dividir) | No afecta: el sobrante es por cupo × marca y suma las tarjas de todas las compras de esa marca del cupo, incluidas las que salieron de la división. Si la división cambió la marca de una parte, cada marca tiene su sobrante. |
+| Compra con material retirado **sin tarja** | Peter (19/11): la fruta siempre llega. Si pasara, Liquidar sigue exigiendo tarja (sin cambio). |
+| **Compra anulada** | No se puede quitar una compra con material retirado (regla de hoy en `PurchaseAllocationController`). Si se bajan sus cajas, el sobrante no cambia: sale de lo retirado y de la tarja, no de lo comprado. |
+| **Cupo liquidado** | La decisión queda bloqueada. Si se **anula la LQ**, se puede rehacer, salvo lo PENDIENTE ya usado en otro despacho, lo ya devuelto y lo pasado a DESCONTAR. |
+| Productor BLOQUEADO con una LQ **ya grabada** de otra semana | La LQ grabada no se toca; el bloqueo frena las LQ **nuevas**. Las cuotas ya aprobadas siguen su curso. |
+| Dos marcas del mismo cupo comparten un insumo (ej. un químico de receta TODAS) | El retirado por insumo se toma por marca (`inventory_movements.brand_id`, como `yaDespachado`). Una devolución sin enlace no tiene marca: se reparte primero a la marca con más sobrante de ese insumo, y se muestra. |
+| Sobrante **0 o negativo** | No bloquea. Si es negativo, aviso informativo en la pantalla y en Liquidar. |
+
+#### 13.B.9 Qué cambia en Liquidar (`SettlementController`, `SettlementFormPage.jsx`)
+
+- `calcular()` agrega a `problemas` los bloqueos de 13.B.7: sobrante sin decidir, sobrante que cambió y **productor BLOQUEADO** (`BloqueoMaterial::de`). `preview` agrega `material_surplus` (resumen por marca, con enlace a la pantalla).
+- `materiales()` pasa a: retirado − devuelto + **traído** (usos activos con `producer_quota_id` = este cupo) − **pendiente** (decisión de este cupo) + **`late_charge_qty`** (PENDIENTE de otras semanas que el coordinador pasó a DESCONTAR y todavía no se cobró). Cada parte se valoriza a su costo congelado.
+- `store()` graba `carried_in_qty`, `pending_qty` y `late_charge_qty` en `settlement_materials` y marca `charged_settlement_id`. `annul()` lo desmarca.
+- **Pantalla:** la tabla "2. Materiales retirados" suma las columnas TRAÍDO, A FAVOR (sale) y PASADO A DESCONTAR. Los avisos rojos (SOBRANTE SIN DECIDIR, BLOQUEADO) van en la fila de avisos (formato del 19/11).
+- **Compra de fruta:** el vendedor bloqueado lleva una barra roja con el motivo (como SIN CÉDULA) y PAGAR sale gris.
+
+#### 13.B.10 Bloqueo del productor por material (Peter, 19/11)
+
+| | Qué |
+|---|---|
+| **Cuándo** | (a) un **DEVOLVER abierto** en cualquiera de sus cupos, desde el día de la decisión; o (b) un **PENDIENTE vencido** con saldo (14 días desde la decisión). |
+| **Qué frena** | Toda **liquidación nueva** del productor (el 20 % y el 100 % de contrato, porque es la misma LQ del cupo) y el botón **PAGAR** del 80 % en sus compras nuevas. El mensaje en MAYÚSCULAS dice qué falta devolver, de qué semana y en qué bodega. |
+| **Qué no frena** | Las órdenes y cuotas que ya existían, la Compra de fruta (se puede seguir comprando), las tarjas y, por ahora, el despacho, que solo avisa en rojo (13.D-N4). |
+| **Quién se entera** | El **coordinador de compras** (pantalla `coordinador_compras`, por persona): contador rojo en el menú, la pantalla Material por devolver y la campanita el día que algo vence. La analista y Liquidaciones ven el aviso en sus pantallas. |
+| **Cómo se destraba** | La bodega registra la devolución enlazada y la cierra (lo que falta se descuenta solo), o el coordinador pasa lo que falta a DESCONTAR con un motivo. |
+
+#### 13.B.11 Impacto en datos existentes (A y B)
+
+| Dato | Qué se hace |
+|---|---|
+| Despachos y devoluciones en **producción** | Volver a contarlos con `siae-datos` antes de subir (en local hay 0). Los cupos **sin liquidar** con tarja y sobrante quedan SIN DECIDIR y **bloquean su LQ**: hay que avisar a la analista el día de la subida. |
+| Cupos ya liquidados | No se tocan: no se crean decisiones hacia atrás. |
+| Compras SPOT ya enviadas a bodega y sin LQ | No se crea ninguna orden 80 % automática: Comercial pulsa PAGAR en las que corresponda. Si alguna ya se pagó **por fuera** (Excel), se registra como anticipo **manual ANTERIOR** con un script `CARGA_BD` + `CARGA_SIMULAR=1`, por los mismos endpoints. Así no se paga dos veces. |
+| Perfiles | **Ningún perfil cambia.** Por excepción por persona (Usuarios → excepciones): la **asistente comercial** recibe `pagar_anticipo_80`, la **analista comercial** `material_sobrante` y el **coordinador de compras** `coordinador_compras`. |
+
+Orden en producción, como siempre: simulación → respaldo de la base, el `dist` y los `.env` → migración → revisión.
+
+---
+
+### 13.C Fases sugeridas
+
+| Fase | Contenido | Por qué en este orden |
+|---|---|---|
+| **1b-1** | 13.A completo: migración 7.3 con los cambios de 13.A.4, PAGAR en Compra de fruta, Tablero de aprobación (4.0, solo para el 80 %), **Cuentas por pagar → Anticipos de productores** con `bank_payment_batch_items` y el TXT, y la LQ SPOT que descuenta el 80 % y deja una sola cuota SALDO SPOT | El 80 % y el cambio de la LQ **salen juntos**: si sale el PAGAR sin la LQ nueva, la LQ volvería a pagar el 80 % (doble pago). Mientras tanto, las cuotas de la LQ se siguen registrando en "Pagos e historial" como hoy. |
+| **1c** | 13.B completo: migración de 13.B.5, pantalla Material sobrante, bloqueo en Liquidar, saldo a favor en el despacho, devolución enlazada | Toca Liquidar igual que 1b-1: mejor después, para no mezclar los dos cambios. No depende de la 1b. |
+| **1b-2** | El resto de la 1b: cuotas de la LQ y OC en Cuentas por pagar, anticipos manuales con aprobación, fallidas, pago manual y reverso | Lo de 5.x que no hace falta para el 80 %. |
+
+#### 13.C.1 Pruebas que debe hacer QA (se suman a las de 7.7; reemplazan los puntos 1 y 2 de la 1b)
+
+1. **SPOT 80/20 enviada**, 1.000 cajas a $7,00, corte en WK45 → PAGAR crea `ORD-…` por 5.600,00, POR APROBAR, semana WK45. Sin envío, sin precio, sin corte, CONTRATO o SPOT al 100 % → 422 con su mensaje.
+2. Doble clic en PAGAR → una sola orden. Un usuario COMERCIAL **sin** la excepción `pagar_anticipo_80` → 403; con la excepción, sí puede. Un perfil de LIQUIDACIONES no puede recibir `pagar_anticipo_80` (`solo`).
+3. Cambiar las cajas con la orden POR APROBAR → se recalcula; APROBADA → vuelve a POR APROBAR con aviso; PAGADA → no cambia y el tablero avisa. SPOT → CONTRATO con la orden APROBADA → 422.
+4. Dividir una compra con 80 % → las partes no tienen PAGAR; la LQ SPOT descuenta el 80 % una sola vez.
+5. Con la tarja de 700 (ejemplo 13.A.8) → cuota 0 y SALDO A FAVOR DE AGAT por 1.291,00.
+6. Cuentas por pagar: con la cuenta PENDIENTE, la orden no entra al TXT; con la cuenta VERIFICADA, hay una línea por orden y la cuenta va enmascarada en pantalla.
+7. Sobrante: retira 800 con tarja 780 + 20 → sin decisión, se liquida. Retira 800 con tarja 700 + 20 → Liquidar bloqueado con "MATERIAL SOBRANTE SIN DECIDIR"; 30 + 50 → se liquida cobrando 30 cajas de material y con 50 a favor.
+8. Suma distinta del total → 422. Se cambia la tarja después de decidir → bloqueo "CAMBIÓ" y aviso a la analista.
+9. DEVOLVER 50 → el productor queda BLOQUEADO: Liquidar y PAGAR dan el mensaje del bloqueo. La bodega registra 30 por insumo como "última" → 20 se descuentan solos y se destraba. Devolver más de lo decidido → 422.
+10. PENDIENTE 50 → el siguiente despacho recomienda 50 menos y registra el uso; anular ese despacho devuelve el saldo. PENDIENTE sin uso a los 15 días → BLOQUEADO (no se cobra solo); aparece en el contador del coordinador; "Pasar a descontar" sin motivo → 422; con motivo → se destraba y se cobra en la siguiente LQ. Si se anula esa LQ, se cobra en la siguiente y no vuelve a bloquear.
+11. Un BODEGUERO de otra bodega no puede registrar la devolución enlazada (403). Sin `ver_costos`, Material sobrante y Material por devolver no muestran $. Sin `coordinador_compras` → 403 en `blocked` y `force-deduct`.
+12. `npm run build` sin errores; `php -l` en cada PHP; migraciones aplicadas en `SIAE` y `siae_test`; `down()` probado en local.
+
+---
+
+### 13.D Preguntas para Peter
+
+**Resueltas por Peter el 19/11/2026:** N1 no (un PENDIENTE vencido no se usa en despachos; solo se destraba devolviendo o con DESCONTAR). N2 sí (las órdenes 80 % ya existentes siguen su curso). N3 un DEVOLVER bloquea desde el día la liquidación de esa semana y, a los 14 días, al productor completo. N4 no (el despacho solo avisa en rojo).

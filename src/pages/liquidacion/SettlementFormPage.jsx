@@ -12,6 +12,10 @@
 //   Se pagan las RECIBIDAS (embarcadas − caídas − rechazadas − faltantes). Cada LQ lleva su retención IR
 //   (tramo por sus recibidas; base = recibidas × el mayor entre el real y el oficial). Materiales y anticipos
 //   se descuentan en la LQ de mayor valor de fruta.
+// 19/11/2026 (fase 1b-1): una sola cuota por LQ (CONTRATO "PAGO ÚNICO (100 %)", SPOT "SALDO SPOT"). La LQ SPOT
+//   descuenta el anticipo 80 % que ya salió al banco (EN BANCO / PAGADA); el que no salió se anula y su fruta va en
+//   la cuota. Si el 80 % pasa el neto, la cuota queda en 0 y el resto es SALDO A FAVOR DE AGAT (se descuenta en la
+//   siguiente LQ del vendedor: aquí sale marcado de entrada).
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Calculator, X, AlertTriangle, Plus } from 'lucide-react';
@@ -31,22 +35,10 @@ const hoy = () => hoyISO();
 
 const ESQUEMA = { 100: 'PAGO 100 %', '80_20': 'PAGO 80 / 20' };
 
-// Misma fórmula que SettlementController::pagos() (descuentos = materiales + transporte)
-const calcularPagos = (lineas, descuentos, anticipos) => {
-  const completo = r2(lineas.filter((l) => l.payment_scheme === '100').reduce((s, l) => s + Number(l.amount), 0));
-  const ochentaVeinte = r2(lineas.filter((l) => l.payment_scheme === '80_20').reduce((s, l) => s + Number(l.amount), 0));
-  let segundo = r2(ochentaVeinte * 0.2);
-  let primero = r2(completo + ochentaVeinte - segundo - descuentos - anticipos);
-  if (primero < 0) {
-    segundo = r2(segundo + primero);
-    primero = 0;
-  }
-  const nombre1 = ochentaVeinte === 0 ? 'PAGO ÚNICO (100 %)' : completo === 0 ? 'PRIMER PAGO (80 %)' : 'PRIMER PAGO (100 % + 80 %)';
-  return [
-    { installment: 1, description: nombre1, amount: primero },
-    { installment: 2, description: 'SEGUNDO PAGO (20 %)', amount: segundo },
-  ].filter((p) => p.amount > 0);
-};
+// 19/11/2026 (fase 1b-1): misma regla que SettlementController::cuota(): una cuota por LQ, sin cuota si el neto es 0
+const calcularPagos = (g, neto) => (neto > 0
+  ? [{ installment: 1, description: g.negotiation_type === 'CONTRATO' ? 'PAGO ÚNICO (100 %)' : 'SALDO SPOT', amount: neto }]
+  : []);
 
 export default function SettlementFormPage() {
   const { quotaId } = useParams();
@@ -71,6 +63,8 @@ export default function SettlementFormPage() {
           return;
         }
         setDatos(res.data);
+        // 19/11/2026: el SALDO A FAVOR DE AGAT de una LQ anterior sale marcado de entrada
+        setAplicar(Object.fromEntries((res.data.advances || []).filter((a) => a.origin === 'SALDO').map((a) => [a.id, String(a.saldo)])));
       })
       .catch((err) => {
         console.error('ERROR AL CALCULAR LA LIQUIDACIÓN:', err);
@@ -89,11 +83,16 @@ export default function SettlementFormPage() {
     const materiales = g.lleva_descuentos ? Number(datos.materials_amount) : 0;
     const anticipos = g.lleva_descuentos ? totalAnticipos : 0;
     const fijos = r2(materiales + Number(g.transport_amount) - Number(g.transport_recognized_amount) - Number(g.bonus_amount) + Number(g.retention_amount));
-    const neto = r2(Number(g.fruit_amount) - fijos - anticipos);
-    return { ...g, materiales, anticipos, neto, pagos: calcularPagos(g.lines, fijos, anticipos) };
+    const netoAntes = r2(Number(g.fruit_amount) - fijos - anticipos);
+    // 19/11/2026: la LQ SPOT descuenta el 80 % ya pagado; lo que pase del neto queda como saldo a favor de AGAT
+    const ochenta = Number(g.advance_80_amount || 0);
+    const saldoAFavor = netoAntes >= 0 ? Math.max(0, r2(ochenta - netoAntes)) : 0;
+    const neto = netoAntes >= 0 ? Math.max(0, r2(netoAntes - ochenta)) : netoAntes;
+    return { ...g, materiales, anticipos, netoAntes, ochenta, saldoAFavor, neto, pagos: calcularPagos(g, neto) };
   });
   const principal = lqs.find((g) => g.lleva_descuentos);
   const neto = r2(lqs.reduce((s, g) => s + g.neto, 0));
+  const anticipos80 = datos.anticipos_80 || [];
   const grupoDe = Object.fromEntries(lqs.flatMap((g) => g.lines.map((l) => [l.producer_quota_line_id, g.group_label])));
   const anticipoExcedido = datos.advances.some((a) => Number(aplicar[a.id] || 0) > a.saldo);
   const puedeLiquidar = datos.problemas.length === 0 && lqs.length > 0 && lqs.every((g) => g.neto >= 0) && !anticipoExcedido && fecha;
@@ -103,7 +102,7 @@ export default function SettlementFormPage() {
       const nuevo = { ...prev };
       if (marcado) {
         // Propone descontar todo el saldo, sin pasar lo que queda en la LQ que lleva los descuentos
-        const disponible = principal ? principal.neto : 0;
+        const disponible = principal ? Math.max(0, principal.netoAntes) : 0;
         nuevo[a.id] = String(Math.max(0, Math.min(a.saldo, disponible)));
       } else {
         delete nuevo[a.id];
@@ -328,7 +327,7 @@ export default function SettlementFormPage() {
                     <td tabIndex={-1} title="Clic para marcar la fila" className={tdNumero}><span className="hidden group-focus-within:inline text-primario mr-0.5" aria-hidden="true">▶</span>{i + 1}</td>
                     <td className={`${tdGrilla} px-3`}><input type="checkbox" checked={marcado} onChange={(e) => marcarAnticipo(a, e.target.checked)} className="w-4 h-4 accent-primario" /></td>
                     <td className={tdLectura}>{formatoFecha(a.date)}</td>
-                    <td className={tdLectura}>{a.type === 'PRESTAMO' ? 'PRÉSTAMO' : 'ANTICIPO'}{a.concept ? ` · ${a.concept}` : ''}</td>
+                    <td className={tdLectura}>{a.origin === 'SALDO' ? 'SALDO A FAVOR' : a.type === 'PRESTAMO' ? 'PRÉSTAMO' : 'ANTICIPO'}{a.concept ? ` · ${a.concept}` : ''}</td>
                     <td className={`${tdLectura} text-right`}>$ {formatoDinero(a.saldo)}</td>
                     <td className={`${tdGrilla} text-right`}>
                       <CampoNumero decimales={2}
@@ -363,6 +362,21 @@ export default function SettlementFormPage() {
               {/* 13/11/2026: bono / extra (pago aparte, va en el 1er pago) */}
               {Number(g.bonus_amount) > 0 && <div className="flex justify-between text-green-700"><span>(+) Bono / extra</span><span>$ {formatoDinero(g.bonus_amount)}</span></div>}
               {g.lleva_descuentos && <div className="flex justify-between text-red-600"><span>(−) Anticipos / préstamos</span><span>$ {formatoDinero(g.anticipos)}</span></div>}
+              {/* 19/11/2026 (fase 1b-1): el 80 % que ya salió al banco (la LQ SPOT lo descuenta completo) */}
+              {g.negotiation_type === 'SPOT' && anticipos80.length > 0 && (<>
+                <div className="flex justify-between text-red-600"><span>(−) Anticipo 80 % ya pagado</span><span>$ {formatoDinero(g.ochenta)}</span></div>
+                {anticipos80.map((o) => (
+                  <div key={o.id} className="flex justify-between text-xs text-gray-500 pl-4">
+                    <span>{o.code} · {formatoCajas(o.boxes)} cajas · {o.estado}{o.descuenta ? '' : ': SE ANULA, SU FRUTA VA EN LA CUOTA'}</span>
+                    <span>{o.descuenta ? `$ ${formatoDinero(o.saldo)}` : '—'}</span>
+                  </div>
+                ))}
+              </>)}
+              {g.saldoAFavor > 0 && (
+                <div className="flex justify-between text-amber-700 font-semibold">
+                  <span title="Se descuenta en la siguiente liquidación del vendedor">SALDO A FAVOR DE AGAT (el 80 % pasó el neto)</span><span>$ {formatoDinero(g.saldoAFavor)}</span>
+                </div>
+              )}
               <div className={`flex justify-between border-t pt-2 text-base font-bold ${g.neto < 0 ? 'text-red-600' : 'text-green-700'}`}>
                 <span>NETO A PAGAR</span><span>$ {formatoDinero(g.neto)}</span>
               </div>
@@ -389,7 +403,7 @@ export default function SettlementFormPage() {
           <span>NETO TOTAL ({lqs.length} liquidaciones)</span><span>$ {formatoDinero(neto)}</span>
         </div>
       )}
-      <p className="text-xs text-gray-500 mb-4">Factura − nota de crédito = valor de la fruta. Los descuentos salen del primer pago. Cada pago y los números de factura y NC se registran después en el detalle de cada liquidación.</p>
+      <p className="text-xs text-gray-500 mb-4">Factura − nota de crédito = valor de la fruta. Cada liquidación deja una sola cuota (su pago se registra en el detalle, como hasta hoy). Los números de factura y NC se registran después en el detalle de cada liquidación.</p>
 
       {/* Datos de la liquidación */}
       <div className="bg-white rounded-xl shadow p-4 mb-4 grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">

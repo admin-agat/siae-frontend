@@ -80,6 +80,8 @@ export const menuItems = [
             { label: "Anticipos y préstamos", ruta: "/liquidacion/anticipos", icono: HandCoins, pantalla: "anticipos" },
             { label: "Liquidar", ruta: "/liquidacion", icono: Calculator, pantalla: "liquidar" },
             { label: "Pagos e historial", ruta: "/liquidacion/pagos", icono: CircleDollarSign, pantalla: "pagos" },
+            // 19/11/2026 (fase 1b-1): aprueba solo el jefe de Liquidaciones; Pagos, Gerencia y Finanzas lo ven
+            { label: "Tablero de anticipos y pagos", ruta: "/liquidacion/tablero-pagos", icono: BadgeCheck, pantalla: ["aprobar_pagos_liquidacion", "pagos", "tablero_pagos_lectura"] },
             // 30/10/2026: notas de crédito por recibir de productores/comercializadoras
             { label: "Notas de crédito", ruta: "/liquidacion/notas-credito", icono: Receipt, pantalla: "notas_credito" },
         ],
@@ -115,6 +117,8 @@ export const menuItems = [
         // 05/11/2026: solo Contabilidad aprueba; carga masiva al banco (TXT de Banco Pichincha)
         items: [
             { label: "Aprobación y pago de OC", ruta: "/contabilidad/ordenes", icono: BadgeCheck, pantalla: "aprobar_oc" },
+            // 19/11/2026 (fase 1b-1): anticipos de productores aprobados → TXT Pichincha
+            { label: "Cuentas por pagar", ruta: "/contabilidad/pagos-banco", icono: Landmark, pantalla: "pagos_banco" },
             { label: "Cuentas bancarias", ruta: "/contabilidad/cuentas", icono: CreditCard, pantalla: "cuentas_bancarias" },
         ],
     },
@@ -151,7 +155,8 @@ export const puede = (user, ...pantallas) =>
     esAdmin(user) || pantallas.some((p) => user?.pantallas?.includes(p));
 
 // Un ítem del menú es visible si: es soloAdmin y el usuario es ADMIN, o tiene su pantalla
-const itemVisible = (user, item) => (item.soloAdmin ? esAdmin(user) : puede(user, item.pantalla));
+// 19/11/2026: pantalla puede ser una lista (basta con tener una)
+const itemVisible = (user, item) => (item.soloAdmin ? esAdmin(user) : puede(user, ...[].concat(item.pantalla)));
 
 // Menú filtrado para el usuario: sin secciones vacías.
 // 05/11/2026: los "Próximamente" (Marca BL, Invoice) ya no se muestran; vuelven al quitarles proximamente

@@ -32,3 +32,23 @@ export const getCuentasProveedores = () => axios.get('/accounting/bank-accounts'
 export const guardarCuenta = (thirdPartyId, data) => axios.put(`/accounting/bank-accounts/${thirdPartyId}`, data).then((res) => res.data);
 // 18/11/2026: Contabilidad marca la cuenta VERIFICADA (si después se cambia, vuelve a PENDIENTE)
 export const verificarCuenta = (thirdPartyId) => axios.patch(`/accounting/bank-accounts/${thirdPartyId}/verify`).then((res) => res.data);
+
+// 19/11/2026 (fase 1b-1): Cuentas por pagar → anticipos de productores (una línea del TXT por orden)
+export const getAnticiposPorPagar = (params = {}) => axios.get('/accounting/payables', { params }).then((res) => res.data);
+export const revisarAnticipos = (ids) => axios.post('/accounting/payables/preview', { ids }).then((res) => res.data);
+export const generarLoteAnticipos = (ids) => axios.post('/accounting/payables/batches', { ids }).then((res) => res.data);
+export const getLotesAnticipos = () => axios.get('/accounting/payables/batches').then((res) => res.data);
+export const anularLoteAnticipos = (id, motivo) => axios.patch(`/accounting/payables/batches/${id}/cancel`, { cancellation_reason: motivo }).then((res) => res.data);
+// fallidas: [{ item_id, motivo }] (vacío = el banco pagó todo)
+export const loteAnticiposPagado = (id, data) => axios.patch(`/accounting/payables/batches/${id}/paid`, data).then((res) => res.data);
+export const descargarLoteAnticipos = async (lote) => {
+    const res = await axios.get(`/accounting/payables/batches/${lote.id}/file`, { responseType: 'blob' });
+    const url = URL.createObjectURL(res.data);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = lote.file_name || `${lote.code}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+};

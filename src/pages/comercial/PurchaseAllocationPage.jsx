@@ -27,8 +27,9 @@
 import { Fragment, useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { flushSync } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, Save, X, Lock, ChevronDown, ChevronRight, AlertTriangle, Truck, Undo2, Users, Ban, RotateCcw, Copy, Split } from 'lucide-react';
-import { getOrderPurchases, saveOrderPurchases, createPurchaseFarm, createPurchaseThirdParty, sendPurchasesToWarehouse, unsendPurchase } from '../../api/customerOrders';
+import { ArrowLeft, Plus, Trash2, Save, X, Lock, ChevronDown, ChevronRight, AlertTriangle, Truck, Undo2, Users, Ban, RotateCcw, Copy, Split, HandCoins } from 'lucide-react';
+import { getOrderPurchases, saveOrderPurchases, createPurchaseFarm, createPurchaseThirdParty, sendPurchasesToWarehouse, unsendPurchase, requestAdvance80, cancelAdvance80 } from '../../api/customerOrders';
+import { semanaISO } from '../../utils/semana';
 import DividirCompraModal from '../../components/DividirCompraModal';
 import { getThirdParties } from '../../api/thirdParties';
 import { getPorts } from '../../api/ports';
@@ -46,6 +47,15 @@ import { ETIQUETA_MODALIDAD, MODALIDAD_POR_DEFECTO } from '../../utils/modalidad
 const formatoCajas = (n) => Number(n || 0).toLocaleString('es-EC');
 const formatoDinero = (n) => Number(n || 0).toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const n = (v) => Number(v) || 0;
+// 19/11/2026 (fase 1b-1): estado de la orden del anticipo 80 % (clases completas para Tailwind v4)
+const COLOR_80 = {
+  'POR APROBAR': 'bg-amber-100 text-amber-800',
+  APROBADA: 'bg-blue-100 text-blue-700',
+  'EN BANCO': 'bg-indigo-100 text-indigo-700',
+  PAGADA: 'bg-green-100 text-green-700',
+  DEVUELTA: 'bg-red-100 text-red-700',
+  FALLIDA: 'bg-red-100 text-red-700',
+};
 // 10/11/2026: fecha y hora del envío a bodega (dd/mm hh:mm, hora local)
 const fechaHora = (iso) => (iso ? new Date(iso).toLocaleString('es-EC', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) : '');
 
@@ -116,6 +126,8 @@ const compraDesdeBackend = (c) => ({
   dividida_el: c.split_at || null,
   dividida_por: c.split_by || '',
   con_tarjas: Boolean(c.con_tarjas),
+  // 19/11/2026 (fase 1b-1): orden del anticipo 80 % { code, estado, amount, boxes, week, motivo, dividida } o null
+  anticipo80: c.anticipo80 || null,
   // 13/11/2026: bono / extra al productor
   bonus_rate: Number(c.bonus_rate) ? texto(Number(c.bonus_rate)) : '',
   con_bono: Number(c.bonus_rate) > 0, // casilla BONO (como RECONOCER del transporte)
@@ -151,7 +163,7 @@ const compraVacia = (anterior, puertoBloque, precioMag) => ({
   contract_id: '', contract_part: '0',
   bloqueo: null, liquidada: false,
   despachada: false, enviada: null, enviada_por: '', cambio_envio: null,
-  pending_split: false, dividida_de: null, dividida_el: null, dividida_por: '', con_tarjas: false,
+  pending_split: false, dividida_de: null, dividida_el: null, dividida_por: '', con_tarjas: false, anticipo80: null,
   bonus_rate: '', con_bono: false, bonus_reason: '', bonus_detail: '',
 });
 
@@ -286,6 +298,13 @@ export default function PurchaseAllocationPage() {
   const [enviando, setEnviando] = useState(false);
   const [quitarEnvio, setQuitarEnvio] = useState(null); // compra a la que se le quita el envío
   const [dividir, setDividir] = useState(null); // 13/11/2026: { bloque, compra } que se está dividiendo
+  // 19/11/2026 (fase 1b-1): anticipo 80 % desde la compra (PAGAR lo pulsa solo quien tiene pagar_anticipo_80)
+  const [puedePagar80, setPuedePagar80] = useState(false);
+  const [cuentas80, setCuentas80] = useState({});     // 19/11/2026: third_party_id → PENDIENTE / VERIFICADA (sin fila = SIN CUENTA)
+  const [pagar80, setPagar80] = useState(null);       // { compra, cajas, precio, monto, semana }
+  const [retirar80, setRetirar80] = useState(null);   // compra a la que se le retira el pedido
+  const [motivo80, setMotivo80] = useState('');
+  const [avisoPagado80, setAvisoPagado80] = useState(null); // compras con el 80 % ya pagado a las que se cambian cajas o precio
   // 13/11/2026: precio oficial en el encabezado del bloque y celdas con detalle a pedido
   const [editOficial, setEditOficial] = useState(null);     // { bKey, valor } popover del oficial del bloque
   const [oficialNuevas, setOficialNuevas] = useState({});   // bKey → oficial que toman las compras nuevas
@@ -315,6 +334,8 @@ export default function PurchaseAllocationPage() {
     setContratos(data.contracts || []);
     setUsoOtros(data.contract_usage || []);
     setVersion(data.version);
+    setPuedePagar80(Boolean(data.puede_pagar_80)); // 19/11/2026
+    setCuentas80(data.cuentas_80 || {});
     const lista = data.blocks.map(bloqueDesdeBackend);
     setBloques(lista.map(rellenar)); // 18/11/2026: + 2 compras vacías por bloque
     setInicial(JSON.stringify(lista));
@@ -768,7 +789,8 @@ export default function PurchaseAllocationPage() {
 
   // ---------------- Guardar ----------------
 
-  const handleGuardar = async () => {
+  // 19/11/2026: confirmado80 === true cuando ya se aceptó el aviso del 80 % pagado (el clic del botón pasa el evento)
+  const handleGuardar = async (confirmado80) => {
     if (guardando) return;
     setErrores([]);
     setFilaMarcada(null);
@@ -810,6 +832,17 @@ export default function PurchaseAllocationPage() {
     if (faltan.length) {
       mostrarErrores(faltan, lista);
       return;
+    }
+    // 19/11/2026 (13.A.3): con el 80 % EN BANCO o PAGADO el cambio de cajas o precio se permite, pero se avisa antes
+    if (confirmado80 !== true) {
+      const antes = Object.fromEntries(JSON.parse(inicial || '[]').flatMap((b) => b.purchases).map((c) => [c.id, c]));
+      const pagadas = lista.flatMap((b) => b.purchases).filter((c) => c.id && ['EN BANCO', 'PAGADA'].includes(c.anticipo80?.estado)
+        && !c.anticipo80.dividida && antes[c.id]
+        && (n(c.boxes) !== n(antes[c.id].boxes) || n(c.real_price) !== n(antes[c.id].real_price)));
+      if (pagadas.length) {
+        setAvisoPagado80(pagadas);
+        return;
+      }
     }
 
     const num = (v) => (v === '' ? null : Number(v));
@@ -919,6 +952,71 @@ export default function PurchaseAllocationPage() {
     } catch (err) {
       const e = err.response?.data?.errors;
       setErrores(e ? Object.values(e).flat() : [err.response?.data?.message || 'NO SE PUDO QUITAR EL ENVÍO.']);
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  // ---------------- Anticipo 80 % (19/11/2026, fase 1b-1) ----------------
+
+  // Mismo cálculo que Anticipo80::calculo(): la compra + las filas que salieron de dividirla, cajas × precio real × 80 %
+  const abrirPagar80 = (b, c) => {
+    if (hayCambios()) {
+      setErrores(['GUARDA LA SEMANA ANTES DE PEDIR EL 80 %.']);
+      return;
+    }
+    setErrores([]);
+    const todas = bloques.flatMap((b) => b.purchases).filter((x) => x.id);
+    const deEsta = (x) => {
+      for (let o = x.dividida_de, i = 0; o && i < 20; o = todas.find((y) => y.id === o)?.dividida_de, i++) {
+        if (o === c.id) return true;
+      }
+      return false;
+    };
+    const partes = [c, ...todas.filter((x) => x.id !== c.id && !x.anticipo80 && deEsta(x))];
+    const cajas = partes.reduce((s, x) => s + n(x.boxes), 0);
+    const valor = partes.reduce((s, x) => s + n(x.boxes) * n(x.real_price), 0);
+    setPagar80({
+      compra: c,
+      vendedor: vendedores.find((v) => String(v.id) === c.third_party_id)?.name || '',
+      cuenta: cuentas80[c.third_party_id] || 'SIN CUENTA',
+      marca: etiquetaBloque(b, true),
+      cajas,
+      precio: cajas ? valor / cajas : 0,
+      monto: Math.round(valor * 0.8 * 100) / 100,
+      semana: c.cut_date ? semanaISO(new Date(`${c.cut_date}T00:00:00`)).semana : null,
+    });
+  };
+
+  const confirmarPagar80 = async () => {
+    const { compra } = pagar80;
+    setEnviando(true);
+    try {
+      const { data } = await requestAdvance80(id, compra.id, version);
+      setPagar80(null);
+      aplicarRespuesta(data);
+      setToast({ tipo: 'exito', mensaje: `Anticipo 80 % pedido (${data.anticipo80_code}): queda POR APROBAR` });
+    } catch (err) {
+      setPagar80(null);
+      const e = err.response?.data?.errors;
+      setErrores(e ? Object.values(e).flat() : [err.response?.data?.message || 'NO SE PUDO PEDIR EL 80 %.']);
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  const confirmarRetirar80 = async () => {
+    const c = retirar80;
+    setEnviando(true);
+    try {
+      const { data } = await cancelAdvance80(id, c.id, motivo80.trim());
+      setRetirar80(null);
+      aplicarRespuesta(data);
+      setToast({ tipo: 'exito', mensaje: 'Pedido del 80 % retirado' });
+    } catch (err) {
+      setRetirar80(null);
+      const e = err.response?.data?.errors;
+      setErrores(e ? Object.values(e).flat() : [err.response?.data?.message || 'NO SE PUDO RETIRAR EL PEDIDO DEL 80 %.']);
     } finally {
       setEnviando(false);
     }
@@ -1626,6 +1724,38 @@ export default function PurchaseAllocationPage() {
                                         <Undo2 size={10} /> Quitar envío
                                       </button>
                                     )}
+                                    {/* 19/11/2026 (fase 1b-1): anticipo 80 % — estado de la orden o botón PAGAR (solo SPOT 80/20) */}
+                                    {c.anticipo80 ? (
+                                      <div className="mt-1" title={c.anticipo80.motivo ? `Devuelta: ${c.anticipo80.motivo}` : undefined}>
+                                        {c.anticipo80.dividida ? (
+                                          <span className="block text-xs text-gray-500">80 % EN {c.anticipo80.code} (COMPRA DIVIDIDA)</span>
+                                        ) : (<>
+                                          <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${COLOR_80[c.anticipo80.estado] || 'bg-gray-100 text-gray-700'}`}>
+                                            80 % {c.anticipo80.estado}
+                                          </span>
+                                          <span className="block text-xs text-gray-500">{c.anticipo80.code} · WK{c.anticipo80.week}{c.anticipo80.amount != null ? ` · $ ${formatoDinero(c.anticipo80.amount)}` : ''}</span>
+                                          {c.anticipo80.motivo && <span className="block text-xs text-red-700">{c.anticipo80.motivo}</span>}
+                                          {puedePagar80 && !c.liquidada && ['POR APROBAR', 'DEVUELTA'].includes(c.anticipo80.estado) && (
+                                            <span className="flex gap-2 mt-0.5">
+                                              {c.anticipo80.estado === 'DEVUELTA' && (
+                                                <button type="button" onClick={() => abrirPagar80(b, c)} disabled={enviando} className="flex items-center gap-1 text-xs text-green-700 hover:underline">
+                                                  <HandCoins size={10} /> Pedir de nuevo
+                                                </button>
+                                              )}
+                                              <button type="button" onClick={() => { setMotivo80(''); setRetirar80(c); }} disabled={enviando} className="flex items-center gap-1 text-xs text-gray-500 hover:text-red-600 hover:underline">
+                                                <Undo2 size={10} /> Retirar
+                                              </button>
+                                            </span>
+                                          )}
+                                        </>)}
+                                      </div>
+                                    ) : puedePagar80 && !c.liquidada && c.negotiation_type === 'SPOT' && c.payment_scheme === '80_20' && (
+                                      <button type="button" onClick={() => abrirPagar80(b, c)} disabled={enviando}
+                                        title="Pide el anticipo 80 % de esta compra (lo aprueba el jefe de Liquidaciones)"
+                                        className="flex items-center gap-1 mt-1 px-2 py-1 text-xs font-semibold rounded-lg shadow-sm bg-guardar text-guardar-texto hover:bg-guardar-hover disabled:opacity-50 whitespace-nowrap transition">
+                                        <HandCoins size={13} /> PAGAR
+                                      </button>
+                                    )}
                                   </div>
                                 ) : c.liquidada ? (
                                   <span className="text-xs text-gray-400">—</span>
@@ -1918,6 +2048,65 @@ export default function PurchaseAllocationPage() {
           onAceptar={confirmarQuitarEnvio}
         >
           La compra de {quitarEnvio.boxes} cajas deja de aparecer en Por despachar de la bodega hasta que la vuelvas a enviar.
+        </DialogoConfirmacion>
+      )}
+
+      {/* 19/11/2026 (fase 1b-1, 13.A.1 paso 2): PAGAR el anticipo 80 % */}
+      {pagar80 && (
+        <DialogoConfirmacion
+          titulo="¿Pedir el anticipo 80 %?"
+          peligro={false}
+          textoAceptar={enviando ? 'Pidiendo...' : 'Sí, pedir el 80 %'}
+          textoCancelar="Cancelar"
+          procesando={enviando}
+          onCancelar={() => setPagar80(null)}
+          onAceptar={confirmarPagar80}
+        >
+          VAS A PEDIR EL ANTICIPO 80 % DE <strong>{pagar80.vendedor}</strong>{pagar80.marca ? ` — ${pagar80.marca}` : ''}:{' '}
+          <strong>{formatoCajas(pagar80.cajas)} CAJAS × $ {formatoDinero(pagar80.precio)} × 80 % = $ {formatoDinero(pagar80.monto)}</strong>
+          {pagar80.semana ? `, SEMANA DE PAGO WK${pagar80.semana}` : ''}.
+          <span className="block mt-2 text-xs">Queda POR APROBAR en el Tablero de anticipos y pagos de Liquidaciones.</span>
+          {/* 19/11/2026: aviso según el estado real de la cuenta del vendedor */}
+          {pagar80.cuenta === 'VERIFICADA' ? (
+            <span className="block mt-2 text-xs text-green-700">La cuenta bancaria del vendedor está VERIFICADA.</span>
+          ) : (
+            <span className="block mt-2 text-xs text-amber-700">
+              {pagar80.cuenta === 'SIN CUENTA'
+                ? 'El vendedor NO TIENE CUENTA BANCARIA registrada: Contabilidad no podrá pagarlo por el banco hasta que se registre y verifique en Cuentas bancarias.'
+                : 'La cuenta del vendedor está PENDIENTE de verificar: Contabilidad no podrá pagarlo por el banco hasta que la verifique en Cuentas bancarias.'}
+            </span>
+          )}
+        </DialogoConfirmacion>
+      )}
+
+      {retirar80 && (
+        <DialogoConfirmacion
+          titulo="¿Retirar el pedido del 80 %?"
+          textoAceptar={enviando ? 'Retirando...' : 'Retirar pedido'}
+          textoCancelar="Cancelar"
+          procesando={enviando}
+          onCancelar={() => setRetirar80(null)}
+          onAceptar={confirmarRetirar80}
+        >
+          La orden {retirar80.anticipo80?.code} se anula y sale del Tablero de Liquidaciones.
+          <textarea value={motivo80} onChange={(e) => setMotivo80(e.target.value.toUpperCase())} rows={2} maxLength={500} placeholder="MOTIVO" aria-label="Motivo"
+            className="mt-3 w-full bg-gray-100 border border-gray-200 rounded-2xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primario" />
+        </DialogoConfirmacion>
+      )}
+
+      {/* 19/11/2026 (13.A.3): la fruta real manda; el 80 % ya pagado no cambia y la diferencia se ajusta en la LQ */}
+      {avisoPagado80 && (
+        <DialogoConfirmacion
+          titulo="El 80 % ya se pagó"
+          peligro={false}
+          textoAceptar="Guardar igual"
+          textoCancelar="Cancelar"
+          onCancelar={() => setAvisoPagado80(null)}
+          onAceptar={() => { setAvisoPagado80(null); handleGuardar(true); }}
+        >
+          {avisoPagado80.map((c) => (
+            <span key={c.id} className="block">EL 80 % ({c.anticipo80.code}) YA SE PAGÓ SOBRE {formatoCajas(c.anticipo80.boxes)} CAJAS: LA DIFERENCIA SE AJUSTA EN LA LIQUIDACIÓN.</span>
+          ))}
         </DialogoConfirmacion>
       )}
 

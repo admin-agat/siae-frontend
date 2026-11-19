@@ -319,12 +319,22 @@ export default function SettlementDetailPage() {
             {/* 13/11/2026: bono / extra al productor */}
             {Number(liq.bonus_amount) > 0 && <div className="flex justify-between text-green-700 print:text-black"><span>(+) Bono / extra</span><span>$ {formatoDinero(liq.bonus_amount)}</span></div>}
             <div className="flex justify-between text-red-600 print:text-black"><span>(−) Anticipos / préstamos</span><span>$ {formatoDinero(liq.advances_amount)}</span></div>
-            {liq.advances.map((a) => (
+            {liq.advances.filter((a) => a.advance?.origin !== 'SPOT_80').map((a) => (
               <div key={a.id} className="flex justify-between text-xs print:text-[9px] text-gray-500 pl-4">
                 <span>{a.advance?.type === 'PRESTAMO' ? 'Préstamo' : 'Anticipo'} del {formatoFecha(a.advance?.date)}{a.advance?.concept ? ` · ${a.advance.concept}` : ''}</span>
                 <span>$ {formatoDinero(a.amount)}</span>
               </div>
             ))}
+            {/* 19/11/2026 (fase 1b-1): anticipo 80 % ya pagado que descontó la LQ SPOT */}
+            {Number(liq.advance_80_amount) > 0 && (<>
+              <div className="flex justify-between text-red-600 print:text-black"><span>(−) Anticipo 80 % ya pagado</span><span>$ {formatoDinero(liq.advance_80_amount)}</span></div>
+              {liq.advances.filter((a) => a.advance?.origin === 'SPOT_80').map((a) => (
+                <div key={a.id} className="flex justify-between text-xs print:text-[9px] text-gray-500 pl-4">
+                  <span>{a.advance?.payment_order_code} · {formatoCajas(a.advance?.boxes)} cajas</span>
+                  <span>$ {formatoDinero(a.amount)}</span>
+                </div>
+              ))}
+            </>)}
             <div className="flex justify-between border-t pt-2 text-base print:text-xs font-bold text-green-700 print:text-black">
               <span>NETO A PAGAR</span><span>$ {formatoDinero(liq.net_amount)}</span>
             </div>
@@ -418,7 +428,7 @@ export default function SettlementDetailPage() {
                 const setF = (campo, valor) => setPagoForm((prev) => ({ ...prev, [p.installment]: { ...f, [campo]: valor } }));
                 return (
                   <tr key={p.id} className="border-t">
-                    <td className={`${td} font-medium`}>{p.description}</td>
+                    <td className={`${td} font-medium`}>{p.description}{p.payment_order_code && <span className="block text-xs font-normal text-gray-500">{p.payment_order_code}{p.scheduled_week ? ` · WK${p.scheduled_week}` : ''}</span>}</td>
                     <td className={`${td} text-right font-semibold`}>$ {formatoDinero(p.amount)}</td>
                     <td className={td}>
                       {p.paid_at
