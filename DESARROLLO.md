@@ -273,6 +273,12 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 19/11/2026 — Listados con formato SAP (grupo A)
+- Pedido de Peter: las tablas de listado que no usaban `TablaEstandar` quedan con su mismo formato: títulos en MAYÚSCULAS, columna #, filas alternadas, fila elegida en verde y pie "Mostrando X–Y de N" con Anterior · Página X de Y · Siguiente (10 por página, visible siempre que haya registros).
+- Pantallas: Historial de despachos y Transferencias pendientes (paginación nueva), Órdenes de compra, Bodegas, Motivos, Insumos, Stock (paginación por bodega), recetas de Marcas, barcos de Navieras y Bitácora (sigue paginando en el servidor, 50 por página).
+- Solo formato: mismos datos, filtros y acciones. En Historial de despachos el TOTAL A DESCONTAR sigue sumando todo lo filtrado.
+- Primer lote hecho con agentes (2 programadores Sonnet con spec aprobado); la sesión principal revisó el diff y corrigió un cierre de etiqueta en la Bitácora.
+
 ### 19/11/2026 — Títulos de los módulos más arriba
 - Pedido de Peter: el marco general (`Layout.jsx`) deja 0 px arriba en vez de 24 px (primero 8 px; Peter pidió un poco más) y las pantallas con `p-6` dejan 12 px arriba en vez de 24 px (una regla en `index.css`): el título sube unos 36 px. Costados y abajo sin cambio.
 

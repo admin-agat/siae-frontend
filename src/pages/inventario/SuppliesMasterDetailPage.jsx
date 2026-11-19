@@ -13,6 +13,8 @@ import { getMensajeExito, getMensajeError } from '../../utils/toastMessages';
 
 // Cantidad de filas por página, tanto en Categorías como en Insumos.
 const POR_PAGINA = 9;
+// 19/11/2026 (Peter): los insumos van de 10 en 10 como el resto de las tablas con formato SAP
+const POR_PAGINA_INSUMOS = 10;
 
 export default function SuppliesMasterDetailPage() {
     // Categorías (columna izquierda)
@@ -184,10 +186,10 @@ export default function SuppliesMasterDetailPage() {
             return true; // TODOS
         });
 
-    const totalPaginasInsumo = Math.max(1, Math.ceil(insumosFiltrados.length / POR_PAGINA));
+    const totalPaginasInsumo = Math.max(1, Math.ceil(insumosFiltrados.length / POR_PAGINA_INSUMOS));
     const insumosPagina = insumosFiltrados.slice(
-        (paginaInsumo - 1) * POR_PAGINA,
-        paginaInsumo * POR_PAGINA
+        (paginaInsumo - 1) * POR_PAGINA_INSUMOS,
+        paginaInsumo * POR_PAGINA_INSUMOS
     );
 
     return (
@@ -395,12 +397,13 @@ export default function SuppliesMasterDetailPage() {
                             <thead className="bg-primario text-white">
                                 <tr>
                                     <th className="text-center px-2 py-2 text-xs w-10">#</th>
-                                    <th className="text-left px-3 py-2 text-xs">Código</th>
-                                    <th className="text-left px-3 py-2 text-xs">Insumo</th>
-                                    <th className="text-left px-3 py-2 text-xs">Unidad</th>
-                                    <th className="text-left px-3 py-2 text-xs">Costo promedio</th>
-                                    <th className="text-left px-3 py-2 text-xs">Estado</th>
-                                    <th className="text-left px-3 py-2 text-xs">Acciones</th>
+                                    {/* 19/11/2026 (Peter): tabla con formato SAP (#, filas alternadas, paginación): títulos en MAYÚSCULAS */}
+                                    <th className="text-left px-3 py-2 uppercase text-xs whitespace-nowrap">Código</th>
+                                    <th className="text-left px-3 py-2 uppercase text-xs whitespace-nowrap">Insumo</th>
+                                    <th className="text-left px-3 py-2 uppercase text-xs whitespace-nowrap">Unidad</th>
+                                    <th className="text-left px-3 py-2 uppercase text-xs whitespace-nowrap">Costo promedio</th>
+                                    <th className="text-left px-3 py-2 uppercase text-xs whitespace-nowrap">Estado</th>
+                                    <th className="text-left px-3 py-2 uppercase text-xs whitespace-nowrap">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -429,7 +432,7 @@ export default function SuppliesMasterDetailPage() {
                                             onClick={() => setFilaSeleccionada(i.id)}
                                             className={`cursor-pointer ${filaSeleccionada === i.id ? 'fila-elegida bg-green-600 text-white' : (idx % 2 === 0 ? 'bg-white hover:bg-yellow-50' : 'bg-violet-50 hover:bg-yellow-50')}`}
                                         >
-                                            <td className="bg-gray-200 border border-gray-300 px-1 py-1.5 text-center text-sm font-bold text-gray-700">{(paginaInsumo - 1) * POR_PAGINA + idx + 1}</td>
+                                            <td className="bg-gray-200 border border-gray-300 px-1 py-1.5 text-center text-sm font-bold text-gray-700">{(paginaInsumo - 1) * POR_PAGINA_INSUMOS + idx + 1}</td>
                                             <td className="px-3 py-1.5 border border-gray-200 text-gray-600">{i.code}</td>
                                             <td className="px-3 py-1.5 border border-gray-200 font-medium">{i.name}</td>
                                             <td className="px-3 py-1.5 border border-gray-200">{i.unit}</td>
@@ -476,28 +479,35 @@ export default function SuppliesMasterDetailPage() {
                             </tbody>
                         </table>
 
-                        {/* Paginación de Insumos */}
-                        {categoriaSeleccionada && !loadingInsumos && insumosFiltrados.length > POR_PAGINA && (
-                            <div className="flex items-center justify-between px-4 py-3 border-t border-primario/10 text-sm">
-                                <button
-                                    onClick={() => setPaginaInsumo(p => Math.max(1, p - 1))}
-                                    disabled={paginaInsumo === 1}
-                                    className="flex items-center gap-1 text-gray-600 hover:text-primario disabled:opacity-30 disabled:hover:text-gray-600"
-                                >
-                                    <ChevronLeft size={16} />
-                                    Anterior
-                                </button>
-                                <span className="text-gray-500">
-                                    Página {paginaInsumo} de {totalPaginasInsumo}
+                        {/* 19/11/2026 (Peter): pie con formato SAP, siempre visible si hay registros */}
+                        {categoriaSeleccionada && !loadingInsumos && insumosFiltrados.length > 0 && (
+                            <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50">
+                                <span className="text-xs text-gray-500">
+                                    Mostrando {(paginaInsumo - 1) * POR_PAGINA_INSUMOS + 1}–{Math.min(paginaInsumo * POR_PAGINA_INSUMOS, insumosFiltrados.length)} de {insumosFiltrados.length} insumos
                                 </span>
-                                <button
-                                    onClick={() => setPaginaInsumo(p => Math.min(totalPaginasInsumo, p + 1))}
-                                    disabled={paginaInsumo === totalPaginasInsumo}
-                                    className="flex items-center gap-1 text-gray-600 hover:text-primario disabled:opacity-30 disabled:hover:text-gray-600"
-                                >
-                                    Siguiente
-                                    <ChevronRight size={16} />
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setPaginaInsumo(p => Math.max(1, p - 1))}
+                                        disabled={paginaInsumo === 1}
+                                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg border text-sm text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100"
+                                    >
+                                        <ChevronLeft size={16} />
+                                        Anterior
+                                    </button>
+                                    <span className="text-sm text-gray-600 px-2">
+                                        Página {paginaInsumo} de {totalPaginasInsumo}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setPaginaInsumo(p => Math.min(totalPaginasInsumo, p + 1))}
+                                        disabled={paginaInsumo === totalPaginasInsumo}
+                                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg border text-sm text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100"
+                                    >
+                                        Siguiente
+                                        <ChevronRight size={16} />
+                                    </button>
+                                </div>
                             </div>
                         )}
                     </div>

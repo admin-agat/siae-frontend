@@ -164,7 +164,8 @@ export default function AuditLogPage() {
 
       {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3 mb-4">{error}</div>}
 
-      <div className="bg-white rounded-xl shadow overflow-x-auto">
+      <div className="bg-white rounded-xl shadow overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm min-w-[1100px] border-collapse">
           <thead className="bg-primario text-white">
             <tr>
@@ -197,19 +198,39 @@ export default function AuditLogPage() {
             ))}
           </tbody>
         </table>
-      </div>
-
-      <div className="flex items-center justify-between mt-3 text-sm text-gray-600">
-        <span>{datos.total.toLocaleString('es-EC')} registros</span>
-        <div className="flex items-center gap-2">
-          <button type="button" onClick={() => irA(pagina - 1)} disabled={pagina <= 1 || cargando} className="p-1.5 rounded-lg border bg-white hover:bg-gray-50 disabled:opacity-40" title="Anterior">
-            <ChevronLeft size={16} />
-          </button>
-          <span>Página {pagina} de {datos.last_page}</span>
-          <button type="button" onClick={() => irA(pagina + 1)} disabled={pagina >= datos.last_page || cargando} className="p-1.5 rounded-lg border bg-white hover:bg-gray-50 disabled:opacity-40" title="Siguiente">
-            <ChevronRight size={16} />
-          </button>
         </div>
+
+        {/* 19/11/2026 (Peter): pie con formato SAP; la paginación sigue siendo del servidor (50 por página) */}
+        {!cargando && datos.total > 0 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50">
+            <span className="text-xs text-gray-500">
+              Mostrando {((pagina - 1) * 50 + 1).toLocaleString('es-EC')}–{Math.min((pagina - 1) * 50 + datos.data.length, datos.total).toLocaleString('es-EC')} de {datos.total.toLocaleString('es-EC')} registros
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => irA(pagina - 1)}
+                disabled={pagina <= 1 || cargando}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg border text-sm text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100"
+              >
+                <ChevronLeft size={16} />
+                Anterior
+              </button>
+              <span className="text-sm text-gray-600 px-2">
+                Página {pagina} de {datos.last_page}
+              </span>
+              <button
+                type="button"
+                onClick={() => irA(pagina + 1)}
+                disabled={pagina >= datos.last_page || cargando}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg border text-sm text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100"
+              >
+                Siguiente
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

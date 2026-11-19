@@ -10,6 +10,8 @@ import VesselModal from '../../components/VesselModal';
 import { getMensajeExito, getMensajeError } from '../../utils/toastMessages';
 
 const POR_PAGINA = 9;
+// 19/11/2026 (Peter): los barcos van de 10 en 10 como el resto de las tablas con formato SAP
+const POR_PAGINA_BARCOS = 10;
 
 export default function ShippingLinesPage() {
     // Navieras (columna izquierda)
@@ -152,10 +154,10 @@ export default function ShippingLinesPage() {
             return true;
         });
 
-    const totalPaginasBarco = Math.max(1, Math.ceil(barcosFiltrados.length / POR_PAGINA));
+    const totalPaginasBarco = Math.max(1, Math.ceil(barcosFiltrados.length / POR_PAGINA_BARCOS));
     const barcosPagina = barcosFiltrados.slice(
-        (paginaBarco - 1) * POR_PAGINA,
-        paginaBarco * POR_PAGINA
+        (paginaBarco - 1) * POR_PAGINA_BARCOS,
+        paginaBarco * POR_PAGINA_BARCOS
     );
 
     return (
@@ -387,7 +389,7 @@ export default function ShippingLinesPage() {
                                             onClick={() => setFilaSeleccionada(v.id)}
                                             className={`cursor-pointer ${filaSeleccionada === v.id ? 'fila-elegida bg-green-600 text-white' : idx % 2 === 0 ? 'bg-white hover:bg-yellow-50' : 'bg-violet-50 hover:bg-yellow-50'}`}
                                         >
-                                            <td className="bg-gray-200 border border-gray-300 px-1 py-1.5 text-center text-sm font-bold text-gray-700">{(paginaBarco - 1) * POR_PAGINA + idx + 1}</td>
+                                            <td className="bg-gray-200 border border-gray-300 px-1 py-1.5 text-center text-sm font-bold text-gray-700">{(paginaBarco - 1) * POR_PAGINA_BARCOS + idx + 1}</td>
                                             <td className="px-3 py-1.5 border border-gray-200 font-medium">{v.name}</td>
                                             <td className="px-3 py-1.5 border border-gray-200">
                                                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -429,27 +431,35 @@ export default function ShippingLinesPage() {
                             </tbody>
                         </table>
 
-                        {navieraSeleccionada && !loadingBarcos && barcosFiltrados.length > POR_PAGINA && (
-                            <div className="flex items-center justify-between px-4 py-3 border-t border-primario/10 text-sm">
-                                <button
-                                    onClick={() => setPaginaBarco(p => Math.max(1, p - 1))}
-                                    disabled={paginaBarco === 1}
-                                    className="flex items-center gap-1 text-gray-600 hover:text-primario disabled:opacity-30 disabled:hover:text-gray-600"
-                                >
-                                    <ChevronLeft size={16} />
-                                    Anterior
-                                </button>
-                                <span className="text-gray-500">
-                                    Página {paginaBarco} de {totalPaginasBarco}
+                        {/* 19/11/2026 (Peter): pie con formato SAP, siempre visible si hay registros */}
+                        {navieraSeleccionada && !loadingBarcos && barcosFiltrados.length > 0 && (
+                            <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50">
+                                <span className="text-xs text-gray-500">
+                                    Mostrando {(paginaBarco - 1) * POR_PAGINA_BARCOS + 1}–{Math.min(paginaBarco * POR_PAGINA_BARCOS, barcosFiltrados.length)} de {barcosFiltrados.length} barcos
                                 </span>
-                                <button
-                                    onClick={() => setPaginaBarco(p => Math.min(totalPaginasBarco, p + 1))}
-                                    disabled={paginaBarco === totalPaginasBarco}
-                                    className="flex items-center gap-1 text-gray-600 hover:text-primario disabled:opacity-30 disabled:hover:text-gray-600"
-                                >
-                                    Siguiente
-                                    <ChevronRight size={16} />
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setPaginaBarco(p => Math.max(1, p - 1))}
+                                        disabled={paginaBarco === 1}
+                                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg border text-sm text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100"
+                                    >
+                                        <ChevronLeft size={16} />
+                                        Anterior
+                                    </button>
+                                    <span className="text-sm text-gray-600 px-2">
+                                        Página {paginaBarco} de {totalPaginasBarco}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setPaginaBarco(p => Math.min(totalPaginasBarco, p + 1))}
+                                        disabled={paginaBarco === totalPaginasBarco}
+                                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg border text-sm text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100"
+                                    >
+                                        Siguiente
+                                        <ChevronRight size={16} />
+                                    </button>
+                                </div>
                             </div>
                         )}
                     </div>

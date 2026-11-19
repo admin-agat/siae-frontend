@@ -6,7 +6,7 @@
 // si el usuario es BODEGUERO, solo los de su propia bodega.
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, FileText, Ban, AlertTriangle, CheckCircle, X, Plus } from 'lucide-react';
+import { Search, FileText, Ban, AlertTriangle, CheckCircle, X, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { puede, bodegasPermitidas } from '../../routes/menu';
 import { getDespachos, anularDespacho } from '../../api/materialDispatch';
@@ -52,6 +52,9 @@ export default function MaterialDispatchHistoryPage() {
     const [cargando, setCargando] = useState(false);
     const [toast, setToast] = useState(null); // { tipo, mensaje }
     const [filaSeleccionada, setFilaSeleccionada] = useState(null);
+    // 19/11/2026 (Peter): paginación local de 10 en 10 (tabla con formato SAP)
+    const POR_PAGINA = 10;
+    const [paginaGuardada, setPagina] = useState(1);
 
     // Despacho que se va a anular (abre el modal de confirmación)
     const [confirmarAnular, setConfirmarAnular] = useState(null);
@@ -85,6 +88,7 @@ export default function MaterialDispatchHistoryPage() {
             const data = await getDespachos(params);
             setDespachos(Array.isArray(data) ? data : []);
             setFilaSeleccionada(null);
+            setPagina(1);
         } catch (err) {
             console.error('ERROR AL CARGAR EL HISTORIAL:', err);
             mostrarToast('error', 'NO SE PUDO CARGAR EL HISTORIAL DE DESPACHOS');
@@ -117,6 +121,12 @@ export default function MaterialDispatchHistoryPage() {
 
     // Suma del valor de lo filtrado (ej. un productor + una semana = su descuento total)
     const valorTotal = despachos.reduce((suma, d) => suma + Number(d.valor_total || 0), 0);
+
+    // 19/11/2026 (Peter): página visible (si se anula uno y sobran menos páginas, muestra la última)
+    const totalPaginas = Math.max(1, Math.ceil(despachos.length / POR_PAGINA));
+    const paginaActual = Math.min(paginaGuardada, totalPaginas);
+    const inicio = (paginaActual - 1) * POR_PAGINA;
+    const filasPagina = despachos.slice(inicio, inicio + POR_PAGINA);
 
     return (
         <div className="p-6 space-y-6">
@@ -188,7 +198,8 @@ export default function MaterialDispatchHistoryPage() {
             </div>
 
             {/* ===== Tabla ===== */}
-            <div className="bg-white rounded-2xl shadow p-6">
+            {/* 19/11/2026 (Peter): tabla con formato SAP (#, filas alternadas, paginación) */}
+            <div className="bg-white rounded-xl shadow overflow-hidden">
                 {despachos.length === 0 ? (
                     <p className="text-sm text-gray-500 text-center py-8">
                         {cargando ? 'Cargando...' : 'NO HAY DESPACHOS CON ESTOS FILTROS'}
@@ -197,22 +208,22 @@ export default function MaterialDispatchHistoryPage() {
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm border-collapse">
                             <thead className="bg-primario text-white">
-                                <tr className="text-left">
+                                <tr className="text-left uppercase">
                                     {/* 18/11/2026 (Peter): lista compacta como el Pedido semanal: # de fila (N° es el número del despacho) */}
                                     <th className="text-center px-2 py-2 text-xs w-10">#</th>
-                                    <th className="px-3 py-2 text-xs">N°</th>
-                                    <th className="px-3 py-2 text-xs">FECHA</th>
-                                    <th className="px-3 py-2 text-xs">SEM</th>
-                                    <th className="px-3 py-2 text-xs">BODEGA</th>
-                                    <th className="px-3 py-2 text-xs">PRODUCTOR</th>
-                                    <th className="px-3 py-2 text-xs">RETIRÓ</th>
-                                    <th className="px-3 py-2 text-xs">REGISTRÓ</th>
-                                    {verCostos && <th className="px-3 py-2 text-xs text-right">VALOR</th>}
-                                    <th className="px-3 py-2 text-xs text-center">ACCIONES</th>
+                                    <th className="px-3 py-2 text-xs whitespace-nowrap">N°</th>
+                                    <th className="px-3 py-2 text-xs whitespace-nowrap">FECHA</th>
+                                    <th className="px-3 py-2 text-xs whitespace-nowrap">SEM</th>
+                                    <th className="px-3 py-2 text-xs whitespace-nowrap">BODEGA</th>
+                                    <th className="px-3 py-2 text-xs whitespace-nowrap">PRODUCTOR</th>
+                                    <th className="px-3 py-2 text-xs whitespace-nowrap">RETIRÓ</th>
+                                    <th className="px-3 py-2 text-xs whitespace-nowrap">REGISTRÓ</th>
+                                    {verCostos && <th className="px-3 py-2 text-xs whitespace-nowrap text-right">VALOR</th>}
+                                    <th className="px-3 py-2 text-xs whitespace-nowrap text-center">ACCIONES</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {despachos.map((d, i) => {
+                                {filasPagina.map((d, i) => {
                                     const liquidado = d.producer_quota?.status === 'LIQUIDADO';
                                     return (
                                         <tr
@@ -220,7 +231,7 @@ export default function MaterialDispatchHistoryPage() {
                                             onClick={() => setFilaSeleccionada(d.id)}
                                             className={`cursor-pointer ${filaSeleccionada === d.id ? 'fila-elegida bg-green-600 text-white' : (i % 2 === 0 ? 'bg-white hover:bg-yellow-50' : 'bg-violet-50 hover:bg-yellow-50')}`}
                                         >
-                                            <td className="bg-gray-200 border border-gray-300 px-1 py-1.5 text-center text-sm font-bold text-gray-700">{i + 1}</td>
+                                            <td className="bg-gray-200 border border-gray-300 px-1 py-1.5 text-center text-sm font-bold text-gray-700">{inicio + i + 1}</td>
                                             <td className="px-3 py-1.5 border border-gray-200 text-gray-500">{d.id}</td>
                                             <td className="px-3 py-1.5 border border-gray-200">{fechaCorta(d.date)}</td>
                                             <td className="px-3 py-1.5 border border-gray-200">{d.week ?? '—'}</td>
@@ -265,14 +276,44 @@ export default function MaterialDispatchHistoryPage() {
                 )}
 
                 {despachos.length > 0 && (
-                    <div className="flex justify-between items-center pt-4 mt-2 border-t text-sm text-gray-600">
-                        <span>{despachos.length} DESPACHO(S)</span>
+                    <>
+                        {/* El total a descontar (de todo lo filtrado) se conserva sobre el pie */}
                         {verCostos && (
-                            <span>
-                                TOTAL A DESCONTAR: <span className="text-lg font-bold text-gray-800">{dinero(valorTotal)}</span>
-                            </span>
+                            <div className="flex justify-end items-center px-4 py-3 border-t text-sm text-gray-600">
+                                <span>
+                                    TOTAL A DESCONTAR: <span className="text-lg font-bold text-gray-800">{dinero(valorTotal)}</span>
+                                </span>
+                            </div>
                         )}
-                    </div>
+                        <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50">
+                            <span className="text-xs text-gray-500">
+                                Mostrando {inicio + 1}–{Math.min(inicio + POR_PAGINA, despachos.length)} de {despachos.length} despachos
+                            </span>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setPagina(Math.max(1, paginaActual - 1))}
+                                    disabled={paginaActual === 1}
+                                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg border text-sm text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100"
+                                >
+                                    <ChevronLeft size={16} />
+                                    Anterior
+                                </button>
+                                <span className="text-sm text-gray-600 px-2">
+                                    Página {paginaActual} de {totalPaginas}
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={() => setPagina(Math.min(totalPaginas, paginaActual + 1))}
+                                    disabled={paginaActual === totalPaginas}
+                                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg border text-sm text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100"
+                                >
+                                    Siguiente
+                                    <ChevronRight size={16} />
+                                </button>
+                            </div>
+                        </div>
+                    </>
                 )}
             </div>
 

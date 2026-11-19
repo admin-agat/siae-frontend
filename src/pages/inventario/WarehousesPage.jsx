@@ -149,12 +149,13 @@ export default function WarehousesPage() {
                     <thead className="bg-primario text-white">
                         <tr>
                             <th className="text-center px-2 py-2 text-xs w-10">#</th>
-                            <th className="text-left px-3 py-2 text-xs">Código</th>
-                            <th className="text-left px-3 py-2 text-xs">Nombre</th>
-                            <th className="text-left px-3 py-2 text-xs">Zona</th>
-                            <th className="text-left px-3 py-2 text-xs">Responsable</th>
-                            <th className="text-left px-3 py-2 text-xs">Estado</th>
-                            <th className="text-left px-3 py-2 text-xs">Acciones</th>
+                            {/* 19/11/2026 (Peter): tabla con formato SAP: títulos en MAYÚSCULAS */}
+                            <th className="text-left px-3 py-2 text-xs uppercase whitespace-nowrap">Código</th>
+                            <th className="text-left px-3 py-2 text-xs uppercase whitespace-nowrap">Nombre</th>
+                            <th className="text-left px-3 py-2 text-xs uppercase whitespace-nowrap">Zona</th>
+                            <th className="text-left px-3 py-2 text-xs uppercase whitespace-nowrap">Responsable</th>
+                            <th className="text-left px-3 py-2 text-xs uppercase whitespace-nowrap">Estado</th>
+                            <th className="text-left px-3 py-2 text-xs uppercase whitespace-nowrap">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>

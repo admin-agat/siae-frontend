@@ -10,7 +10,7 @@
 // pasa a CANCELADA, PARCIAL (ya hay INGRESO real en bodega) pasa a CERRADA.
 // El frontend nunca envía el estado destino, solo refleja esa decisión.
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Eye, Ban, Lock } from 'lucide-react';
+import { Plus, Eye, Ban, Lock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getPurchaseOrders, cancelPurchaseOrder } from '../../api/purchaseOrders';
 import SelectBuscable from '../../components/common/SelectBuscable';
@@ -212,19 +212,20 @@ export default function PurchaseOrdersPage() {
                 </SelectBuscable>
             </div>
 
+            {/* 19/11/2026 (Peter): tabla con formato SAP (#, filas alternadas, paginación) */}
             <div className="bg-white rounded-xl shadow overflow-hidden">
                 <table className="w-full text-sm border-collapse">
                     <thead className="bg-primario text-white">
                         <tr>
                             {/* 18/11/2026 (Peter): lista compacta como el Pedido semanal (columna #, sigue la página) */}
                             <th className="text-center px-2 py-2 text-xs w-10">#</th>
-                            <th className="text-left px-3 py-2 text-xs">Código</th>
-                            <th className="text-left px-3 py-2 text-xs">Proveedor</th>
-                            <th className="text-left px-3 py-2 text-xs">Bodega destino</th>
-                            <th className="text-left px-3 py-2 text-xs">Fecha</th>
-                            <th className="text-center px-3 py-2 text-xs w-20">Semana</th>
-                            <th className="text-center px-3 py-2 text-xs w-32">Estado</th>
-                            <th className="text-center px-3 py-2 text-xs w-24">Acciones</th>
+                            <th className="text-left px-3 py-2 text-xs uppercase whitespace-nowrap">Código</th>
+                            <th className="text-left px-3 py-2 text-xs uppercase whitespace-nowrap">Proveedor</th>
+                            <th className="text-left px-3 py-2 text-xs uppercase whitespace-nowrap">Bodega destino</th>
+                            <th className="text-left px-3 py-2 text-xs uppercase whitespace-nowrap">Fecha</th>
+                            <th className="text-center px-3 py-2 text-xs uppercase whitespace-nowrap w-20">Semana</th>
+                            <th className="text-center px-3 py-2 text-xs uppercase whitespace-nowrap w-32">Estado</th>
+                            <th className="text-center px-3 py-2 text-xs uppercase whitespace-nowrap w-24">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -291,25 +292,33 @@ export default function PurchaseOrdersPage() {
                     </tbody>
                 </table>
 
-                {totalPaginas > 1 && (
-                    <div className="flex justify-between items-center px-4 py-3 border-t bg-gray-50 text-sm">
-                        <span className="text-gray-500">
-                            Página {pagina} de {totalPaginas} — {ordenesFiltradas.length} orden(es)
+                {/* 19/11/2026 (Peter): pie siempre visible cuando hay órdenes, igual que TablaEstandar */}
+                {!cargando && ordenesFiltradas.length > 0 && (
+                    <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50">
+                        <span className="text-xs text-gray-500">
+                            Mostrando {(pagina - 1) * PAGE_SIZE + 1}–{Math.min(pagina * PAGE_SIZE, ordenesFiltradas.length)} de {ordenesFiltradas.length} órdenes
                         </span>
-                        <div className="flex gap-2">
+                        <div className="flex items-center gap-2">
                             <button
+                                type="button"
                                 onClick={() => setPagina((p) => Math.max(1, p - 1))}
                                 disabled={pagina === 1}
-                                className="px-3 py-1.5 rounded-lg border border-gray-200 disabled:opacity-40"
+                                className="flex items-center gap-1 px-3 py-1.5 rounded-lg border text-sm text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100"
                             >
+                                <ChevronLeft size={16} />
                                 Anterior
                             </button>
+                            <span className="text-sm text-gray-600 px-2">
+                                Página {pagina} de {totalPaginas}
+                            </span>
                             <button
+                                type="button"
                                 onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
                                 disabled={pagina === totalPaginas}
-                                className="px-3 py-1.5 rounded-lg border border-gray-200 disabled:opacity-40"
+                                className="flex items-center gap-1 px-3 py-1.5 rounded-lg border text-sm text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100"
                             >
                                 Siguiente
+                                <ChevronRight size={16} />
                             </button>
                         </div>
                     </div>

@@ -6,7 +6,7 @@
 // o CANCELAR (rojo, desactiva el EGRESO y el stock vuelve a la bodega
 // origen) — misma paleta Guardar-verde/Cancelar-rojo del resto del sistema.
 import { useState, useEffect, Fragment } from 'react';
-import { CheckCircle2, ArrowRight, AlertTriangle, Eye, XCircle } from 'lucide-react';
+import { CheckCircle2, ArrowRight, AlertTriangle, Eye, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getPendingTransfers, confirmTransfer, cancelTransfer } from '../../api/inventoryMovements';
 import CampoNumero from '../../components/common/CampoNumero';
 
@@ -40,6 +40,9 @@ export default function PendingTransfersPage({ soloRecibir = false }) {
     const [toast, setToast] = useState(null);
     // 18/11/2026 (Peter): fila elegida (verde), como las listas compactas
     const [filaSeleccionada, setFilaSeleccionada] = useState(null);
+    // 19/11/2026 (Peter): paginación local de 10 en 10 (tabla con formato SAP)
+    const POR_PAGINA = 10;
+    const [paginaGuardada, setPagina] = useState(1);
 
     useEffect(() => {
         cargarPendientes();
@@ -196,6 +199,12 @@ export default function PendingTransfersPage({ soloRecibir = false }) {
         }
     };
 
+    // 19/11/2026 (Peter): página visible (al confirmar/cancelar una, si sobran menos páginas muestra la última)
+    const totalPaginas = Math.max(1, Math.ceil(transferencias.length / POR_PAGINA));
+    const paginaActual = Math.min(paginaGuardada, totalPaginas);
+    const inicio = (paginaActual - 1) * POR_PAGINA;
+    const filasPagina = transferencias.slice(inicio, inicio + POR_PAGINA);
+
     return (
         <div className="max-w-full mx-auto p-6 space-y-6">
             <div className="mb-2">
@@ -215,17 +224,18 @@ export default function PendingTransfersPage({ soloRecibir = false }) {
                 </div>
             )}
 
+            {/* 19/11/2026 (Peter): tabla con formato SAP (#, filas alternadas, paginación) */}
             <div className="bg-white rounded-xl shadow overflow-hidden">
                 <table className="w-full text-sm border-collapse">
                     <thead className="bg-primario text-white">
                         <tr>
                             {/* 18/11/2026 (Peter): lista compacta como el Pedido semanal (columna #) */}
                             <th className="text-center px-2 py-2 text-xs w-10">#</th>
-                            <th className="text-left px-3 py-2 text-xs">Origen → Destino</th>
-                            <th className="text-left px-3 py-2 text-xs">Fecha</th>
-                            <th className="text-left px-3 py-2 text-xs">Guía de remisión</th>
-                            <th className="text-left px-3 py-2 text-xs">Insumos</th>
-                            <th className="text-center px-3 py-2 text-xs w-72">Acción</th>
+                            <th className="text-left px-3 py-2 text-xs uppercase whitespace-nowrap">Origen → Destino</th>
+                            <th className="text-left px-3 py-2 text-xs uppercase whitespace-nowrap">Fecha</th>
+                            <th className="text-left px-3 py-2 text-xs uppercase whitespace-nowrap">Guía de remisión</th>
+                            <th className="text-left px-3 py-2 text-xs uppercase whitespace-nowrap">Insumos</th>
+                            <th className="text-center px-3 py-2 text-xs uppercase whitespace-nowrap w-72">Acción</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -242,13 +252,13 @@ export default function PendingTransfersPage({ soloRecibir = false }) {
                                 </td>
                             </tr>
                         ) : (
-                            transferencias.map((t, index) => (
+                            filasPagina.map((t, index) => (
                                 <tr
                                     key={t.id}
                                     onClick={() => setFilaSeleccionada(t.id)}
                                     className={`cursor-pointer ${filaSeleccionada === t.id ? 'fila-elegida bg-green-600 text-white' : (index % 2 === 0 ? 'bg-white hover:bg-yellow-50' : 'bg-violet-50 hover:bg-yellow-50')}`}
                                 >
-                                    <td className="bg-gray-200 border border-gray-300 px-1 py-1.5 text-center text-sm font-bold text-gray-700">{index + 1}</td>
+                                    <td className="bg-gray-200 border border-gray-300 px-1 py-1.5 text-center text-sm font-bold text-gray-700">{inicio + index + 1}</td>
                                     <td className="px-3 py-1.5 border border-gray-200 font-semibold text-gray-800">
                                         <span className="flex items-center gap-1.5">
                                             {t.warehouse?.name}
@@ -297,6 +307,37 @@ export default function PendingTransfersPage({ soloRecibir = false }) {
                         )}
                     </tbody>
                 </table>
+
+                {!cargando && transferencias.length > 0 && (
+                    <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50">
+                        <span className="text-xs text-gray-500">
+                            Mostrando {inicio + 1}–{Math.min(inicio + POR_PAGINA, transferencias.length)} de {transferencias.length} transferencias
+                        </span>
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setPagina(Math.max(1, paginaActual - 1))}
+                                disabled={paginaActual === 1}
+                                className="flex items-center gap-1 px-3 py-1.5 rounded-lg border text-sm text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100"
+                            >
+                                <ChevronLeft size={16} />
+                                Anterior
+                            </button>
+                            <span className="text-sm text-gray-600 px-2">
+                                Página {paginaActual} de {totalPaginas}
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => setPagina(Math.min(totalPaginas, paginaActual + 1))}
+                                disabled={paginaActual === totalPaginas}
+                                className="flex items-center gap-1 px-3 py-1.5 rounded-lg border text-sm text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100"
+                            >
+                                Siguiente
+                                <ChevronRight size={16} />
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Modal de SOLO VISUALIZACIÓN + flujo de cancelación inline */}

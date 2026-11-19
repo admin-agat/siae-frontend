@@ -12,6 +12,8 @@ import MaterialRecipeModal from '../../components/MaterialRecipeModal';
 import { getMensajeExito, getMensajeError } from '../../utils/toastMessages';
 
 const POR_PAGINA = 9;
+// 19/11/2026 (Peter): las recetas van de 10 en 10 como el resto de las tablas con formato SAP
+const POR_PAGINA_RECETAS = 10;
 
 export default function BrandsPage() {
     // --- Marcas (columna izquierda) ---
@@ -159,8 +161,8 @@ export default function BrandsPage() {
             return true;
         });
 
-    const totalPaginasReceta = Math.max(1, Math.ceil(recetasFiltradas.length / POR_PAGINA));
-    const recetasPagina = recetasFiltradas.slice((paginaReceta - 1) * POR_PAGINA, paginaReceta * POR_PAGINA);
+    const totalPaginasReceta = Math.max(1, Math.ceil(recetasFiltradas.length / POR_PAGINA_RECETAS));
+    const recetasPagina = recetasFiltradas.slice((paginaReceta - 1) * POR_PAGINA_RECETAS, paginaReceta * POR_PAGINA_RECETAS);
 
     // Conteo de recetas activas por marca, para el badge de la izquierda
     const contarRecetas = (codigoMarca) => recetas.filter(r => r.brand === codigoMarca && r.status).length;
@@ -375,7 +377,7 @@ export default function BrandsPage() {
                                             onClick={() => setFilaSeleccionada(r.id)}
                                             className={`cursor-pointer ${filaSeleccionada === r.id ? 'fila-elegida bg-green-600 text-white' : idx % 2 === 0 ? 'bg-white hover:bg-yellow-50' : 'bg-violet-50 hover:bg-yellow-50'}`}
                                         >
-                                            <td className="bg-gray-200 border border-gray-300 px-1 py-1.5 text-center text-sm font-bold text-gray-700">{(paginaReceta - 1) * POR_PAGINA + idx + 1}</td>
+                                            <td className="bg-gray-200 border border-gray-300 px-1 py-1.5 text-center text-sm font-bold text-gray-700">{(paginaReceta - 1) * POR_PAGINA_RECETAS + idx + 1}</td>
                                             <td className="px-3 py-1.5 border border-gray-200 font-medium">{r.supply?.name}</td>
                                             <td className="px-3 py-1.5 border border-gray-200 text-gray-600">{r.supply?.category?.name || '—'}</td>
                                             <td className="px-3 py-1.5 border border-gray-200">{Number(r.ratio_per_box).toFixed(6)}</td>
@@ -412,17 +414,25 @@ export default function BrandsPage() {
                             </tbody>
                         </table>
 
-                        {marcaSeleccionada && !loadingRecetas && recetasFiltradas.length > POR_PAGINA && (
-                            <div className="flex items-center justify-between px-4 py-3 border-t border-primario/10 text-sm">
-                                <button onClick={() => setPaginaReceta(p => Math.max(1, p - 1))} disabled={paginaReceta === 1}
-                                    className="flex items-center gap-1 text-gray-600 hover:text-primario disabled:opacity-30">
-                                    <ChevronLeft size={16} /> Anterior
-                                </button>
-                                <span className="text-gray-500">Página {paginaReceta} de {totalPaginasReceta}</span>
-                                <button onClick={() => setPaginaReceta(p => Math.min(totalPaginasReceta, p + 1))} disabled={paginaReceta === totalPaginasReceta}
-                                    className="flex items-center gap-1 text-gray-600 hover:text-primario disabled:opacity-30">
-                                    Siguiente <ChevronRight size={16} />
-                                </button>
+                        {/* 19/11/2026 (Peter): pie con formato SAP, siempre visible si hay registros */}
+                        {marcaSeleccionada && !loadingRecetas && recetasFiltradas.length > 0 && (
+                            <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50">
+                                <span className="text-xs text-gray-500">
+                                    Mostrando {(paginaReceta - 1) * POR_PAGINA_RECETAS + 1}–{Math.min(paginaReceta * POR_PAGINA_RECETAS, recetasFiltradas.length)} de {recetasFiltradas.length} recetas
+                                </span>
+                                <div className="flex items-center gap-2">
+                                    <button type="button" onClick={() => setPaginaReceta(p => Math.max(1, p - 1))} disabled={paginaReceta === 1}
+                                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg border text-sm text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100">
+                                        <ChevronLeft size={16} />
+                                        Anterior
+                                    </button>
+                                    <span className="text-sm text-gray-600 px-2">Página {paginaReceta} de {totalPaginasReceta}</span>
+                                    <button type="button" onClick={() => setPaginaReceta(p => Math.min(totalPaginasReceta, p + 1))} disabled={paginaReceta === totalPaginasReceta}
+                                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg border text-sm text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100">
+                                        Siguiente
+                                        <ChevronRight size={16} />
+                                    </button>
+                                </div>
                             </div>
                         )}
                     </div>
