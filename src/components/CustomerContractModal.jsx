@@ -174,6 +174,9 @@ export default function CustomerContractModal({ contract, onClose, onGuardado })
     const inputClass =
         'w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500';
     const labelClass = 'block text-sm font-semibold text-gray-700 mb-1.5';
+    // 19/11/2026 (Peter): celdas de la grilla de precios, iguales a las del Pedido semanal
+    const tdGrilla = 'px-0.5 py-0 border border-gray-200 align-middle focus-within:bg-green-100 focus-within:text-gray-900';
+    const celda = 'w-full bg-transparent border-0 rounded-none px-1.5 py-0.5 text-sm text-inherit outline-none disabled:opacity-60 disabled:cursor-not-allowed';
 
     return (
         <>
@@ -243,25 +246,53 @@ export default function CustomerContractModal({ contract, onClose, onGuardado })
                             <p className="text-xs text-red-600">Este cliente no tiene marcas. Asígnalas en Configuración → Terceros.</p>
                         ) : (
                             <div className="space-y-2">
-                                {form.prices.map((p, i) => (
-                                    <div key={i} className="grid grid-cols-[1fr_11.5rem_7rem_auto] gap-2 items-center">
-                                        <SelectBuscable value={p.brand_id} onChange={(e) => cambiarPrecio(i, 'brand_id', e.target.value)} className={inputClass}>
-                                            <option value="">MARCA...</option>
-                                            {marcasCliente.map((m) => <option key={m.id} value={String(m.id)}>{m.name}</option>)}
-                                        </SelectBuscable>
-                                        <SelectBuscable value={p.presentation} onChange={(e) => cambiarPrecio(i, 'presentation', e.target.value)} className={inputClass}>
-                                            {PRESENTACIONES.map((pr) => <option key={pr} value={pr}>{ETIQUETA_PRESENTACION[pr]}</option>)}
-                                        </SelectBuscable>
-                                        <input type="text" inputMode="decimal" value={p.box_price} onChange={(e) => cambiarPrecio(i, 'box_price', e.target.value)}
-                                            placeholder="7.50" className={inputClass} />
-                                        <button type="button" onClick={() => quitarPrecio(i)} title="Quitar precio"
-                                            className="text-white p-1.5 rounded-lg bg-red-600 hover:bg-red-700">
-                                            <Trash2 size={16} />
-                                        </button>
+                                {/* 19/11/2026 (Peter): precios como la grilla de Compra de fruta (tipo SAP): #, celdas planas, línea fina,
+                                    filas alternadas, la fila donde se trabaja en verde y la celda que se edita en verde claro */}
+                                {form.prices.length > 0 && (
+                                    <div className="overflow-x-auto border rounded-lg">
+                                        <table className="w-full text-sm border-collapse">
+                                            <thead className="bg-primario text-white">
+                                                <tr>
+                                                    <th className="text-left px-2 py-2 uppercase text-xs w-8">#</th>
+                                                    <th className="text-left px-2 py-2 uppercase text-xs">Marca</th>
+                                                    <th className="text-left px-2 py-2 uppercase text-xs w-44">Presentación</th>
+                                                    <th className="text-right px-2 py-2 uppercase text-xs w-28">Precio caja</th>
+                                                    <th className="px-2 py-2 w-10"></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {form.prices.map((p, i) => (
+                                                    <tr key={i} className={`fila-grilla group text-gray-800 ${i % 2 === 0 ? 'bg-white' : 'bg-violet-50'} focus-within:bg-green-600 focus-within:text-white`}>
+                                                        <td tabIndex={-1} title="Clic para marcar la fila" className="cursor-pointer outline-none bg-gray-200 border border-gray-300 px-0.5 py-0.5 text-center text-sm font-bold text-gray-700 whitespace-nowrap"><span className="hidden group-focus-within:inline text-primario mr-0.5" aria-hidden="true">▶</span>{i + 1}</td>
+                                                        <td className={tdGrilla}>
+                                                            <SelectBuscable value={p.brand_id} onChange={(e) => cambiarPrecio(i, 'brand_id', e.target.value)} className={celda}>
+                                                                <option value="">MARCA...</option>
+                                                                {marcasCliente.map((m) => <option key={m.id} value={String(m.id)}>{m.name}</option>)}
+                                                            </SelectBuscable>
+                                                        </td>
+                                                        <td className={tdGrilla}>
+                                                            <SelectBuscable value={p.presentation} onChange={(e) => cambiarPrecio(i, 'presentation', e.target.value)} className={celda}>
+                                                                {PRESENTACIONES.map((pr) => <option key={pr} value={pr}>{ETIQUETA_PRESENTACION[pr]}</option>)}
+                                                            </SelectBuscable>
+                                                        </td>
+                                                        <td className={tdGrilla}>
+                                                            <input type="text" inputMode="decimal" value={p.box_price} onChange={(e) => cambiarPrecio(i, 'box_price', e.target.value)}
+                                                                placeholder="7.50" className={`${celda} text-right`} />
+                                                        </td>
+                                                        <td className={`${tdGrilla} px-1 py-0.5`}>
+                                                            <button type="button" onClick={() => quitarPrecio(i)} title="Quitar precio"
+                                                                className="text-white p-1.5 rounded-lg shadow-sm transition bg-red-600 hover:bg-red-700">
+                                                                <Trash2 size={16} />
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
                                     </div>
-                                ))}
-                                <button type="button" onClick={agregarPrecio} className="flex items-center gap-1 text-sm font-semibold text-primario hover:underline">
-                                    <Plus size={16} /> Agregar precio
+                                )}
+                                <button type="button" onClick={agregarPrecio} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-primario text-white hover:bg-primario-hover transition">
+                                    <Plus size={18} /> Agregar precio
                                 </button>
                             </div>
                         )}

@@ -273,6 +273,16 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 19/11/2026 — Contratos con el estilo de las grillas
+- Pedido de Peter: los listados de contratos (clientes y productores) ya tenían el formato SAP por `TablaEstandar`; faltaban los formularios.
+- Contrato de cliente (`CustomerContractModal.jsx`): los precios por marca + presentación pasan a una grilla como la de Compra de fruta (#, celdas planas, línea fina, filas alternadas, fila en verde y celda en verde claro). "+ Agregar precio" pasa a botón sólido.
+- Contrato de productor (`ProducerContractsPage.jsx`): "+ Agregar contrato" pasa a botón sólido y "Quitar contrato" a botón rojo sólido. Las tarjetas de cada contrato quedan igual (12 campos: en grilla sería muy ancha).
+- Solo formato: mismos datos, validaciones y guardado.
+
+### 19/11/2026 — Liquidar: avisos en una sola fila
+- Pedido de Peter: en Liquidar, "Todavía no se puede liquidar", los avisos (ej. POR DIVIDIR) y "SIN CUENTA BANCARIA" van en una sola fila, repartidos en partes iguales (dos avisos = mitad y mitad; uno solo ocupa todo el ancho). En celular quedan uno debajo del otro.
+- Solo formato (`SettlementFormPage.jsx`): mismos textos y el botón "+ Cuenta bancaria" sigue en el aviso rojo.
+
 ### 19/11/2026 — Listados con formato SAP (grupo A)
 - Pedido de Peter: las tablas de listado que no usaban `TablaEstandar` quedan con su mismo formato: títulos en MAYÚSCULAS, columna #, filas alternadas, fila elegida en verde y pie "Mostrando X–Y de N" con Anterior · Página X de Y · Siguiente (10 por página, visible siempre que haya registros).
 - Pantallas: Historial de despachos y Transferencias pendientes (paginación nueva), Órdenes de compra, Bodegas, Motivos, Insumos, Stock (paginación por bodega), recetas de Marcas, barcos de Navieras y Bitácora (sigue paginando en el servidor, 50 por página).

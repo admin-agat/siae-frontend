@@ -156,8 +156,9 @@ function ProductorModal({ tercero, semana, modo, onClose, onGuardado }) {
                     <h3 className="font-bold text-gray-800">Contratos</h3>
                     {esLegal ? (
                         <button type="button" onClick={() => setContratos((cs) => [...cs, contratoVacio(siguienteNumero())])}
-                            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold text-primario hover:bg-primario-claro">
-                            <Plus size={16} /> Agregar contrato
+                            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg shadow-sm bg-primario text-white hover:bg-primario-hover transition">
+                            {/* 19/11/2026 (Peter): botón sólido, como "Agregar línea" del Pedido semanal */}
+                            <Plus size={18} /> Agregar contrato
                         </button>
                     ) : (
                         <span className="text-xs font-semibold text-gray-500">LOS CONTRATOS LOS REGISTRA LEGAL</span>
@@ -179,7 +180,7 @@ function ProductorModal({ tercero, semana, modo, onClose, onGuardado }) {
                                 )}
                                 {!c.id && (
                                     <button type="button" onClick={() => setContratos((cs) => cs.filter((_, j) => j !== i))} title="Quitar contrato" aria-label="Quitar contrato"
-                                        className="p-1.5 rounded-lg hover:bg-red-50 text-red-600">
+                                        className="text-white p-1.5 rounded-lg shadow-sm transition bg-red-600 hover:bg-red-700">
                                         <Trash2 size={16} />
                                     </button>
                                 )}

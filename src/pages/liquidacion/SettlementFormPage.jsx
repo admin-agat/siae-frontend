@@ -158,8 +158,11 @@ export default function SettlementFormPage() {
         </div>
       </div>
 
+      {/* 19/11/2026 (Peter): los avisos en una sola fila, repartidos en partes iguales (en celular, uno debajo del otro) */}
+      {(datos.problemas.length > 0 || datos.avisos?.length > 0 || (datos.cuenta_vendedor && !datos.cuenta_vendedor.tiene_cuenta)) && (
+      <div className="flex flex-col md:flex-row gap-3 mb-4">
       {datos.problemas.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-lg px-4 py-3 mb-4 flex gap-2">
+        <div className="flex-1 bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-lg px-4 py-3 flex gap-2">
           <AlertTriangle size={18} className="shrink-0 mt-0.5" />
           <div>
             <p className="font-semibold">Todavía no se puede liquidar:</p>
@@ -170,7 +173,7 @@ export default function SettlementFormPage() {
 
       {/* 13/11/2026: avisos que no impiden liquidar (ej. compras POR DIVIDIR de una comercializadora) */}
       {datos.avisos?.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-lg px-4 py-3 mb-4 flex gap-2">
+        <div className="flex-1 bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-lg px-4 py-3 flex gap-2">
           <AlertTriangle size={18} className="shrink-0 mt-0.5" />
           <div>{datos.avisos.map((p) => <p key={p}>{p}</p>)}</div>
         </div>
@@ -178,7 +181,7 @@ export default function SettlementFormPage() {
 
       {/* 18/11/2026 (fase 2b): sin cuenta bancaria se puede liquidar, pero no pagar; el "+" la registra aquí mismo */}
       {datos.cuenta_vendedor && !datos.cuenta_vendedor.tiene_cuenta && (
-        <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3 mb-4 flex items-center gap-3">
+        <div className="flex-1 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3 flex items-center gap-3">
           <AlertTriangle size={18} className="shrink-0" />
           <p className="font-semibold flex-1">SIN CUENTA BANCARIA: regístrala antes de pagar.</p>
           <button type="button" onClick={() => setCuentaAbierta(true)} title="Registrar cuenta bancaria" aria-label="Registrar cuenta bancaria"
@@ -186,6 +189,8 @@ export default function SettlementFormPage() {
             <Plus size={14} /> Cuenta bancaria
           </button>
         </div>
+      )}
+      </div>
       )}
       {/* 18/11/2026 (Peter): con cuenta, se ve su estado (PENDIENTE hasta que Contabilidad la verifique) */}
       {datos.cuenta_vendedor?.tiene_cuenta && (
