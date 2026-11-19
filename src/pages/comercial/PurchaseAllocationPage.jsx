@@ -1007,8 +1007,9 @@ export default function PurchaseAllocationPage() {
         )}
       </div>
 
-      {/* 18/11/2026 (Peter): avance de la compra y de los contratos en la misma línea */}
+      {/* 19/11/2026 (Peter): a la izquierda los cuadros de clientes y a la derecha los dos avances (compra y contratos) uno sobre otro */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4 items-start">
+      <div className="xl:order-2 flex flex-col gap-4">
       {/* Avance */}
       <div className={`rounded-xl border px-4 py-3 ${hayExceso ? 'bg-amber-50 border-amber-300' : avance >= 100 ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
         <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
@@ -1078,7 +1079,7 @@ export default function PurchaseAllocationPage() {
       </div>
 
       {/* Resumen por cliente */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+      <div className="xl:order-1 grid grid-cols-1 md:grid-cols-2 gap-3">
         {clientes.map((c) => {
           const comprado = compradoCliente(c.id);
           const falta = c.pedido - comprado;
@@ -1115,6 +1116,7 @@ export default function PurchaseAllocationPage() {
             </div>
           );
         })}
+      </div>
       </div>
 
       {barcos.length === 0 && (
