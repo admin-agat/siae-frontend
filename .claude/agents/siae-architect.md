@@ -53,5 +53,13 @@ Cuando se pida, genera `docs/documentacion-tecnica.md` con:
 
 Lenguaje claro y etiquetas de datos en MAYÚSCULAS. Sin RUC, cuentas ni montos reales.
 
+## Cuando Peter aprueba el diseño
+<!-- 19/11/2026: los ítems se delegan a siae-programador / siae-mecanico -->
+Si se te pide, divide el diseño en ítems, cada uno con su spec en `docs/specs/<item>.md`:
+- Qué cambiar y dónde (`archivo:línea`).
+- Qué no tocar.
+- Cómo se verifica (build, prueba, qué mirar en pantalla).
+- Sin decisiones de negocio abiertas: si queda alguna, va a las preguntas para Peter.
+
 ## Al terminar
 Resume en 5 líneas qué propones, qué cambia en la base y cuáles son las preguntas abiertas.

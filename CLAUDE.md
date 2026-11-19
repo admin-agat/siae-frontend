@@ -18,8 +18,12 @@ Respuestas y textos de pantalla en **español de Ecuador** con tú ("Selecciona"
 | Desarrollador | sesión principal | Opus · medio |
 | Calidad (pruebas + revisión) | agente `siae-qa` | Sonnet · medio |
 | Datos (cruces y cargas) | agente `siae-datos` | Sonnet · medio |
+| Lector (buscar en el código) | agente `siae-lector` | Haiku · bajo |
+| Ejecutor mecánico (sin decisiones) | agente `siae-mecanico` | Haiku · medio |
+| Programador (con criterio de código) | agente `siae-programador` | Sonnet · medio |
 
 ```
+Delegado:       spec → PETER APRUEBA → mecanico/programador aplica → desarrollador revisa diff + build/pruebas → qa revisa → PETER dice "lo de siempre" → respaldo + producción
 Cambio grande:  architect diseña → PETER APRUEBA → desarrollador programa → qa prueba y revisa → PETER dice "lo de siempre" → respaldo + producción
 Cambio chico:   desarrollador programa → qa prueba y revisa → PETER dice "lo de siempre" → respaldo + producción
 Datos:          siae-datos cruza y prepara script → simulación → PETER APRUEBA → respaldo → real

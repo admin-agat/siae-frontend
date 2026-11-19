@@ -273,6 +273,11 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 19/11/2026 — Equipo de agentes: lector, mecánico y programador
+- Agentes nuevos en `.claude/agents/`: `siae-lector` (Haiku, solo lectura, busca con archivo:línea), `siae-mecanico` (Haiku, aplica un spec sin decidir) y `siae-programador` (Sonnet, decisiones chicas de código, nunca de negocio). Los dos que escriben no tienen Bash: no pueden hacer commit, migrar ni tocar el servidor.
+- `siae-architect` divide un diseño aprobado en specs por ítem; `siae-qa` revisa el trabajo delegado contra su spec.
+- Flujo delegado en `CLAUDE.md`: spec → Peter aprueba → agente aplica → desarrollador revisa diff, build y pruebas → qa → "lo de siempre". No cambia nada de la aplicación.
+
 ### 18/11/2026 — Tarjas: nombres de columnas (solo esa vista)
 - Pedido de Peter, solo en la pantalla de Tarjas de la semana: COMPRADO → **ESTIMADO**; el total del camión se llama **RECIBIDAS** y lo que se paga (recibidas − caídas − rechazadas − faltantes) se llama **EMBARCADAS**. También el subtítulo, el pie, los mensajes de error y el historial de la tarja (`TallySheetController`).
 - Solo textos: mismos datos (`boxes_shipped` sigue siendo el total) y mismo cálculo. Liquidar, Detalle, Notas de crédito, Cierre y la lista de Tarjas siguen diciendo "recibidas" = lo que se paga.

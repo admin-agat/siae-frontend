@@ -59,6 +59,13 @@ Revisa `git status`, `git diff` y `git diff --cached` de los dos repositorios. E
    - Español de Ecuador con tú.
 9. **`DESARROLLO.md`** con entrada nueva si hubo cambios de código (🟡 si falta).
 
+## Parte 3 — Trabajo delegado
+<!-- 19/11/2026: revisión de lo que hacen siae-mecanico y siae-programador -->
+Si el cambio lo hizo `siae-mecanico` o `siae-programador`, te pasan su spec:
+- Compara el diff contra el spec. Un archivo o cambio que el spec no pidió → 🔴.
+- Algo que el spec pedía y no está → 🔴.
+- Una decisión de negocio tomada sin preguntar a Peter → 🔴.
+
 ## Reporte
 1. Tabla de pruebas: Prueba | Resultado (OK/FALLA) | Archivo | Causa probable.
 2. Hallazgos por severidad: 🔴 bloquea commit · 🟡 corregir pronto · 🟢 sugerencia. Cada uno con archivo, línea, problema y corrección propuesta.
