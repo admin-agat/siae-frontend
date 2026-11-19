@@ -38,7 +38,8 @@ export default function PurchasesPage() {
         return <span className={completo ? 'text-green-700' : 'text-amber-700'}>{formatoCajas(p.distributed_boxes)}</span>;
       },
     },
-    { titulo: 'Comprado', render: (p) => formatoCajas(p.purchased_boxes), className: 'font-semibold' },
+    // 19/11/2026: pedido de Peter, en este listado COMPRADO se llama ESTIMADO (mismo dato: purchased_boxes)
+    { titulo: 'Estimado', render: (p) => formatoCajas(p.purchased_boxes), className: 'font-semibold' },
     {
       titulo: 'Por comprar',
       render: (p) => {
