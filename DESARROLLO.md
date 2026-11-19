@@ -273,6 +273,14 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 19/11/2026 — Compra de fruta: META y datos del bloque desde la Distribución en barcos
+- Pedido de Peter: la META del bloque ya no se escribe; sale de la Distribución en barcos por barco + cliente + marca + presentación + modalidad. Si esa combinación no está, META 0 y aviso "NO ESTÁ EN LA DISTRIBUCIÓN DE ESTE BARCO".
+- Varios bloques con la misma combinación comparten la meta y lo comprado (opción a de Peter): la cabecera muestra el total y "ESTE: n". Al guardar, cada bloque lleva su parte de la meta (la suma es la de la distribución, así el Tablero no la duplica).
+- Al elegir barco, cliente o marca (y en un bloque nuevo) se proponen cliente, marca, presentación y modalidad cuando la distribución de ese barco tiene una sola opción.
+- Pedidos sin distribución: la meta sigue a mano, como antes.
+- La columna "Retira materiales en" pasa a "RETIRA".
+- Backend: `PurchaseAllocationController` devuelve `distribution` (shipment_lines + customer_order_lines agrupadas). Sin migraciones.
+
 ### 19/11/2026 — Menú lateral por encima de las barras fijas
 - Pedido de Peter: con el menú abierto, la barra de abajo de Compra de fruta (Cancelar / Guardar compras) se veía encima del menú, porque ambos usaban la capa z-40.
 - `Sidebar.jsx`: el fondo oscuro pasa a z-[45] y la lista de opciones y la barra de íconos a z-50. Vale para todas las pantallas con barra fija abajo.

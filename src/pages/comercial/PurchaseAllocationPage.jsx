@@ -251,6 +251,7 @@ export default function PurchaseAllocationPage() {
   const [semanasCompra, setSemanasCompra] = useState([]); // 10/11/2026: la del pedido y la siguiente
   const [clientes, setClientes] = useState([]);
   const [barcos, setBarcos] = useState([]);
+  const [distribucion, setDistribucion] = useState([]); // 19/11/2026: cajas de la Distribución en barcos (META de cada bloque)
   const [bloques, setBloques] = useState([]);
   const [ejecutivos, setEjecutivos] = useState([]); // 11/11/2026: comerciales activos de la lista de ADMIN
   const [verComerciales, setVerComerciales] = useState(false);
@@ -305,6 +306,7 @@ export default function PurchaseAllocationPage() {
     setSemanasCompra(data.purchase_weeks || []);
     setClientes(data.customers);
     setBarcos(data.shipments);
+    setDistribucion(data.distribution || []);
     setEjecutivos(data.executives || []);
     setBodegas(data.warehouses || []);
     setUltimaBodega(data.last_pickup || {});
@@ -343,6 +345,12 @@ export default function PurchaseAllocationPage() {
   // ---------------- Cálculos ----------------
 
   const compradoBloque = (b) => b.purchases.reduce((s, c) => s + n(c.boxes), 0);
+  // 19/11/2026 (Peter): la META del bloque sale de la Distribución en barcos (barco + cliente + marca + presentación + modalidad).
+  // Los bloques con la misma combinación comparten la meta y lo comprado. Sin distribución, la meta sigue a mano como antes.
+  const conDistribucion = distribucion.length > 0;
+  const claveDist = (x) => [x.shipment_id, x.customer_id, x.brand_id, x.presentation, x.cargo_mode ?? x.cargo_type].map((v) => texto(v)).join('|');
+  const metaDistribucion = (b) => distribucion.filter((d) => claveDist(d) === claveDist(b)).reduce((s, d) => s + n(d.cajas), 0);
+  const grupoDe = (b, lista = bloques) => lista.filter((x) => claveDist(x) === claveDist(b));
   const compradoCliente = (clienteId) => bloques
     .filter((b) => b.customer_id === String(clienteId))
     .reduce((s, b) => s + compradoBloque(b), 0);
@@ -474,18 +482,49 @@ export default function PurchaseAllocationPage() {
 
   // ---------------- Cambios ----------------
 
+  // 19/11/2026 (Peter): al elegir barco, cliente o marca se proponen los datos de la Distribución en barcos
+  // (solo cuando hay una sola opción en la distribución de ese barco)
+  const proponerDeDistribucion = (b, nuevo, campo) => {
+    if (!conDistribucion || !['shipment_id', 'customer_id', 'brand_id'].includes(campo)) return;
+    const unico = (lista, c) => {
+      const v = [...new Set(lista.map((d) => texto(d[c])))];
+      return v.length === 1 ? v[0] : null;
+    };
+    const delBarco = distribucion.filter((d) => texto(d.shipment_id) === nuevo.shipment_id);
+    if (campo === 'shipment_id') {
+      const cliente = unico(delBarco, 'customer_id');
+      if (cliente && cliente !== b.customer_id) {
+        const marcas = clientes.find((x) => String(x.id) === cliente)?.brands || [];
+        nuevo.customer_id = cliente;
+        nuevo.brand_id = marcas.length === 1 ? String(marcas[0].id) : '';
+      }
+    }
+    const delCliente = delBarco.filter((d) => texto(d.customer_id) === nuevo.customer_id);
+    if (campo !== 'brand_id') {
+      const marca = unico(delCliente, 'brand_id');
+      if (marca) nuevo.brand_id = marca;
+    }
+    const deMarca = delCliente.filter((d) => texto(d.brand_id) === nuevo.brand_id);
+    const presentacion = unico(deMarca, 'presentation');
+    if (presentacion) nuevo.presentation = presentacion;
+    const modalidad = unico(deMarca, 'cargo_type');
+    if (modalidad) nuevo.cargo_mode = modalidad;
+  };
+
   const cambiarBloque = (key, campo, valor) => {
     setBloques((prev) => prev.map((b) => {
       if (b._key !== key) return b;
       const nuevo = { ...b, [campo]: valor };
-      // PACKED: todas sus compras pasan a SPOT (las liquidadas no se tocan; el backend avisa)
-      if (campo === 'presentation' && valor === 'PACKED') {
-        nuevo.purchases = b.purchases.map((c) => (c.liquidada || c.negotiation_type === 'SPOT' ? c
-          : { ...c, negotiation_type: 'SPOT', payment_scheme: PAGO_POR_TIPO.SPOT, contract_id: '', contract_part: '0' }));
-      }
       if (campo === 'customer_id') {
         const marcas = clientes.find((x) => String(x.id) === valor)?.brands || [];
         nuevo.brand_id = marcas.length === 1 ? String(marcas[0].id) : '';
+      }
+      proponerDeDistribucion(b, nuevo, campo);
+      // PACKED: todas sus compras pasan a SPOT (las liquidadas no se tocan; el backend avisa)
+      // 19/11/2026: también cuando PACKED llega propuesto por la distribución
+      if (nuevo.presentation === 'PACKED' && b.presentation !== 'PACKED') {
+        nuevo.purchases = b.purchases.map((c) => (c.liquidada || c.negotiation_type === 'SPOT' ? c
+          : { ...c, negotiation_type: 'SPOT', payment_scheme: PAGO_POR_TIPO.SPOT, contract_id: '', contract_part: '0' }));
       }
       // El puerto del barco se propone como puerto del bloque
       if (campo === 'shipment_id' && !b.departure_port_id) {
@@ -545,7 +584,7 @@ export default function PurchaseAllocationPage() {
     const cliente = clientes[0];
     const marcas = cliente?.brands || [];
     const key = nuevaClave('b');
-    setBloques((prev) => [...prev, {
+    const bloque = {
       _key: key, id: null,
       shipment_id: barco ? String(barco.id) : '',
       brand_id: marcas.length === 1 ? String(marcas[0].id) : '',
@@ -554,7 +593,9 @@ export default function PurchaseAllocationPage() {
       cargo_mode: MODALIDAD_POR_DEFECTO,
       departure_port_id: texto(barco?.departure_port_id),
       target_boxes: '', notes: '', purchases: [],
-    }].map((x) => (x._key === key ? rellenar(x) : x))); // 18/11/2026: con sus 2 compras vacías
+    };
+    proponerDeDistribucion({ customer_id: '' }, bloque, 'shipment_id'); // 19/11/2026: datos de la distribución del barco
+    setBloques((prev) => [...prev, bloque].map((x) => (x._key === key ? rellenar(x) : x))); // 18/11/2026: con sus 2 compras vacías
     setAbiertos((prev) => ({ ...prev, [key]: true }));
   };
 
@@ -772,6 +813,19 @@ export default function PurchaseAllocationPage() {
     }
 
     const num = (v) => (v === '' ? null : Number(v));
+    // 19/11/2026: con distribución se guarda en cada bloque su parte de la meta (lo que compró, y el último del grupo
+    // lo que reste), así la suma por combinación es la meta de la distribución y el Tablero no la duplica
+    const metaGuardar = {};
+    if (conDistribucion) {
+      const resta = {};
+      lista.forEach((b) => {
+        const k = claveDist(b);
+        if (resta[k] === undefined) resta[k] = metaDistribucion(b);
+        const ultimo = grupoDe(b, lista).at(-1) === b;
+        metaGuardar[b._key] = Math.max(ultimo ? resta[k] : Math.min(compradoBloque(b), resta[k]), 0);
+        resta[k] -= metaGuardar[b._key];
+      });
+    }
     setGuardando(true);
     try {
       const res = await saveOrderPurchases(id, {
@@ -784,7 +838,7 @@ export default function PurchaseAllocationPage() {
           customer_id: Number(b.customer_id),
           cargo_mode: b.cargo_mode,
           departure_port_id: num(b.departure_port_id),
-          target_boxes: n(b.target_boxes),
+          target_boxes: conDistribucion ? metaGuardar[b._key] : n(b.target_boxes),
           notes: b.notes || null,
           purchases: b.purchases.map((c) => ({
             id: c.id,
@@ -1142,8 +1196,10 @@ export default function PurchaseAllocationPage() {
       <div className="space-y-3 mb-4">
         {bloques.map((b, i) => {
           const abierto = abiertos[b._key];
-          const comprado = compradoBloque(b);
-          const meta = n(b.target_boxes);
+          // 19/11/2026: con distribución, meta y comprado son de todos los bloques de la misma combinación
+          const grupo = conDistribucion ? grupoDe(b) : [b];
+          const comprado = grupo.reduce((s, x) => s + compradoBloque(x), 0);
+          const meta = conDistribucion ? metaDistribucion(b) : n(b.target_boxes);
           const falta = meta - comprado;
           const marcas = clientes.find((x) => String(x.id) === b.customer_id)?.brands || [];
           const marcaNombre = marcas.find((m) => String(m.id) === b.brand_id)?.name || 'SIN MARCA';
@@ -1166,6 +1222,9 @@ export default function PurchaseAllocationPage() {
                   <p className="text-xs text-gray-600">
                     {clienteNombre} · {MODALIDADES[b.cargo_mode]} · {puertosSalida.find((p) => String(p.id) === b.departure_port_id)?.name || 'SIN PUERTO'} · {b.purchases.filter((c) => !esVacia(c)).length} compras
                     {conSiguiente && <span className="ml-1 font-semibold text-sky-800">· {porSemana.map((w) => `COMPRA WK${w.week}: ${formatoCajas(w.cajas)}`).join(' · ')}</span>}
+                    {/* 19/11/2026: avisos de la meta tomada de la distribución */}
+                    {conDistribucion && !meta && <span className="ml-1 font-semibold text-amber-700">· NO ESTÁ EN LA DISTRIBUCIÓN DE ESTE BARCO</span>}
+                    {grupo.length > 1 && <span className="ml-1 font-semibold text-sky-800">· META Y COMPRADO ENTRE {grupo.length} BLOQUES (ESTE: {formatoCajas(compradoBloque(b))})</span>}
                   </p>
                 </div>
                 <div className="flex gap-4 text-sm text-center">
@@ -1277,7 +1336,10 @@ export default function PurchaseAllocationPage() {
                     </div>
                     <div>
                       <label className={etiqueta}>Meta (cajas)</label>
-                      <CampoNumero decimales={0} value={b.target_boxes} onChange={(e) => cambiarBloque(b._key, 'target_boxes', e.target.value)} placeholder="EJ. 13200" className={`${inputClass} text-right`} />
+                      {/* 19/11/2026: con distribución la meta no se escribe: sale del barco */}
+                      {conDistribucion
+                        ? <input value={formatoCajas(meta)} readOnly title="Sale de la Distribución en barcos" className={`${inputClass} text-right cursor-not-allowed`} />
+                        : <CampoNumero decimales={0} value={b.target_boxes} onChange={(e) => cambiarBloque(b._key, 'target_boxes', e.target.value)} placeholder="EJ. 13200" className={`${inputClass} text-right`} />}
                     </div>
                   </div>
 
@@ -1295,7 +1357,7 @@ export default function PurchaseAllocationPage() {
                           <th className={th}>Finca</th>
                           <th className={th} title="Uno o varios comerciales que hicieron la compra">Comerciales</th>
                           <th className={th} title="Semana de compra: lo que llega al puerto hasta el domingo. Si la nave se queda a la semana siguiente, elige esa semana: se liquida y cuenta en el contrato ahí. Debajo, el puerto donde entrega">Corte · Semana · Entrega</th>
-                          <th className={th}>Retira materiales en *</th>
+                          <th className={th} title="Bodega donde retira los materiales">Retira *</th>
                           <th className={`${th} text-right`}>Cajas *</th>
                           {/* 13/11/2026: el P. oficial pasó al encabezado del bloque; Tipo · Pago → Negociación; columna Bono / extra */}
                           <th className={`${th} text-right`} title="Precio real pagado al productor. Debajo, OF. $ si esta compra tiene otro precio oficial que el del bloque">P. real</th>
