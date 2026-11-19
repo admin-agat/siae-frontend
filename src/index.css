@@ -99,3 +99,9 @@ tr.fila-elegida > td [class*="rounded-full"][class*="overflow-hidden"] {
 tr.fila-elegida > td [class*="rounded-full"][class*="overflow-hidden"] > * {
   background-color: #fff !important;
 }
+
+/* 19/11/2026 (Peter): título de cada módulo más arriba. Las pantallas traen p-6 (24 px); arriba se deja 12 px
+   con una sola regla aquí, en vez de editar las 59 pantallas */
+main > .p-6 {
+  padding-top: 0.75rem;
+}
