@@ -273,7 +273,7 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
-### 19/11/2026 — Fase 1b-1: anticipo 80 % desde Compra de fruta, tablero de aprobación, Cuentas por pagar y LQ con una sola cuota (SIN SUBIR)
+### 19/11/2026 — Fase 1b-1: anticipo 80 % desde Compra de fruta, tablero de aprobación, Cuentas por pagar y LQ con una sola cuota (en producción 19/11/2026)
 - Diseño aprobado por Peter: `docs/modulos/pagos-liquidaciones.md` sección 13.A (13.C fase 1b-1). Cambia la regla de liquidación: el 80 % lo pide Comercial con **PAGAR** (cajas compradas × precio real × 80 %, semana de pago = semana del día de corte) y la LQ SPOT lo descuenta.
 - **Migración** `2026_11_19_000001_pagos_liquidaciones_1b` (backend), aplicada en `SIAE` y `siae_test`: columnas de aprobación y pago en `producer_advances` (origen SPOT_80 / SALDO / MANUAL), `bank_payment_batch_items`, una cuota por LQ con su `ORD-…`, pantallas nuevas `pagar_anticipo_80`, `aprobar_pagos_liquidacion`, `tablero_pagos_lectura`, `pagos_banco`, `confirmar_pagos` (las dos primeras van por excepción por persona).
 - Backend: `App\Services\Anticipo80`, rutas `advance-80` en `PurchaseAllocationController`, `SettlementPayableController` (tablero, aprobar, devolver), `SettlementController` (descuenta el 80 % en banco/pagado, anula el resto, SALDO A FAVOR DE AGAT si pasa el neto, una cuota), `AccountingController` + `PichinchaPagos` (lotes de anticipos, una línea del TXT por orden, cuenta congelada y enmascarada).
@@ -284,7 +284,7 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
   - **Liquidar**: una cuota por LQ (PAGO ÚNICO / SALDO SPOT), línea "(−) Anticipo 80 % ya pagado" con cada orden, SALDO A FAVOR DE AGAT, y el saldo a favor anterior marcado de entrada. El detalle muestra el 80 % aparte y el `ORD-…` de la cuota.
   - `menu.js`: un ítem puede pedir varias pantallas (basta una).
   - El diálogo de PAGAR dice si la cuenta del vendedor está VERIFICADA, PENDIENTE o no existe (`cargar()` devuelve `cuentas_80`: solo el estado, nunca el número, y solo a quien tiene `pagar_anticipo_80`).
-- Pendiente: pruebas de siae-qa (13.C.1 puntos 1-6 + 7.7 1b). No se sube hasta terminar la revisión.
+- siae-qa: `tests/Feature/Anticipo80PagarTest.php` (63 pruebas, 13.C.1 puntos 1-6 + 7.7 1b); suite 381 pasan. Migración probada sobre una copia de producción antes de subir.
 
 ### 19/11/2026 — Compra de fruta: META y datos del bloque desde la Distribución en barcos
 - Pedido de Peter: la META del bloque ya no se escribe; sale de la Distribución en barcos por barco + cliente + marca + presentación + modalidad. Si esa combinación no está, META 0 y aviso "NO ESTÁ EN LA DISTRIBUCIÓN DE ESTE BARCO".
