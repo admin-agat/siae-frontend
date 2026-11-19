@@ -1085,7 +1085,9 @@ export default function PurchaseAllocationPage() {
           return (
             <div key={c.id} className="bg-white rounded-xl shadow p-4">
               <p className="font-bold text-gray-800">{c.name}</p>
-              <p className="text-xs text-gray-500 mb-2">Marcas: {c.brands.map((b) => b.name).join(', ') || <span className="text-red-600">SIN MARCAS (asígnalas en Configuración → Terceros)</span>}</p>
+              {/* 19/11/2026: pedido de Peter, sin la línea "Marcas: ..." (el desglose de abajo ya las muestra); queda solo el aviso si no tiene marcas */}
+              {c.brands.length === 0 && <p className="text-xs text-red-600 mb-2">SIN MARCAS (asígnalas en Configuración → Terceros)</p>}
+              {c.brands.length > 0 && <div className="mb-2" />}
               <div className="grid grid-cols-3 gap-2 text-center text-sm">
                 <div><p className="text-xs text-gray-500 uppercase">Pedido</p><p className="font-semibold">{formatoCajas(c.pedido)}</p></div>
                 <div><p className="text-xs text-gray-500 uppercase">Comprado</p><p className="font-semibold text-primario">{formatoCajas(comprado)}</p></div>
