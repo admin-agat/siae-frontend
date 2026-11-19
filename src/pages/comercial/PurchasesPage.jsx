@@ -31,13 +31,7 @@ export default function PurchasesPage() {
   const columnas = [
     { titulo: 'Semana', render: (p) => `SEMANA ${p.week} / ${p.year}`, className: 'font-medium' },
     { titulo: 'Total cajas', render: (p) => formatoCajas(p.total_boxes) },
-    {
-      titulo: 'En barcos (Logística)',
-      render: (p) => {
-        const completo = Number(p.distributed_boxes) >= Number(p.total_boxes);
-        return <span className={completo ? 'text-green-700' : 'text-amber-700'}>{formatoCajas(p.distributed_boxes)}</span>;
-      },
-    },
+    // 19/11/2026: pedido de Peter, sin la columna "En barcos (Logística)" en este listado
     // 19/11/2026: pedido de Peter, en este listado COMPRADO se llama ESTIMADO (mismo dato: purchased_boxes)
     { titulo: 'Estimado', render: (p) => formatoCajas(p.purchased_boxes), className: 'font-semibold' },
     {

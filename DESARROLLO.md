@@ -288,6 +288,7 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ### 19/11/2026 — Compra de fruta: COMPRADO → ESTIMADO en el listado de semanas
 - Pedido de Peter, solo en la tabla del listado (`PurchasesPage`): la columna "Comprado" se llama **Estimado**. Mismo dato y cálculo; dentro de cada semana (Comprar) sigue diciendo "Comprado".
+- Luego, también pedido de Peter: se quita la columna "En barcos (Logística)" de ese listado (el dato sigue en Distribución en barcos).
 
 ### 19/11/2026 — Equipo de agentes: lector, mecánico y programador
 - Agentes nuevos en `.claude/agents/`: `siae-lector` (Haiku, solo lectura, busca con archivo:línea), `siae-mecanico` (Haiku, aplica un spec sin decidir) y `siae-programador` (Sonnet, decisiones chicas de código, nunca de negocio). Los dos que escriben no tienen Bash: no pueden hacer commit, migrar ni tocar el servidor.
