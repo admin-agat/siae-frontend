@@ -152,7 +152,8 @@ function LayoutContenido() {
         </div>
 
         {/* Página activa — Outlet renderiza la ruta hija */}
-        <main className="flex-1 p-6">
+        {/* 19/11/2026 (Peter): menos margen arriba para que el título de cada módulo quede más cerca de la barra */}
+        <main className="flex-1 px-6 pb-6 pt-2">
           {/* Las páginas se cargan por partes (React.lazy en AppRouter): mientras llega una, se ve este aviso */}
           {/* 17/11/2026: si la pantalla falla al cargar o dibujarse, aviso (o recarga) en vez de página en blanco */}
           <ErrorPantalla key={pathname}>

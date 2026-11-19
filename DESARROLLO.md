@@ -273,6 +273,9 @@ Aplicado el 28/10/2026 (backend y frontend). Probado con pruebas automáticas en
 
 ## 7. Historial de cambios
 
+### 19/11/2026 — Títulos de los módulos más arriba
+- Pedido de Peter: el marco general (`Layout.jsx`) deja 8 px arriba en vez de 24 px, así el título de todas las pantallas sube unos 16 px. Costados y abajo sin cambio.
+
 ### 19/11/2026 — Compra de fruta: sin la línea "Marcas" en las tarjetas de cliente
 - Pedido de Peter: en cada tarjeta de cliente (dentro de una semana) se quita la línea "Marcas: ...". Se mantiene el desglose del pedido por marca y presentación, y el aviso rojo SIN MARCAS cuando el cliente no tiene ninguna.
 - Distribución: a la izquierda los cuadros de clientes (dos por fila) y a la derecha los dos avances amarillos (compra y contratos) uno sobre otro. En pantallas angostas los avances van arriba, como antes.
